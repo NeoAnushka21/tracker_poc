@@ -1,6 +1,8 @@
 # Deploying OmniAI (Render + Neon)
 
-> Last updated: 2026-09-28 (first deployment). Update this file whenever the deployment setup changes (see [README.md](README.md)).
+> Last updated: 2026-09-29 (live; user and admin pages tested on laptop and phone).
+
+**Live:** https://omniai-hkv2.onrender.com (Render service `omniai`, Singapore) · Neon project `young-star-73873699` (AWS Singapore). Local data was copied into Neon on 2026-09-29 (159 rows, 13 tables); Neon is now the real database. The NVIDIA backup is off in production, and there's no uptime pinger yet. Update this file whenever the deployment setup changes (see [README.md](README.md)).
 
 OmniAI runs as **one free Render web service** that builds the React app and runs the FastAPI backend, which serves both the site and `/api`. The data lives in a **free Neon Postgres** database. Both are in **Singapore**, close to India and to each other. The setup is in [`render.yaml`](../render.yaml) at the repo root (a Render "Blueprint").
 

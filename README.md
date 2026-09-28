@@ -141,7 +141,7 @@ Full details: [docs/technical-overview.md](docs/technical-overview.md).
 - Branded-product web search. For now Claude uses what it knows about the label and asks you for the figures if it doesn't know the product.
 - A cleanup job for stale proposals (they expire lazily on the next request)
 
-**Deployment:** Render (free web service) + Neon (free Postgres), see [docs/deployment.md](docs/deployment.md). Locally the app still uses SQLite.
+**Deployment:** live at https://omniai-hkv2.onrender.com on Render (free web service) + Neon (free Postgres), see [docs/deployment.md](docs/deployment.md). Locally the app still uses SQLite.
 
 **Differences from the spec's schema:**
 
