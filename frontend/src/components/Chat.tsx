@@ -1,6 +1,8 @@
-import { useEffect, useRef, useState, type FormEvent, type KeyboardEvent } from "react";
+import { Fragment, useEffect, useRef, useState, type FormEvent, type KeyboardEvent, type ReactNode } from "react";
 import { api } from "../api";
 import type { Action, ChatMessage, User } from "../types";
+import { useSpeechToText } from "../useSpeechToText";
+import { AssistantAvatar, UserAvatar } from "./Avatar";
 import ProposalCard from "./ProposalCard";
 
 const EXAMPLES = [
@@ -12,6 +14,28 @@ const EXAMPLES = [
 
 type Props = { user: User; onDataChanged: () => void };
 
+/** Renders **bold** spans; everything else stays plain text (no HTML injection). */
+function renderText(text: string): ReactNode {
+  return text.split(/(\*\*[^*]+\*\*)/g).map((part, i) =>
+    part.startsWith("**") && part.endsWith("**") && part.length > 4
+      ? <strong key={i}>{part.slice(2, -2)}</strong>
+      : <Fragment key={i}>{part}</Fragment>,
+  );
+}
+
+function clock(iso: string): string {
+  return new Date(iso).toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit" });
+}
+
+function MicIcon() {
+  return (
+    <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true">
+      <rect x="9" y="3" width="6" height="11" rx="3" fill="currentColor" />
+      <path d="M5.5 11a6.5 6.5 0 0 0 13 0M12 17.5V21M8.5 21h7" stroke="currentColor" strokeWidth="1.8" fill="none" strokeLinecap="round" />
+    </svg>
+  );
+}
+
 export default function Chat({ user, onDataChanged }: Props) {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState("");
@@ -21,6 +45,12 @@ export default function Chat({ user, onDataChanged }: Props) {
   const [busyAction, setBusyAction] = useState<number | null>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
+  const speechBaseRef = useRef("");
+
+  const speech = useSpeechToText((spoken) => {
+    const base = speechBaseRef.current;
+    setInput(base ? `${base} ${spoken}` : spoken);
+  });
 
   useEffect(() => {
     api.history().then(setMessages).catch((e) => setError(e.message));
@@ -30,6 +60,15 @@ export default function Chat({ user, onDataChanged }: Props) {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, sending]);
 
+  function toggleMic() {
+    if (speech.listening) {
+      speech.stop();
+    } else {
+      speechBaseRef.current = input.trim();
+      speech.start();
+    }
+  }
+
   function updateAction(updated: Action) {
     setMessages((ms) =>
       ms.map((m) => ({ ...m, actions: m.actions.map((a) => (a.id === updated.id ? updated : a)) })),
@@ -38,9 +77,11 @@ export default function Chat({ user, onDataChanged }: Props) {
 
   async function send(e?: FormEvent) {
     e?.preventDefault();
+    if (speech.listening) speech.stop();
     const text = input.trim();
     if (!text || sending) return;
     setError(null);
+    speech.clearError();
     setSending(true);
     const optimistic: ChatMessage = {
       id: -Date.now(), role: "user", content: text, created_at: new Date().toISOString(), actions: [],
@@ -104,12 +145,22 @@ export default function Chat({ user, onDataChanged }: Props) {
 
   // App events (confirm/cancel notes) are context for the LLM; the card status shows them in the UI.
   const visible = messages.filter((m) => m.role !== "event");
+  const shownError = error ?? speech.error;
 
   return (
     <section className="chat card">
+      <div className="chat-head">
+        <AssistantAvatar size={36} />
+        <div>
+          <div className="chat-title">Macro assistant</div>
+          <div className="muted small">Tell me what you ate; I'll do the maths.</div>
+        </div>
+      </div>
+
       <div className="messages">
         {visible.length === 0 && (
           <div className="empty">
+            <AssistantAvatar size={64} />
             <p>Hi{user.preferred_name ? ` ${user.preferred_name}` : ""}! Tell me what you ate and I'll work out the macros.</p>
             <div className="examples">
               {EXAMPLES.map((ex) => (
@@ -121,30 +172,41 @@ export default function Chat({ user, onDataChanged }: Props) {
           </div>
         )}
         {visible.map((m) => (
-          <div key={m.id} className={`msg ${m.role}`}>
-            <div className="bubble">{m.content}</div>
-            {m.actions.map((a) => (
-              <ProposalCard
-                key={a.id}
-                action={a}
-                busy={busyAction === a.id}
-                awaitingFeedback={feedbackFor?.id === a.id}
-                onConfirm={() => resolve(a, "confirm")}
-                onNeedsChanges={() => needsChanges(a)}
-                onCancel={() => resolve(a, "reject")}
-              />
-            ))}
+          <div key={m.id} className={`msg-row ${m.role}`}>
+            {m.role === "assistant"
+              ? <AssistantAvatar />
+              : <UserAvatar name={user.preferred_name} email={user.email} />}
+            <div className="msg">
+              <div className="bubble">{renderText(m.content)}</div>
+              {m.actions.map((a) => (
+                <ProposalCard
+                  key={a.id}
+                  action={a}
+                  busy={busyAction === a.id}
+                  awaitingFeedback={feedbackFor?.id === a.id}
+                  onConfirm={() => resolve(a, "confirm")}
+                  onNeedsChanges={() => needsChanges(a)}
+                  onCancel={() => resolve(a, "reject")}
+                />
+              ))}
+              <span className="msg-time">{clock(m.created_at)}</span>
+            </div>
           </div>
         ))}
         {sending && (
-          <div className="msg assistant">
-            <div className="bubble typing">Thinking…</div>
+          <div className="msg-row assistant">
+            <AssistantAvatar />
+            <div className="msg">
+              <div className="bubble typing" aria-label="Assistant is typing">
+                <span /><span /><span />
+              </div>
+            </div>
           </div>
         )}
         <div ref={bottomRef} />
       </div>
 
-      {error && <div className="error chat-error">{error}</div>}
+      {shownError && <div className="error chat-error">{shownError}</div>}
 
       <form className="composer" onSubmit={send}>
         {feedbackFor && (
@@ -153,6 +215,7 @@ export default function Chat({ user, onDataChanged }: Props) {
             <button type="button" className="ghost" onClick={() => setFeedbackFor(null)} aria-label="Stop giving feedback">✕</button>
           </div>
         )}
+        {speech.listening && <div className="listening-hint">Listening… tap the mic again when you're done.</div>}
         <div className="composer-row">
           <textarea
             ref={inputRef}
@@ -161,8 +224,25 @@ export default function Chat({ user, onDataChanged }: Props) {
             onKeyDown={onKeyDown}
             rows={2}
             maxLength={4000}
-            placeholder={feedbackFor ? "What should I change? e.g. 'the chicken was 150g'" : "What did you eat?"}
+            placeholder={
+              speech.listening ? "Speak now…"
+                : feedbackFor ? "What should I change? e.g. 'the chicken was 150g'"
+                : "What did you eat? Type or tap the mic"
+            }
           />
+          {speech.supported && (
+            <button
+              type="button"
+              className={`mic ${speech.listening ? "on" : ""}`}
+              onClick={toggleMic}
+              disabled={sending}
+              aria-pressed={speech.listening}
+              aria-label={speech.listening ? "Stop voice input" : "Start voice input"}
+              title={speech.listening ? "Stop voice input" : "Speak instead of typing"}
+            >
+              <MicIcon />
+            </button>
+          )}
           <button className="primary" disabled={sending || !input.trim()}>Send</button>
         </div>
       </form>

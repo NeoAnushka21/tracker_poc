@@ -5,21 +5,53 @@ import { MEAL_LABEL, friendlyDate, grams, kcal, shiftDay, time } from "../format
 
 const MEAL_ORDER = ["breakfast", "lunch", "snack", "dinner"];
 
-function Bar({ label, value, target, unit }: { label: string; value: number; target: number; unit: string }) {
+/** A meter: one macro against its target. Identity comes from the label; the fill hue repeats it. */
+function Bar({ label, value, target, unit, tone }: {
+  label: string; value: number; target: number; unit: string; tone: "protein" | "carbs" | "fat";
+}) {
   const pct = target > 0 ? Math.min(100, (value / target) * 100) : 0;
   const over = target > 0 && value > target;
-  const fmt = (n: number) => (unit === "kcal" ? Math.round(n).toLocaleString() : `${Math.round(n)}`);
+  const left = Math.round(target - value);
   return (
-    <div className="bar-row">
+    <div className={`bar-row ${tone}`} title={`${label}: ${Math.round(value)} of ${target} ${unit}`}>
       <div className="bar-label">
-        <span>{label}</span>
+        <span className="bar-name"><i className="swatch" aria-hidden="true" />{label}</span>
         <span className="num">
-          {fmt(value)} / {fmt(target)} {unit}
+          {Math.round(value)} / {target} {unit}
+          <span className={over ? "warn" : "muted"}> · {over ? `${-left} ${unit} over` : `${left} ${unit} left`}</span>
         </span>
       </div>
       <div className="bar" role="progressbar" aria-valuenow={Math.round(value)} aria-valuemax={target} aria-label={label}>
         <div className={`bar-fill ${over ? "over" : ""}`} style={{ width: `${pct}%` }} />
       </div>
+    </div>
+  );
+}
+
+/** Calorie meter as a ring: remaining kcal is the headline, eaten/target beside it. */
+function CalorieRing({ eaten, target }: { eaten: number; target: number }) {
+  const r = 52;
+  const circumference = 2 * Math.PI * r;
+  const frac = target > 0 ? Math.min(1, eaten / target) : 0;
+  const remaining = Math.round(target - eaten);
+  const over = remaining < 0;
+  return (
+    <div className="kcal-ring-wrap">
+      <svg className={`kcal-ring ${over ? "over" : ""}`} viewBox="0 0 120 120" role="img"
+           aria-label={`${Math.round(eaten)} of ${target} kcal eaten`}>
+        <title>{`${Math.round(eaten)} of ${target} kcal eaten`}</title>
+        <circle className="ring-track" cx="60" cy="60" r={r} />
+        <circle className="ring-fill" cx="60" cy="60" r={r}
+                strokeDasharray={`${frac * circumference} ${circumference}`}
+                transform="rotate(-90 60 60)" />
+        <text x="60" y="58" className="ring-value">{Math.abs(remaining).toLocaleString()}</text>
+        <text x="60" y="76" className="ring-caption">{over ? "kcal over" : "kcal left"}</text>
+      </svg>
+      <dl className="kcal-stats">
+        <div><dt>Eaten</dt><dd>{Math.round(eaten).toLocaleString()}</dd></div>
+        <div><dt>Budget</dt><dd>{target.toLocaleString()}</dd></div>
+        <div><dt>Progress</dt><dd>{target > 0 ? Math.round((eaten / target) * 100) : 0}%</dd></div>
+      </dl>
     </div>
   );
 }
@@ -45,7 +77,6 @@ export default function Dashboard({ dataVersion }: { dataVersion: number }) {
 
   const t = data.targets;
   const c = data.consumed;
-  const remaining = data.remaining?.calories ?? 0;
   const byMeal: Record<string, Entry[]> = {};
   for (const e of data.entries) (byMeal[e.meal_type] ??= []).push(e);
 
@@ -59,20 +90,10 @@ export default function Dashboard({ dataVersion }: { dataVersion: number }) {
 
       {t ? (
         <>
-          <div className="kcal-hero">
-            <div>
-              <div className="big num">{Math.round(c.calories).toLocaleString()}</div>
-              <div className="muted small">eaten</div>
-            </div>
-            <div className={remaining < 0 ? "warn" : ""}>
-              <div className="big num">{Math.abs(Math.round(remaining)).toLocaleString()}</div>
-              <div className="muted small">{remaining < 0 ? "over budget" : "remaining"}</div>
-            </div>
-          </div>
-          <Bar label="Calories" value={c.calories} target={t.calories} unit="kcal" />
-          <Bar label="Protein" value={c.protein_g} target={t.protein_g} unit="g" />
-          <Bar label="Carbs" value={c.carbs_g} target={t.carbs_g} unit="g" />
-          <Bar label="Fat" value={c.fat_g} target={t.fat_g} unit="g" />
+          <CalorieRing eaten={c.calories} target={t.calories} />
+          <Bar label="Protein" value={c.protein_g} target={t.protein_g} unit="g" tone="protein" />
+          <Bar label="Carbs" value={c.carbs_g} target={t.carbs_g} unit="g" tone="carbs" />
+          <Bar label="Fat" value={c.fat_g} target={t.fat_g} unit="g" tone="fat" />
           <div className="muted small">Fiber: {grams(c.fiber_g)}</div>
         </>
       ) : (

@@ -6,6 +6,12 @@ import Onboarding from "./components/Onboarding";
 import Chat from "./components/Chat";
 import Dashboard from "./components/Dashboard";
 import SettingsDialog from "./components/SettingsDialog";
+import { AssistantAvatar, UserAvatar } from "./components/Avatar";
+
+function greeting(): string {
+  const h = new Date().getHours();
+  return h < 12 ? "Good morning" : h < 17 ? "Good afternoon" : "Good evening";
+}
 
 export default function App() {
   const [user, setUser] = useState<User | null>(null);
@@ -37,10 +43,14 @@ export default function App() {
   return (
     <div className="app">
       <header className="topbar">
-        <span className="brand">Macro Tracker</span>
+        <span className="brand"><AssistantAvatar size={30} />Macro Tracker</span>
         <div className="topbar-actions">
           <button className="ghost" onClick={() => setShowSettings(true)}>Targets &amp; weight</button>
           <button className="ghost" onClick={logout}>Log out</button>
+          <span className="topbar-user">
+            <span className="greeting">{greeting()}{user.preferred_name ? `, ${user.preferred_name}` : ""}</span>
+            <UserAvatar name={user.preferred_name} email={user.email} size={34} />
+          </span>
         </div>
       </header>
       <main className="layout">
