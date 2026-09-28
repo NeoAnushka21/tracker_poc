@@ -12,6 +12,7 @@ Spec: [macro_tracker_build_spec (1).md](macro_tracker_build_spec%20(1).md).
 | [docs/hld.md](docs/hld.md) | High-level design with diagrams |
 | [docs/technical-overview.md](docs/technical-overview.md) | Stack, API, data model, LLM layer, components |
 | [docs/llm-routing-strategy.md](docs/llm-routing-strategy.md) | Multi-model open-source routing plan |
+| [docs/deployment.md](docs/deployment.md) | Deploying on Render with a Neon Postgres database |
 
 Keep these in sync with every code or UI change. See the checklist in [docs/README.md](docs/README.md).
 
@@ -139,7 +140,8 @@ Full details: [docs/technical-overview.md](docs/technical-overview.md).
 - OTP email verification
 - Branded-product web search. For now Claude uses what it knows about the label and asks you for the figures if it doesn't know the product.
 - A cleanup job for stale proposals (they expire lazily on the next request)
-- Deployment
+
+**Deployment:** Render (free web service) + Neon (free Postgres), see [docs/deployment.md](docs/deployment.md). Locally the app still uses SQLite.
 
 **Differences from the spec's schema:**
 

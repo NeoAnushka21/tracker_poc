@@ -13,9 +13,13 @@ load_dotenv(BACKEND_DIR / ".env")
 
 # --- Environment ---------------------------------------------------------
 DATABASE_URL = os.getenv("DATABASE_URL", f"sqlite:///{BACKEND_DIR / 'macro_tracker.db'}")
-SECRET_KEY = os.getenv("SECRET_KEY", "dev-only-insecure-secret-change-me-in-backend-env")
+DEV_SECRET_KEY = "dev-only-insecure-secret-change-me-in-backend-env"
+SECRET_KEY = os.getenv("SECRET_KEY", DEV_SECRET_KEY)
 SESSION_DAYS = int(os.getenv("SESSION_DAYS", "14"))
 COOKIE_SECURE = os.getenv("COOKIE_SECURE", "false").lower() == "true"
+# The built React app (npm run build). When it exists the backend serves it too, so the
+# site and the API share one address (production on Render). In development Vite serves it.
+FRONTEND_DIST = Path(os.getenv("FRONTEND_DIST", BACKEND_DIR.parent / "frontend" / "dist"))
 # Comma-separated emails that get the admin panel. Nobody else can see or call it.
 DEFAULT_ADMIN_EMAIL = "mhatre.anushka.work@gmail.com"
 # Used once at startup to create the admin account if it doesn't exist yet. Change the

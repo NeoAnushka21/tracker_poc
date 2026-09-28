@@ -2,8 +2,10 @@ import os
 import tempfile
 
 # Point the app at a throwaway database before anything imports app.config.
+# TEST_DATABASE_URL runs the suite against another database, e.g. a throwaway local Postgres
+# (tables are dropped and recreated per test, so never point it at real data).
 _tmpdir = tempfile.mkdtemp()
-os.environ["DATABASE_URL"] = f"sqlite:///{_tmpdir}/test.db"
+os.environ["DATABASE_URL"] = os.getenv("TEST_DATABASE_URL") or f"sqlite:///{_tmpdir}/test.db"
 os.environ["SECRET_KEY"] = "test-secret-key-that-is-long-enough-for-hs256"
 # Keep tests independent of the developer's backend/.env (load_dotenv won't override these).
 os.environ["ADMIN_EMAILS"] = "mhatre.anushka.work@gmail.com"

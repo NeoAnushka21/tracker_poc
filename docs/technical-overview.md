@@ -1,6 +1,6 @@
 # OmniAI technical overview
 
-> Last updated: 2026-09-28 (NVIDIA backup, strict licences, consent update). Update this file in the same change as any code change it describes (see [docs/README.md](README.md)).
+> Last updated: 2026-09-28 (deployment: Render + Neon Postgres). Update this file in the same change as any code change it describes (see [docs/README.md](README.md)).
 > Architecture diagrams: [hld.md](hld.md). End-user manual: [user-guide.md](user-guide.md).
 
 ## 1. Tech stack
@@ -12,7 +12,8 @@
 | Font | Plus Jakarta Sans (variable), self-hosted via `@fontsource-variable/plus-jakarta-sans` (no Google Fonts request) |
 | Voice | Browser Web Speech API (`useSpeechToText.ts`), on-device or browser-vendor; no server audio. |
 | Backend | Python 3.12+ (developed on 3.14), FastAPI, Uvicorn |
-| ORM / DB | SQLAlchemy 2.x, SQLite (`backend/macro_tracker.db`) |
+| ORM / DB | SQLAlchemy 2.x. Development: SQLite (`backend/macro_tracker.db`). Production: Postgres on Neon via `psycopg` 3 (`db.make_engine` rewrites `postgres://` URLs to the psycopg driver and pings pooled connections, since Neon suspends idle databases) |
+| Hosting | One free Render web service (`render.yaml`, Singapore): builds the React app, and FastAPI serves it plus `/api`. See [deployment.md](deployment.md). |
 | Auth | Email + password, stdlib `scrypt` hashes, PyJWT session token in an httpOnly cookie (`SESSION_DAYS`, default 14) |
 | LLM | `openai` SDK against any OpenAI-compatible host (default Groq `openai/gpt-oss-120b`), or the `anthropic` SDK |
 | Tests | pytest + FastAPI TestClient, with a `FakeProvider` in place of the LLM (no key or network needed) |
@@ -23,17 +24,20 @@
 POC_new/
 ├── README.md                     # quick start
 ├── CLAUDE.md                     # rules for AI-assisted changes (keep docs in sync)
+├── render.yaml                   # Render Blueprint (build, start, env vars)
+├── .python-version               # Python version for Render (3.14)
 ├── docs/
 │   ├── README.md                 # docs index + maintenance checklist
 │   ├── user-guide.md             # end-user manual / walkthrough
 │   ├── hld.md                    # high-level design (Mermaid diagrams)
 │   ├── technical-overview.md     # this file
+│   ├── deployment.md             # Render + Neon step-by-step
 │   └── llm-routing-strategy.md   # multi-model open-source plan
 ├── backend/
 │   ├── .env.example
 │   ├── requirements.txt
 │   ├── app/
-│   │   ├── main.py               # FastAPI app, startup migrations, router wiring
+│   │   ├── main.py               # FastAPI app, startup migrations, router wiring, serves frontend/dist
 │   │   ├── config.py             # every tunable constant + env settings
 │   │   ├── db.py                 # engine, session, add_missing_columns()
 │   │   ├── data_migrations.py    # one-off data fixes + admin bootstrap
@@ -46,6 +50,7 @@ POC_new/
 │   │   ├── routers/              # HTTP endpoints (section 4)
 │   │   ├── services/             # business logic (section 3)
 │   │   └── llm/                  # prompt, tools, tool loop, providers (section 6)
+│   ├── scripts/copy_to_postgres.py  # one-off SQLite → Postgres data copy
 │   └── tests/                    # pytest suite
 └── frontend/
     ├── vite.config.ts            # dev proxy /api → :8000
@@ -89,6 +94,8 @@ All endpoints are JSON under `/api`, authenticated by the session cookie. Every 
 | `admin` | `GET users` (admins excluded) · `GET users/{id}` · `GET users/{id}/chat` · `GET audit` · `GET llm-usage?hours=` (model calls, tokens, fast-path share, pool state; aggregate only, not audited). Every read of user data is audited. |
 
 FastAPI's interactive docs are at `http://localhost:8000/docs` while the backend is running.
+
+When `frontend/dist` exists (`FRONTEND_DIST`), `main.mount_frontend` also serves the built app: `/assets/*` as static files, and every other non-API path returns `index.html` (no-cache), so the site and the API share one address and one cookie. API routes are registered first and always win; unknown `/api/*` paths return 404.
 
 ## 5. Data model
 
@@ -211,7 +218,13 @@ The environment is set in `backend/.env` (template: `backend/.env.example`):
 | `LLM_ROUTING`, `LLM_FASTPATH` | Turn routing / rule-based replies off (both on by default) |
 | `ADMIN_EMAILS`, `ADMIN_INITIAL_PASSWORD` | Admin accounts (default admin: `mhatre.anushka.work@gmail.com`) |
 | `SHOW_LLM_ERRORS` | Development only |
-| `DATABASE_URL`, `COOKIE_SECURE`, `SESSION_DAYS` | Deployment |
+| `DATABASE_URL` | Default: local SQLite. Production: the Neon connection string (`postgresql://…?sslmode=require`). On Postgres the app refuses to start with the development `SECRET_KEY`. |
+| `COOKIE_SECURE`, `SESSION_DAYS` | `true` in production (HTTPS); session length |
+| `FRONTEND_DIST` | Built frontend folder served by the backend (default `frontend/dist`) |
+| `TARGET_DATABASE_URL`, `SOURCE_DATABASE_URL` | Only for `scripts/copy_to_postgres.py` (target Neon; source defaults to the local SQLite file) |
+| `TEST_DATABASE_URL` | Only for tests: run the suite on a throwaway Postgres |
+
+Production values live in the Render dashboard (`render.yaml` declares them; secrets are `sync: false` or generated), never in the repo.
 
 Domain constants (meal windows, goal multipliers, activity factors, water, fiber, micronutrient reference values, adherence thresholds, consent text and version) are in `backend/app/config.py`.
 
@@ -219,19 +232,28 @@ Domain constants (meal windows, goal multipliers, activity factors, water, fiber
 
 ```bash
 cd backend
-.venv\Scripts\python -m pytest -q      # 188 tests, fake LLM, no network
+.venv\Scripts\python -m pytest -q      # 192 tests (1 needs Postgres), fake LLM, no network
 cd ../frontend
 npm run build                          # type-check + production build
 ```
 
 - The Vite dev server uses a polling file watcher (`vite.config.ts`), and the backend should be started with `WATCHFILES_FORCE_POLLING=true`, because native file events were missed on Windows and served stale code.
+- **Postgres:** production runs on Postgres, which is stricter than SQLite (e.g. `SELECT DISTINCT` can't compare JSON columns). Run the suite against a throwaway Postgres before database-heavy changes:
+
+  ```bash
+  docker run -d --rm --name omniai-pg-test -e POSTGRES_PASSWORD=test -e POSTGRES_DB=omniai -p 55432:5432 postgres:17
+  set TEST_DATABASE_URL=postgresql://postgres:test@localhost:55432/omniai   # PowerShell: $env:TEST_DATABASE_URL="..."
+  .venv\Scripts\python -m pytest -q
+  ```
+
+  Never point `TEST_DATABASE_URL` at real data: tables are dropped per test.
 - `tests/conftest.py` gives each test a fresh database and a scripted `FakeProvider`. It also pins `ADMIN_EMAILS` and blanks `ADMIN_INITIAL_PASSWORD` so the local `.env` can't leak into tests.
-- Coverage by file: `test_flow` (confirm loop, auth, guide flag), `test_foods` (library, recipes), `test_micros`, `test_water_meals`, `test_admin`, `test_analysis`, `test_entries` (move/copy/quantity/delete), `test_body`, `test_openai_provider`, `test_nutrition`, `test_streaks`, `test_chat_days`, `test_routing` (router, fast paths, pool failover and cooldowns, licence gate, escalation, usage report).
+- Coverage by file: `test_flow` (confirm loop, auth, guide flag), `test_foods` (library, recipes), `test_micros`, `test_water_meals`, `test_admin`, `test_analysis`, `test_entries` (move/copy/quantity/delete), `test_body`, `test_openai_provider`, `test_nutrition`, `test_streaks`, `test_chat_days`, `test_deploy` (URL handling, frontend serving, SQLite → Postgres copy), `test_routing` (router, fast paths, pool failover and cooldowns, licence gate, escalation, usage report).
 - **Policy:** development and tests use the fake model. Don't use the real LLM API for routine testing, because the free-tier quota is shared with real users.
 
 ## 11. Known limitations and next steps
 
-- SQLite and a single process. The Stop-button registry is in memory, so multiple instances would need Redis or the database.
+- A single process (one Render instance). The Stop-button registry and the model pool's cooldowns are in memory, so multiple instances would need Redis or the database; a restart (e.g. Render waking from sleep) forgets cooldowns.
 - No Alembic yet; `add_missing_columns` only adds nullable columns.
 - The free-tier LLM quota caps daily usage. Phases 1–3 of [llm-routing-strategy.md](llm-routing-strategy.md) are in (fast paths, routing, pool); a second provider (phase 4) and the evaluation run (phase 5) need decisions and accounts.
-- Deferred: OTP email verification, branded-product web search, data export, a scheduled cleanup of stale proposals, and deployment (planned: hosted backend, e.g. Render, with Postgres, e.g. Neon).
+- Deferred: OTP email verification, branded-product web search, data export, a scheduled cleanup of stale proposals. Deployment is set up (Render + Neon, [deployment.md](deployment.md)); an uptime pinger and a custom domain are open decisions.

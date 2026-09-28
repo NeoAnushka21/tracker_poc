@@ -3,11 +3,26 @@ from sqlalchemy.orm import DeclarativeBase, sessionmaker
 
 from app.config import DATABASE_URL
 
-_is_sqlite = DATABASE_URL.startswith("sqlite")
-engine = create_engine(
-    DATABASE_URL,
-    connect_args={"check_same_thread": False} if _is_sqlite else {},
-)
+
+def normalize_url(url: str) -> str:
+    """Hosts (Neon, Render) hand out postgres:// or postgresql:// URLs; use the psycopg 3 driver."""
+    for prefix in ("postgres://", "postgresql://"):
+        if url.startswith(prefix):
+            return "postgresql+psycopg://" + url[len(prefix):]
+    return url
+
+
+def make_engine(url: str):
+    url = normalize_url(url)
+    if url.startswith("sqlite"):
+        return create_engine(url, connect_args={"check_same_thread": False})
+    # Neon suspends idle databases and drops their connections, so check each pooled
+    # connection before use and recycle it before the host would close it.
+    return create_engine(url, pool_pre_ping=True, pool_recycle=300, pool_size=5, max_overflow=5)
+
+
+_is_sqlite = normalize_url(DATABASE_URL).startswith("sqlite")
+engine = make_engine(DATABASE_URL)
 
 if _is_sqlite:
     @event.listens_for(engine, "connect")

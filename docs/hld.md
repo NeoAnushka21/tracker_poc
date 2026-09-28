@@ -1,6 +1,6 @@
 # OmniAI high-level design (HLD)
 
-> Last updated: 2026-09-28 (NVIDIA backup, strict licences, consent update). Update the diagrams whenever a component, data flow, table or external service changes (see [docs/README.md](README.md)).
+> Last updated: 2026-09-28 (deployment: Render + Neon Postgres). Update the diagrams whenever a component, data flow, table or external service changes (see [docs/README.md](README.md)).
 > Diagrams are Mermaid. They render on GitHub and in VS Code with a Mermaid preview extension.
 
 ## 1. Purpose and principles
@@ -52,7 +52,7 @@ flowchart TB
         S --> N
     end
 
-    DB[(SQLite<br/>macro_tracker.db)]
+    DB[(Postgres on Neon<br/>SQLite in development)]
     LLM[(LLM API)]
 
     SPA -->|/api/* JSON<br/>httpOnly JWT cookie| R
@@ -60,7 +60,19 @@ flowchart TB
     L -->|HTTPS| LLM
 ```
 
-In development, Vite serves the SPA on `:5173` and proxies `/api` to Uvicorn on `:8000`.
+In development, Vite serves the SPA on `:5173` and proxies `/api` to Uvicorn on `:8000`, with SQLite as the database.
+
+### 3.1 Production deployment
+
+```mermaid
+flowchart LR
+    U[Browser] -->|HTTPS| R["Render free web service · Singapore<br/>FastAPI serves the built SPA and /api"]
+    R -->|SSL, pooled connections| N[("Neon Postgres · Singapore<br/>free, scales to zero")]
+    R -->|HTTPS| G[(Groq: gpt-oss-20b / 120b)]
+    GH[GitHub main] -->|push = build + deploy| R
+```
+
+One service keeps the site and the API on one address (simple same-site cookie, one cold start). The server and the database share a region because one chat message makes many database round trips. Secrets are set in the Render dashboard. Step-by-step: [deployment.md](deployment.md).
 
 ## 4. Key flows
 
@@ -186,9 +198,9 @@ Column-level detail is in [technical-overview.md](technical-overview.md#5-data-m
 
 | Area | Current state | Planned |
 |---|---|---|
-| **Security** | scrypt password hashes, JWT in an httpOnly SameSite cookie, per-user scoping on every query, admin audit | HTTPS + `COOKIE_SECURE`, rate limiting, OTP email verification |
+| **Security** | scrypt password hashes, JWT in an httpOnly SameSite cookie (Secure over HTTPS in production), per-user scoping on every query, admin audit | Rate limiting, OTP email verification |
 | **Privacy** | Consent at sign-up (versioned), full account deletion | Data export |
-| **Scale** | Single process, SQLite | Postgres (e.g. Neon), stateless app instances |
+| **Scale** | Single process; Postgres on Neon (SQLite locally) | Stateless app instances (move in-memory state to the database or Redis) |
 | **LLM capacity** | Groq free tier, per model (~200K tokens/day each for gpt-oss-20b and 120b); fast paths and slimmer calls stretch it | Second free provider for failover, see [llm-routing-strategy.md](llm-routing-strategy.md) |
 | **Accessibility** | WCAG AA contrast in light and dark, keyboard tooltips, ARIA tabs and dialogs | – |
-| **Deployment** | Local only | Hosted frontend and backend (e.g. Render) with managed Postgres |
+| **Deployment** | Render free web service + Neon free Postgres, Singapore; the free service sleeps after ~15 min idle (30–60 s first load) | Uptime pinger, custom domain, Alembic migrations |

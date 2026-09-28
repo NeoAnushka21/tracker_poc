@@ -122,10 +122,9 @@ def list_foods(db: Session, user_id: int, limit: int | None = None) -> list[User
 
 
 def recipes_using(db: Session, food_id: int) -> list[UserFood]:
-    stmt = (
-        select(UserFood).join(RecipeIngredient, RecipeIngredient.recipe_id == UserFood.id)
-        .where(RecipeIngredient.food_id == food_id).distinct()
-    )
+    # A subquery instead of JOIN + DISTINCT: Postgres can't compare JSON columns for DISTINCT.
+    stmt = select(UserFood).where(UserFood.id.in_(
+        select(RecipeIngredient.recipe_id).where(RecipeIngredient.food_id == food_id)))
     return list(db.scalars(stmt))
 
 

@@ -1,6 +1,7 @@
 fastapi>=0.115
 uvicorn[standard]>=0.30
 sqlalchemy>=2.0.36
+psycopg[binary]>=3.2          # Postgres driver (production database on Neon)
 pyjwt>=2.9
 anthropic>=0.70
 openai>=3.0

@@ -6,6 +6,7 @@
 | [hld.md](hld.md) | Everyone technical, stakeholders | High-level design: principles, context, containers, key flows, data model, non-functional notes (Mermaid diagrams) |
 | [technical-overview.md](technical-overview.md) | Developers | Stack, repo layout, services, API, tables, LLM layer, frontend components, config, testing |
 | [llm-routing-strategy.md](llm-routing-strategy.md) | Developers, product | Plan for routing across several free open-source models |
+| [deployment.md](deployment.md) | Whoever deploys | Render + Neon step by step, data copy, free-plan behaviour, troubleshooting |
 
 The in-app **first-run guide** (`frontend/src/components/GuideTour.tsx`) is the short version of `user-guide.md`.
 
@@ -23,6 +24,6 @@ The docs are part of the product. **Update them in the same change as the code**
 | Config / env variables | `technical-overview.md` §9, `backend/.env.example` |
 | Target formulas, meal windows, water or micronutrient rules | `user-guide.md` (§2, §5, §11) and `technical-overview.md` |
 | App or assistant name, logo, hostname | `frontend/src/brand.ts` (name, logo text, `APP_DEV_HOST`, `APP_DOMAIN`), `public/favicon.svg`, `backend/app/config.py` `APP_NAME`, the persona line in `prompt.py`, all docs titles, and `technical-overview.md` §8 |
-| Deployment or infrastructure | `hld.md` §3 and §7, `technical-overview.md` §11, the root `README.md` |
+| Deployment or infrastructure | `deployment.md`, `render.yaml`, `hld.md` §3.1 and §7, `technical-overview.md` §1 and §9, the root `README.md` |
 
 Also bump the **Last updated** date at the top of each file you touch.
