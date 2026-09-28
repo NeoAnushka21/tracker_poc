@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { api, ApiError } from "./api";
 import type { User } from "./types";
 import AuthScreen from "./components/AuthScreen";
@@ -42,6 +42,9 @@ export default function App() {
   const [tab, setTab] = useState<TabId>(tabFromHash);
   const [chatDraft, setChatDraft] = useState<{ text: string; nonce: number } | null>(null);
   const [guideOpen, setGuideOpen] = useState(false);
+  // Sliding underline under the active tab: measured from the button itself.
+  const tabsRef = useRef<HTMLElement>(null);
+  const [indicator, setIndicator] = useState<{ left: number; width: number } | null>(null);
 
   useEffect(() => {
     const onHash = () => setTab(tabFromHash());
@@ -78,6 +81,16 @@ export default function App() {
     openTab("chat");
     if (user && !user.guide_seen) api.guideSeen().then(setUser).catch(() => {});
   }
+
+  useLayoutEffect(() => {
+    const measure = () => {
+      const el = tabsRef.current?.querySelector<HTMLElement>("button.on");
+      setIndicator(el ? { left: el.offsetLeft, width: el.offsetWidth } : null);
+    };
+    measure();
+    window.addEventListener("resize", measure);
+    return () => window.removeEventListener("resize", measure);
+  }, [tab, user?.id, user?.onboarded, user?.consented]);
 
   if (loading) return <div className="center muted">Loading…</div>;
   if (error) return <div className="center error">Couldn't reach the server: {error}</div>;
@@ -137,7 +150,7 @@ export default function App() {
           </span>
         </div>
       </header>
-      <nav className="tabs" role="tablist" aria-label="Sections">
+      <nav className="tabs" role="tablist" aria-label="Sections" ref={tabsRef}>
         {tabs.map((t) => (
           <button
             key={t.id}
@@ -151,6 +164,8 @@ export default function App() {
             {t.label}
           </button>
         ))}
+        {indicator && <span className="tab-indicator" aria-hidden="true"
+                            style={{ transform: `translateX(${indicator.left}px)`, width: indicator.width }} />}
       </nav>
       {/* Panels stay mounted so the chat keeps its scroll position and draft text. */}
       <main className="page page-chat" id="panel-chat" role="tabpanel" aria-labelledby="tab-chat" hidden={current !== "chat"}>

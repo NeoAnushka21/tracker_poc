@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState, type FormEvent } from "react";
 import { api } from "../api";
 import type { Food } from "../types";
-import { grams } from "../format";
+import MacroChips from "./MacroChips";
 
 type Filter = "all" | "food" | "recipe";
 
@@ -93,6 +93,24 @@ function EditForm({ food, onSaved, onCancel }: { food: Food; onSaved: (f: Food) 
   );
 }
 
+function PencilIcon() {
+  return (
+    <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" fill="none" stroke="currentColor"
+         strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M4 20h4L19 9a2.8 2.8 0 0 0-4-4L4 16v4z" /><path d="M13.5 6.5l4 4" />
+    </svg>
+  );
+}
+
+function TrashIcon() {
+  return (
+    <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" fill="none" stroke="currentColor"
+         strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M4 7h16M9 7V4.5h6V7M6.5 7l1 12.5h9l1-12.5M10 11v5M14 11v5" />
+    </svg>
+  );
+}
+
 function FoodRow({ food, onChanged, onDeleted }: { food: Food; onChanged: (f: Food) => void; onDeleted: (id: number) => void }) {
   const [editing, setEditing] = useState(false);
   const [open, setOpen] = useState(false);
@@ -118,12 +136,7 @@ function FoodRow({ food, onChanged, onDeleted }: { food: Food; onChanged: (f: Fo
           {food.kind === "recipe" && <span className="source-tag recipe">recipe</span>}
         </div>
         <div className="food-nutrients">
-          <span className="muted">{food.measures}:</span>{" "}
-          <b>{Math.round(food.calories)} kcal</b>
-          <span>P {grams(food.protein_g)}</span>
-          <span>C {grams(food.carbs_g)}</span>
-          <span>F {grams(food.fat_g)}</span>
-          <span className="muted">Fiber {grams(food.fiber_g)}</span>
+          <MacroChips n={food} label={`${food.measures}:`} />
         </div>
         <div className="muted small">
           {SOURCE_LABEL[food.source]}{food.kind === "recipe" && yieldText(food) ? ` · ${yieldText(food)}` : ""}
@@ -135,8 +148,13 @@ function FoodRow({ food, onChanged, onDeleted }: { food: Food; onChanged: (f: Fo
             {open ? "Hide" : "Ingredients"}
           </button>
         )}
-        <button className="ghost" onClick={() => setEditing(!editing)}>{editing ? "Close" : "Edit"}</button>
-        <button className="ghost danger" onClick={remove}>Delete</button>
+        <button className={`ghost icon-btn ${editing ? "on" : ""}`} onClick={() => setEditing(!editing)}
+                aria-label={`${editing ? "Close editing" : "Edit"} ${food.name}`} title={editing ? "Close" : "Edit"} aria-pressed={editing}>
+          <PencilIcon />
+        </button>
+        <button className="ghost icon-btn danger" onClick={remove} aria-label={`Delete ${food.name}`} title="Delete">
+          <TrashIcon />
+        </button>
       </div>
       {error && <p className="error small food-error">{error}</p>}
       {open && food.ingredients && (

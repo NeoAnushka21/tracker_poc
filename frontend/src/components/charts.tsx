@@ -1,7 +1,7 @@
 /**
  * Small hand-rolled SVG charts. Colours are CSS variables applied via `style`, so both
  * themes work without re-rendering. Conventions (from the data-viz guidance): one y-axis,
- * recessive grid, 4px rounded bar ends, hover + keyboard tooltips with hit areas wider than
+ * recessive grid and no axis lines, rounded bar tops, hover + keyboard tooltips with hit areas wider than
  * the marks, a legend for 2+ series, and a data table for every chart.
  */
 import { useEffect, useRef, useState, type ReactNode } from "react";
@@ -33,13 +33,13 @@ function fmt(v: number): string {
   return Math.abs(v) >= 1000 ? `${(v / 1000).toFixed(v >= 10000 ? 0 : 1)}k` : `${Math.round(v)}`;
 }
 
-/** Bar path with 4px rounded top corners, anchored flat to the baseline. */
+/** Bar path with rounded top corners, anchored flat to the baseline. */
 function barPath(x: number, y: number, w: number, h: number): string {
-  const r = Math.min(4, w / 2, h);
+  const r = Math.min(7, w / 2, h);
   return `M${x},${y + h} V${y + r} Q${x},${y} ${x + r},${y} H${x + w - r} Q${x + w},${y} ${x + w},${y + r} V${y + h} Z`;
 }
 
-const M = { top: 12, right: 10, bottom: 26, left: 40 };
+const M = { top: 24, right: 10, bottom: 26, left: 40 };
 
 function Tooltip({ x, width, children }: { x: number; width: number; children: ReactNode }) {
   const left = Math.min(Math.max(x, 70), width - 70);
@@ -54,12 +54,12 @@ function YGrid({ max, innerW, innerH, unit }: { max: number; innerW: number; inn
         const y = innerH - (t / max) * innerH;
         return (
           <g key={t}>
-            <line x1={0} x2={innerW} y1={y} y2={y} className="chart-grid" />
+            {t > 0 && <line x1={0} x2={innerW} y1={y} y2={y} className="chart-grid" />}
             <text x={-6} y={y} dy="0.32em" textAnchor="end" className="chart-tick">{fmt(t)}</text>
           </g>
         );
       })}
-      <text x={-M.left + 2} y={-4} className="chart-tick">{unit}</text>
+      <text x={-M.left + 2} y={-14} className="chart-tick">{unit}</text>
     </g>
   );
 }
@@ -109,7 +109,6 @@ export function BarChart({ points, color, unit, height = 200, valueLabel, ariaLa
               </g>
             );
           })}
-          <line x1={0} x2={innerW} y1={innerH} y2={innerH} className="chart-axis" />
         </g>
       </svg>
       {hp && (
@@ -164,7 +163,6 @@ export function LineChart({ labels, titles, series, unit, height = 220, ariaLabe
           {labels.map((l, i) => i % every === 0 && (
             <text key={i} x={x(i)} y={innerH + 16} textAnchor="middle" className="chart-tick">{l}</text>
           ))}
-          <line x1={0} x2={innerW} y1={innerH} y2={innerH} className="chart-axis" />
           {hover != null && <line x1={x(hover)} x2={x(hover)} y1={0} y2={innerH} className="chart-crosshair" />}
           {series.map((s) => (
             <g key={s.key}>
@@ -251,9 +249,22 @@ export function DataTable({ columns, rows }: { columns: string[]; rows: (string 
   );
 }
 
-export function StatTile({ label, value, sub }: { label: string; value: string; sub?: ReactNode }) {
+export type StatIconName = "flame" | "bolt" | "target" | "drop";
+
+const STAT_ICONS: Record<StatIconName, ReactNode> = {
+  flame: <path d="M12 2c1 3.5 5 5.5 5 11a5 5 0 0 1-10 0c0-2.4 1-4 2.5-5.5C9.8 9.8 11 11 12 11c-.5-3 0-6 0-9z" />,
+  bolt: <path d="M13 2L4 14h7l-1 8 9-12h-7l1-8z" />,
+  target: <><circle cx="12" cy="12" r="9" /><circle cx="12" cy="12" r="5" /><circle cx="12" cy="12" r="1.5" /></>,
+  drop: <path d="M12 3c3.5 4.4 6 7.9 6 11a6 6 0 0 1-12 0c0-3.1 2.5-6.6 6-11z" />,
+};
+
+export function StatTile({ label, value, sub, icon }: { label: string; value: string; sub?: ReactNode; icon?: StatIconName }) {
   return (
-    <div className="stat-tile">
+    <div className={`stat-tile ${icon ?? ""}`}>
+      {icon && (
+        <svg className="stat-icon" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor"
+             strokeWidth="1.6" strokeLinejoin="round">{STAT_ICONS[icon]}</svg>
+      )}
       <div className="stat-label">{label}</div>
       <div className="stat-value">{value}</div>
       {sub && <div className="stat-sub">{sub}</div>}

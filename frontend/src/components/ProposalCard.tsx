@@ -1,5 +1,6 @@
 import type { Action, ActionPayload, Item, Nutrients } from "../types";
 import { MEAL_LABEL, grams, kcal, time } from "../format";
+import MacroChips from "./MacroChips";
 
 type Props = {
   action: Action;
@@ -68,12 +69,7 @@ function ItemsTable({ items, struck }: { items: Item[]; struck?: boolean }) {
 function Totals({ n, label }: { n: Nutrients; label?: string }) {
   return (
     <div className="totals">
-      {label && <span className="muted">{label}</span>}
-      <b>{kcal(n.calories)}</b>
-      <span>P {grams(n.protein_g)}</span>
-      <span>C {grams(n.carbs_g)}</span>
-      <span>F {grams(n.fat_g)}</span>
-      <span className="muted">Fiber {grams(n.fiber_g)}</span>
+      <MacroChips n={n} label={label ?? "Total"} />
     </div>
   );
 }

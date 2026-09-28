@@ -72,13 +72,13 @@ export default function AnalysisPage({ dataVersion }: { dataVersion: number }) {
       {header}
 
       <div className="stat-row">
-        <StatTile label="Avg calories" value={`${n(s.avg.calories)} kcal`}
+        <StatTile icon="flame" label="Avg calories" value={`${n(s.avg.calories)} kcal`}
                   sub={latest ? `target ${latest.calories.toLocaleString()}` : undefined} />
-        <StatTile label="Avg protein" value={`${n(s.avg.protein_g)} g`}
+        <StatTile icon="bolt" label="Avg protein" value={`${n(s.avg.protein_g)} g`}
                   sub={latest ? `target ${latest.protein_g} g` : undefined} />
-        <StatTile label="Days on target" value={`${s.days_on_target} / ${s.days_logged}`}
+        <StatTile icon="target" label="Days on target" value={`${s.days_on_target} / ${s.days_logged}`}
                   sub={`kcal ±${rule.calorie_tolerance_pct}% and protein ≥${rule.min_protein_pct}%`} />
-        <StatTile label="Avg water" value={s.avg.water_ml ? litres(s.avg.water_ml) : "–"}
+        <StatTile icon="drop" label="Avg water" value={s.avg.water_ml ? litres(s.avg.water_ml) : "–"}
                   sub={data.water_target_ml ? `goal ${litres(data.water_target_ml)}` : undefined} />
       </div>
       <p className="muted small">Averages are over the {s.days_logged} day{s.days_logged === 1 ? "" : "s"} with logs, out of {days}.</p>

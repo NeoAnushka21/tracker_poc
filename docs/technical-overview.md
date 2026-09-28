@@ -1,6 +1,6 @@
 # MacBro technical overview
 
-> Last updated: 2026-09-28. Update this file in the same change as any code change it describes (see [docs/README.md](README.md)).
+> Last updated: 2026-09-28 (UI refresh). Update this file in the same change as any code change it describes (see [docs/README.md](README.md)).
 > Architecture diagrams: [hld.md](hld.md). End-user manual: [user-guide.md](user-guide.md).
 
 ## 1. Tech stack
@@ -8,7 +8,8 @@
 | Layer | Choice |
 |---|---|
 | Frontend | React 19, TypeScript, Vite. No UI or chart library: charts are hand-rolled SVG (`charts.tsx`). |
-| Styling | One `styles.css` with CSS custom-property tokens. Light and dark via `prefers-color-scheme` and `data-theme`. |
+| Styling | One `styles.css` with CSS custom-property tokens (colours, `--radius` 16px / `--radius-sm` 12px, `--shadow-card`, `--accent-grad`, `--glass`). Light and dark via `prefers-color-scheme` and `data-theme`. |
+| Font | Plus Jakarta Sans (variable), self-hosted via `@fontsource-variable/plus-jakarta-sans` (no Google Fonts request) |
 | Voice | Browser Web Speech API (`useSpeechToText.ts`), on-device or browser-vendor; no server audio. |
 | Backend | Python 3.12+ (developed on 3.14), FastAPI, Uvicorn |
 | ORM / DB | SQLAlchemy 2.x, SQLite (`backend/macro_tracker.db`) |
@@ -159,19 +160,22 @@ FastAPI's interactive docs are at `http://localhost:8000/docs` while the backend
 | `FoodsPage` | Library search, filter, edit and delete |
 | `SettingsDialog` | Account (and appearance), Targets (`TargetsEditor`), Body profile (`BodyProfile`), Password, Delete account |
 | `AdminPage` | User table, per-user detail, audit log |
+| `MacroChips` | Bold kcal plus colour-coded P / C / F / Fiber chips (chat cards, My foods) |
 | `Avatar`, `ThemeToggle` | MacBro and user avatars; theme switch (Settings only) |
 
 **Colour tokens** (checked with the dataviz palette validator for colour-vision deficiency separation and contrast):
 
 | Token | Light | Dark |
 |---|---|---|
-| Protein | `#2a78d6` | `#3987e5` |
-| Fiber | `#eda100` | `#c98500` |
-| Carbs | `#1baf7a` | `#199e70` |
-| Fat | `#eb6834` | `#d95926` |
+| Protein | `#1db371` | `#1fa855` |
+| Fiber | `#c73e91` | `#c73e91` |
+| Carbs | `#e07b12` | `#e0730f` |
+| Fat | `#0b8fc9` | `#0b8fc9` |
 | Water | `#4a3aa7` | `#9085e9` |
 
-Text always uses text tokens, never a series colour.
+Light passes every check (worst colour-blind separation ΔE 9.4). Dark is in the 6–8 "floor" band (ΔE 7.9, green vs amber), which is allowed because every bar, chip and legend also carries a text label. Text always uses text tokens, never a series colour; neutral text tokens pass WCAG AA on every surface.
+
+**Visual language:** slate off-white background (`#f8fafc`) with white cards and soft shadows; pill tabs with a sliding gradient underline (`App.tsx` measures the active tab); a sticky glass summary bar; a pill-shaped chat input with gradient Send and mic buttons; a mint-tinted proposal card with row dividers only; a large glowing calorie ring; 14px macro bars; charts with rounded bar tops, dashed grid lines, no axis lines, and an arrow tooltip; Analysis stat cards with faint background icons; My foods as cards with hover-revealed icon buttons.
 
 ## 8. Configuration
 

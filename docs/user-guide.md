@@ -4,7 +4,7 @@ MacBro (macro + bro) is a chat-based calorie and macro tracker. You tell it what
 
 This guide walks a new user through the app from sign-up to daily use. The same walkthrough appears inside the app as a short tour the first time you log in. You can reopen it any time with the **? Guide** button at the top.
 
-> Last updated: 2026-09-28. Keep this file in step with the UI (see [docs/README.md](README.md)).
+> Last updated: 2026-09-28 (UI refresh). Keep this file in step with the UI (see [docs/README.md](README.md)).
 
 ---
 
@@ -107,7 +107,7 @@ If something is ambiguous, for example "a bowl of pasta", MacBro asks a short qu
 
 **Stop:** while MacBro is thinking, press **■ Stop**. Your message comes back to the input box so you can edit it and send again.
 
-Above the chat, the **summary strip** shows today's calories as **eaten / target** (e.g. `1,005 / 1,920 kcal today`) with protein, carbs and fat. Click it to open the Dashboard.
+Above the chat, the floating **summary bar** stays pinned while you scroll. It shows today's calories as **eaten / target** (e.g. `1,005 / 1,920 kcal today`) with protein, carbs and fat. Click it to open the Dashboard.
 
 ## 5. Confirm, correct or cancel
 
@@ -154,8 +154,9 @@ Your water target is based on your weight and activity level. The bar shows litr
 **My foods** is your personal food library. Every food in a meal you confirm is saved there automatically, so the next time you log it MacBro reuses **exactly the same numbers** and scales them to the amount.
 
 - **Search** by name or brand, and filter by **All / Foods / Recipes**.
-- **Edit** a food to fix its values (per 100 g/ml, or per piece/serving with the gram weight). Foods you edit by hand are never overwritten by later estimates.
-- **Delete** a food you no longer want. Past logs keep their numbers.
+- Each food is a card showing its **calories in bold** and coloured chips for **P**rotein, **C**arbs, **F**at and **Fiber**.
+- **Edit** (pencil icon) a food to fix its values (per 100 g/ml, or per piece/serving with the gram weight). Foods you edit by hand are never overwritten by later estimates.
+- **Delete** (trash icon) a food you no longer want. With a mouse, the icons appear when you hover over a card; on touch screens they're always visible. Past logs keep their numbers.
 
 **Recipes** are for dishes you make at home:
 
@@ -181,7 +182,7 @@ MacBro answers from your **confirmed** data only:
 |---|---|
 | **Day navigation** | **‹ ›** to move between days (not into the future). |
 | **Calorie ring** | Calories **eaten / target**. Beside it: **Balance** (calories left) or **Over budget by**, and **Progress %**. |
-| **Macro bars** | Protein, Fiber, Carbs and Fat against target. |
+| **Macro bars** | Thick bars for Protein (green), Fiber (magenta), Carbs (amber) and Fat (cyan), with current / target above each bar. |
 | **Where today's calories came from** | A split bar of protein, carbs and fat calories (hover for numbers). |
 | **Water** | Litres against target, quick-add buttons, undo. |
 | **Additional micronutrients** | Iron, calcium, magnesium, potassium, zinc, vitamin C, vitamin B12 and vitamin D, against daily reference values for your age and sex. Sodium is shown as a limit to stay under. |
@@ -193,7 +194,7 @@ Micronutrients are estimates. Treat them as a guide, not a lab result.
 
 The **Analysis** tab shows trends over **7, 14 or 30 days**:
 
-- summary tiles: average calories, average protein, **days on target**, average water
+- summary cards: average calories, average protein, **days on target**, average water
 - calories per day and protein per day against target
 - macro trends
 - where your calories came from
