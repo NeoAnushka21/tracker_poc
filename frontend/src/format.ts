@@ -46,3 +46,9 @@ export function shiftDay(day: string, delta: number): string {
   const pad = (n: number) => String(n).padStart(2, "0");
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
 }
+
+/** Time-of-day greeting in the user's local time. */
+export function greeting(): string {
+  const h = new Date().getHours();
+  return h >= 5 && h < 12 ? "Good morning" : h >= 12 && h < 17 ? "Good afternoon" : "Good evening";
+}

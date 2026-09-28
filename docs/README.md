@@ -16,12 +16,12 @@ The docs are part of the product. **Update them in the same change as the code**
 | If you changed… | Update |
 |---|---|
 | Anything a user sees or does (labels, buttons, tabs, flows, messages) | `user-guide.md` **and** the steps in `GuideTour.tsx` if the tour mentions it |
-| A new screen, tab, or major feature | `user-guide.md`, `GuideTour.tsx`, `hld.md` (container/flow), `technical-overview.md` (components) |
+| A new screen, tab (e.g. Home), or major feature | `user-guide.md`, `GuideTour.tsx`, `hld.md` (container/flow), `technical-overview.md` (components) |
 | An API endpoint | `technical-overview.md` §4 (and `hld.md` if it's a new flow) |
 | A table or column | `technical-overview.md` §5 and the ER diagram in `hld.md` §5 |
 | An LLM tool, guard, prompt rule or provider | `technical-overview.md` §6, `hld.md` §6 |
 | Config / env variables | `technical-overview.md` §8, `backend/.env.example` |
-| Target formulas, meal windows, water or micronutrient rules | `user-guide.md` (§2, §4, §10) and `technical-overview.md` |
+| Target formulas, meal windows, water or micronutrient rules | `user-guide.md` (§2, §5, §11) and `technical-overview.md` |
 | Deployment or infrastructure | `hld.md` §3 and §7, `technical-overview.md` §10, the root `README.md` |
 
 Also bump the **Last updated** date at the top of each file you touch.

@@ -52,7 +52,6 @@ export default function AnalysisPage({ dataVersion }: { dataVersion: number }) {
   const latest = [...data.days].reverse().find((d) => d.targets)?.targets ?? null;
   const pts = (key: "calories" | "protein_g", target: (d: RangeDay) => number | null): Point[] =>
     data.days.map((d, i) => ({ ...labels[i], value: d.logged ? d[key] : null, target: target(d) }));
-  const rule = s.adherence_rule;
 
   if (s.days_logged === 0) {
     return (
@@ -76,8 +75,6 @@ export default function AnalysisPage({ dataVersion }: { dataVersion: number }) {
                   sub={latest ? `target ${latest.calories.toLocaleString()}` : undefined} />
         <StatTile icon="bolt" label="Avg protein" value={`${n(s.avg.protein_g)} g`}
                   sub={latest ? `target ${latest.protein_g} g` : undefined} />
-        <StatTile icon="target" label="Days on target" value={`${s.days_on_target} / ${s.days_logged}`}
-                  sub={`kcal ±${rule.calorie_tolerance_pct}% and protein ≥${rule.min_protein_pct}%`} />
         <StatTile icon="drop" label="Avg water" value={s.avg.water_ml ? litres(s.avg.water_ml) : "–"}
                   sub={data.water_target_ml ? `goal ${litres(data.water_target_ml)}` : undefined} />
       </div>

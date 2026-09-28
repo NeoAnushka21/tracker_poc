@@ -5,7 +5,7 @@ import { MEAL_LABEL, MEAL_ORDER, friendlyDate, grams, kcal, litres, shiftDay } f
 import { StackedBar } from "./charts";
 
 /** A meter: one macro against its target. Identity comes from the label; the fill hue repeats it. */
-function Bar({ label, value, target, unit, tone }: {
+export function Bar({ label, value, target, unit, tone }: {
   label: string; value: number; target: number; unit: string; tone: "protein" | "fiber" | "carbs" | "fat";
 }) {
   const pct = target > 0 ? Math.min(100, (value / target) * 100) : 0;
@@ -32,7 +32,7 @@ function Bar({ label, value, target, unit, tone }: {
 }
 
 /** Calorie meter as a ring: remaining kcal is the headline, eaten/target beside it. */
-function CalorieRing({ eaten, target }: { eaten: number; target: number }) {
+export function CalorieRing({ eaten, target }: { eaten: number; target: number }) {
   const r = 52;
   const circumference = 2 * Math.PI * r;
   const frac = target > 0 ? Math.min(1, eaten / target) : 0;
@@ -108,7 +108,7 @@ function WaterDrop() {
 }
 
 /** Independent water tracker: quick-add buttons save directly (they're the user's own clicks). */
-function Water({ w, isToday, onChanged }: { w: WaterSummary; isToday: boolean; onChanged: () => void }) {
+export function Water({ w, isToday, onChanged }: { w: WaterSummary; isToday: boolean; onChanged: () => void }) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const target = w.target_ml ?? 0;

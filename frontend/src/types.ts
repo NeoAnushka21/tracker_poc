@@ -217,3 +217,12 @@ export type AdminUserDetail = {
 };
 
 export type AuditRow = { at: string; admin: string | null; action: string; user: string | null };
+
+export type Streak = { current: number; best: number; today_done: boolean };
+
+export type Streaks = {
+  logging: Streak;
+  target: Streak;
+  last_7_days: { date: string; logged: boolean; on_target: boolean }[];
+  rule: { calorie_tolerance_pct: number; min_protein_pct: number };
+};

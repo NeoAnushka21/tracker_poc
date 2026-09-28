@@ -2,16 +2,27 @@ import { useEffect, useRef, useState, type KeyboardEvent, type ReactNode } from 
 import { MacBroAvatar } from "./Avatar";
 
 // Keep these steps in sync with docs/user-guide.md whenever the UI changes.
-export type GuideTab = "chat" | "dashboard" | "analysis" | "foods";
+export type GuideTab = "home" | "chat" | "dashboard" | "analysis" | "foods";
 
 type Step = { tab: GuideTab; title: string; body: ReactNode };
 
 function steps(name: string | null): Step[] {
   return [
     {
-      tab: "chat",
+      tab: "home",
       title: `Hey${name ? ` ${name}` : ""}, I'm MacBro!`,
       body: <p>Your macro bro. This quick tour shows you around in about a minute. You can reopen it any time from the <b>Guide</b> button at the top.</p>,
+    },
+    {
+      tab: "home",
+      title: "Your Home page",
+      body: (
+        <ul>
+          <li>A greeting and <b>today's summary</b>: calories eaten / target, your balance, and protein, fiber, carbs and fat.</li>
+          <li><b>Water</b> with quick +250 ml / +500 ml buttons.</li>
+          <li>Two <b>streaks</b>: days in a row you logged a meal, and days in a row you hit your target.</li>
+        </ul>
+      ),
     },
     {
       tab: "chat",

@@ -5,7 +5,7 @@ from datetime import date, timedelta
 from sqlalchemy.orm import Session
 
 from app.config import ADHERENCE_CALORIE_TOLERANCE, ADHERENCE_MIN_PROTEIN_SHARE, KCAL_PER_G, MEAL_TYPES
-from app.models import User
+from app.models import User, UserTarget
 from app.services.logs import current_targets, current_weight, entries_between, sum_items, targets_to_dict
 from app.services.water import water_between_range, water_target_ml
 from app.timeutil import utc_to_local
@@ -87,5 +87,78 @@ def range_summary(db: Session, user: User, end: date, days: int) -> dict:
                 "calorie_tolerance_pct": round(ADHERENCE_CALORIE_TOLERANCE * 100),
                 "min_protein_pct": round(ADHERENCE_MIN_PROTEIN_SHARE * 100),
             },
+        },
+    }
+
+
+# --- Streaks (Home tab) ------------------------------------------------------
+
+STREAK_WINDOW_DAYS = 365
+
+
+def _run_back(flags: list[bool]) -> int:
+    """Consecutive True values counting back from the end of the list."""
+    n = 0
+    for f in reversed(flags):
+        if not f:
+            break
+        n += 1
+    return n
+
+
+def _best_run(flags: list[bool]) -> int:
+    best = run = 0
+    for f in flags:
+        run = run + 1 if f else 0
+        best = max(best, run)
+    return best
+
+
+def _streak(flags: list[bool]) -> dict:
+    """flags run oldest..today. Today is still in progress, so it only extends a streak once
+    it qualifies; until then the streak counts up to yesterday and isn't broken."""
+    today_done = flags[-1]
+    current = _run_back(flags if today_done else flags[:-1])
+    return {"current": current, "best": max(_best_run(flags), current), "today_done": today_done}
+
+
+def streaks(db: Session, user: User, today: date) -> dict:
+    """Two streaks: days with at least one confirmed meal, and days that met the target
+    (same rule as Analysis: kcal within +/-10%, protein at least 90%)."""
+    start = today - timedelta(days=STREAK_WINDOW_DAYS - 1)
+    items_by_day: dict[date, list] = defaultdict(list)
+    for e in entries_between(db, user, start, today):
+        items_by_day[utc_to_local(e.eaten_at, user.timezone).date()].extend(e.items)
+
+    all_targets = sorted(
+        db.query(UserTarget).filter(UserTarget.user_id == user.id).all(),
+        key=lambda t: (t.effective_date, t.id),
+    )
+
+    def targets_on(d: date) -> dict | None:
+        chosen = None
+        for t in all_targets:
+            if t.effective_date <= d:
+                chosen = t
+        return targets_to_dict(chosen or (all_targets[0] if all_targets else None))
+
+    logged, hit, last7 = [], [], []
+    d = start
+    while d <= today:
+        items = items_by_day.get(d, [])
+        ok = bool(items) and bool(on_target(sum_items(items), targets_on(d)))
+        logged.append(bool(items))
+        hit.append(ok)
+        if (today - d).days < 7:
+            last7.append({"date": d.isoformat(), "logged": bool(items), "on_target": ok})
+        d += timedelta(days=1)
+
+    return {
+        "logging": _streak(logged),
+        "target": _streak(hit),
+        "last_7_days": last7,
+        "rule": {
+            "calorie_tolerance_pct": round(ADHERENCE_CALORIE_TOLERANCE * 100),
+            "min_protein_pct": round(ADHERENCE_MIN_PROTEIN_SHARE * 100),
         },
     }

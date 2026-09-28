@@ -87,9 +87,10 @@ user message ─► FastAPI /api/chat ─► LLM (Groq gpt-oss-120b or Claude) w
 
 ## Screens
 
+- **Home (default tab):** a time-of-day greeting, today's summary (calorie ring, macro bars, water), and two streaks: days in a row with a meal logged, and days in a row on target.
 - **Chat:** talk to MacBro (typing or voice). Proposals appear as cards you confirm.
 - **Dashboard:** today's calorie ring; protein, fiber, carbs and fat meters; calorie split; water tracker; micronutrients; five meal sections with per-meal macros.
-- **Analysis:** 7, 14 or 30-day trends: calories and protein vs target, macro lines, calorie split, calories by meal, water, days on target, and a data table. All charts have hover and keyboard tooltips.
+- **Analysis:** 7, 14 or 30-day trends: calories and protein vs target, macro lines, calorie split, calories by meal, water, and a data table. All charts have hover and keyboard tooltips.
 - **My foods:** your saved foods and recipes.
 - **Admin console:** reached through **Admin login** on the login page, and only for `ADMIN_EMAILS`. Admin emails can't sign up or use the normal login. The admin account is created at startup from `ADMIN_INITIAL_PASSWORD` if it doesn't exist yet. The console shows users, logins and activity, with read-only access to each user's logs, foods and chat, and every view is written to an audit log.
 - **Settings (⚙):** Account (email, registration date, last login, consent, and appearance), Targets, Body profile (weight, height, optional body measurements), Password, and **Delete account**, which requires your password and permanently removes all of your data.

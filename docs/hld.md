@@ -1,6 +1,6 @@
 # MacBro high-level design (HLD)
 
-> Last updated: 2026-09-28. Update the diagrams whenever a component, data flow, table or external service changes (see [docs/README.md](README.md)).
+> Last updated: 2026-09-28 (Home tab and streaks). Update the diagrams whenever a component, data flow, table or external service changes (see [docs/README.md](README.md)).
 > Diagrams are Mermaid. They render on GitHub and in VS Code with a Mermaid preview extension.
 
 ## 1. Purpose and principles
@@ -27,7 +27,7 @@ flowchart LR
 
 | Actor | Uses |
 |---|---|
-| **User** | Chat logging, Dashboard, Analysis, My foods, Settings |
+| **User** | Home (summary and streaks), Chat logging, Dashboard, Analysis, My foods, Settings |
 | **Admin** (emails in `ADMIN_EMAILS`) | Admin console only: user list, per-user read-only data, audit log |
 | **LLM provider** | Nutrition estimation, clarifying questions, choosing tools. It never writes data. |
 
@@ -36,7 +36,7 @@ flowchart LR
 ```mermaid
 flowchart TB
     subgraph Browser
-        SPA[React 19 + Vite SPA<br/>Chat · Dashboard · Analysis · My foods<br/>Settings · Guide tour · Admin console]
+        SPA[React 19 + Vite SPA<br/>Home · Chat · Dashboard · Analysis · My foods<br/>Settings · Guide tour · Admin console]
         STT[Web Speech API]
         SPA --- STT
     end
@@ -104,7 +104,9 @@ flowchart LR
     D[Dashboard ⋯ menu] -->|POST /api/entries/items/id/transfer<br/>move or copy| E[services/entries]
     D -->|PATCH /api/entries/items/id<br/>quantity| E
     D -->|DELETE /api/entries/items/id| E
-    W[Water buttons] -->|POST · DELETE /api/water| WS[services/water]
+    W[Water buttons<br/>Home and Dashboard] -->|POST · DELETE /api/water| WS[services/water]
+    H[Home streaks] -->|GET /api/dashboard/streaks| AN[services/analysis]
+    AN --> DB
     E --> DB[(DB)]
     WS --> DB
     E -->|record_event| CM[chat event note<br/>so MacBro stays in sync]
@@ -124,7 +126,7 @@ flowchart TD
     Me -->|not onboarded| Onb[Onboarding → targets]
     Onb --> Me
     Me -->|guide not seen| Guide[First-run guide tour]
-    Me --> Tabs[Chat · Dashboard · Analysis · My foods]
+    Me --> Tabs[Home default · Chat · Dashboard · Analysis · My foods]
     Guide --> Tabs
 ```
 

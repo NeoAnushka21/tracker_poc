@@ -1,6 +1,6 @@
 # MacBro technical overview
 
-> Last updated: 2026-09-28 (UI refresh). Update this file in the same change as any code change it describes (see [docs/README.md](README.md)).
+> Last updated: 2026-09-28 (Home tab and streaks). Update this file in the same change as any code change it describes (see [docs/README.md](README.md)).
 > Architecture diagrams: [hld.md](hld.md). End-user manual: [user-guide.md](user-guide.md).
 
 ## 1. Tech stack
@@ -50,7 +50,7 @@ POC_new/
 └── frontend/
     ├── vite.config.ts            # dev proxy /api → :8000
     └── src/
-        ├── App.tsx               # auth gate, tabs, top bar, guide tour
+        ├── App.tsx               # auth gate, tabs (Home default), top bar, guide tour
         ├── api.ts                # typed fetch client
         ├── types.ts, format.ts, theme.ts, useSpeechToText.ts
         ├── styles.css
@@ -66,7 +66,7 @@ POC_new/
 | `services/foods.py` | Food library: unit normalisation, `scale_factor`, `resolve_library_item`, `upsert_estimate` (teach on confirm, never overwrite user-edited foods), `compute_recipe`, `save_recipe` |
 | `services/entries.py` | Direct item operations: `transfer_items` (move/copy), `set_item_quantity`, `delete_item` (soft-deletes an empty entry), `record_event` (chat note so the model knows) |
 | `services/water.py` | Water target (35 ml/kg + activity extra), add/delete, daily summary |
-| `services/analysis.py` | `range_summary` for 7/14/30 days, `on_target` (±10% kcal, ≥90% protein) |
+| `services/analysis.py` | `range_summary` for 7/14/30 days, `on_target` (±10% kcal, ≥90% protein); `streaks` (365-day window; today only counts once it qualifies, so it never breaks a streak) |
 | `services/progress.py` | "Day so far" card after a confirm: percentages and a template motivational line |
 | `services/micros.py` | Clean, scale and total the micronutrient JSON |
 | `services/cancel.py` | In-memory registry for the Stop button: `start`, `raise_if_cancelled`, `finish_or_cancelled` (atomic check before commit), `cancel` |
@@ -82,7 +82,7 @@ All endpoints are JSON under `/api`, authenticated by the session cookie. Every 
 | `profile` | `POST onboarding` · `GET preview-targets` · `PUT targets` · `POST weight` · `GET body` · `POST height` · `POST measurements` · `DELETE measurements/{id}` |
 | `chat` | `GET history` · `POST ""` (send; 503 with friendly text if the LLM fails) · `POST cancel` |
 | `actions` | `POST {id}/confirm` (returns the action + progress card) · `POST {id}/reject` |
-| `dashboard` | `GET daily?date=` · `GET range?days=&end=` |
+| `dashboard` | `GET daily?date=` · `GET range?days=&end=` · `GET streaks` (logging and target streaks, best, last 7 days) |
 | `entries` | `POST items/{id}/transfer` (move/copy) · `PATCH items/{id}` (quantity) · `DELETE items/{id}` |
 | `foods` | `GET ""` · `GET {id}` · `PUT {id}` · `DELETE {id}` |
 | `water` | `POST ""` · `DELETE {id}` |
@@ -147,14 +147,14 @@ FastAPI's interactive docs are at `http://localhost:8000/docs` while the backend
 
 | Component | Purpose |
 |---|---|
-| `App.tsx` | Loads `/me`, then routes: auth screen → admin console, or consent gate → onboarding → tabbed app. Tabs live in the URL hash. Owns `dataVersion` (bumped after writes so views refetch) and the first-run guide. |
+| `App.tsx` | Loads `/me`, then routes: auth screen → admin console, or consent gate → onboarding → tabbed app (Home, Chat, Dashboard, Analysis, My foods; Home is the default). Tabs live in the URL hash. Owns `dataVersion` (bumped after writes so views refetch) and the first-run guide. |
 | `AuthScreen` | Log in / Create account (with consent) / Admin login modes |
 | `ConsentGate` | Re-consent when `CONSENT_VERSION` changes |
 | `Onboarding` | Profile form, then editable target preview |
 | `GuideTour` | First-run walkthrough docked at the bottom. It switches tabs per step and calls `POST /auth/guide-seen` when closed. The **? Guide** button reopens it. **Its steps must match `docs/user-guide.md`.** |
 | `Chat` | Messages, example chips, mic, Stop, feedback mode, progress card |
 | `ProposalCard` | Renders each action type with Looks good / Needs changes / Cancel |
-| `SummaryStrip` | Eaten / target kcal and macros above the chat |
+| `HomePage` | Default tab: time-of-day greeting, today's summary (reuses `CalorieRing`, `Bar`, `Water` from `Dashboard`), and the two streak cards |
 | `Dashboard` | Day navigation, calorie ring, macro bars, calorie split, water, micronutrients, meal sections with the ⋯ item menu |
 | `AnalysisPage` + `charts.tsx` | 7/14/30-day range: stat tiles, line, bar and stacked charts with hover/keyboard tooltips and data tables |
 | `FoodsPage` | Library search, filter, edit and delete |
@@ -175,7 +175,7 @@ FastAPI's interactive docs are at `http://localhost:8000/docs` while the backend
 
 Light passes every check (worst colour-blind separation ΔE 9.4). Dark is in the 6–8 "floor" band (ΔE 7.9, green vs amber), which is allowed because every bar, chip and legend also carries a text label. Text always uses text tokens, never a series colour; neutral text tokens pass WCAG AA on every surface.
 
-**Visual language:** slate off-white background (`#f8fafc`) with white cards and soft shadows; pill tabs with a sliding gradient underline (`App.tsx` measures the active tab); a sticky glass summary bar; a pill-shaped chat input with gradient Send and mic buttons; a mint-tinted proposal card with row dividers only; a large glowing calorie ring; 14px macro bars; charts with rounded bar tops, dashed grid lines, no axis lines, and an arrow tooltip; Analysis stat cards with faint background icons; My foods as cards with hover-revealed icon buttons.
+**Visual language:** slate off-white background (`#f8fafc`) with white cards and soft shadows; pill tabs with a sliding gradient underline (`App.tsx` measures the active tab); a pill-shaped chat input with gradient Send and mic buttons; a mint-tinted proposal card with row dividers only; a large glowing calorie ring; 14px macro bars; charts with rounded bar tops, dashed grid lines, no axis lines, and an arrow tooltip; Analysis stat cards with faint background icons; My foods as cards with hover-revealed icon buttons.
 
 ## 8. Configuration
 
@@ -198,13 +198,14 @@ Domain constants (meal windows, goal multipliers, activity factors, water, fiber
 
 ```bash
 cd backend
-.venv\Scripts\python -m pytest -q      # 129 tests, fake LLM, no network
+.venv\Scripts\python -m pytest -q      # 131 tests, fake LLM, no network
 cd ../frontend
 npm run build                          # type-check + production build
 ```
 
+- The Vite dev server uses a polling file watcher (`vite.config.ts`), because native file events were missed on Windows and served stale modules.
 - `tests/conftest.py` gives each test a fresh database and a scripted `FakeProvider`. It also pins `ADMIN_EMAILS` and blanks `ADMIN_INITIAL_PASSWORD` so the local `.env` can't leak into tests.
-- Coverage by file: `test_flow` (confirm loop, auth, guide flag), `test_foods` (library, recipes), `test_micros`, `test_water_meals`, `test_admin`, `test_analysis`, `test_entries` (move/copy/quantity/delete), `test_body`, `test_openai_provider`, `test_nutrition`.
+- Coverage by file: `test_flow` (confirm loop, auth, guide flag), `test_foods` (library, recipes), `test_micros`, `test_water_meals`, `test_admin`, `test_analysis`, `test_entries` (move/copy/quantity/delete), `test_body`, `test_openai_provider`, `test_nutrition`, `test_streaks`.
 - **Policy:** development and tests use the fake model. Don't use the real LLM API for routine testing, because the free-tier quota is shared with real users.
 
 ## 10. Known limitations and next steps

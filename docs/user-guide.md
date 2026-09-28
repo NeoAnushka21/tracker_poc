@@ -4,7 +4,7 @@ MacBro (macro + bro) is a chat-based calorie and macro tracker. You tell it what
 
 This guide walks a new user through the app from sign-up to daily use. The same walkthrough appears inside the app as a short tour the first time you log in. You can reopen it any time with the **? Guide** button at the top.
 
-> Last updated: 2026-09-28 (UI refresh). Keep this file in step with the UI (see [docs/README.md](README.md)).
+> Last updated: 2026-09-28 (Home tab and streaks). Keep this file in step with the UI (see [docs/README.md](README.md)).
 
 ---
 
@@ -13,17 +13,18 @@ This guide walks a new user through the app from sign-up to daily use. The same 
 1. [Create your account](#1-create-your-account)
 2. [Set up your profile](#2-set-up-your-profile)
 3. [The first-run tour](#3-the-first-run-tour)
-4. [Log food in the Chat](#4-log-food-in-the-chat)
-5. [Confirm, correct or cancel](#5-confirm-correct-or-cancel)
-6. [Edit, move, copy and delete](#6-edit-move-copy-and-delete)
-7. [Water](#7-water)
-8. [Recipes and My foods](#8-recipes-and-my-foods)
-9. [Ask about your history](#9-ask-about-your-history)
-10. [The Dashboard](#10-the-dashboard)
-11. [Analysis](#11-analysis)
-12. [Settings](#12-settings)
-13. [Tips for accurate logging](#13-tips-for-accurate-logging)
-14. [Troubleshooting and FAQ](#14-troubleshooting-and-faq)
+4. [Your Home page](#4-your-home-page)
+5. [Log food in the Chat](#5-log-food-in-the-chat)
+6. [Confirm, correct or cancel](#6-confirm-correct-or-cancel)
+7. [Edit, move, copy and delete](#7-edit-move-copy-and-delete)
+8. [Water](#8-water)
+9. [Recipes and My foods](#9-recipes-and-my-foods)
+10. [Ask about your history](#10-ask-about-your-history)
+11. [The Dashboard](#11-the-dashboard)
+12. [Analysis](#12-analysis)
+13. [Settings](#13-settings)
+14. [Tips for accurate logging](#14-tips-for-accurate-logging)
+15. [Troubleshooting and FAQ](#15-troubleshooting-and-faq)
 
 ---
 
@@ -70,13 +71,29 @@ After you submit, **Your daily targets** shows the calories, protein, carbs, fat
 
 ## 3. The first-run tour
 
-The first time you reach the main screen, a small panel opens at the bottom. It steps through the tabs (Chat → Dashboard → Analysis → My foods) and explains each one.
+The first time you reach the main screen, a small panel opens at the bottom. It steps through the tabs (Home → Chat → Dashboard → Analysis → My foods) and explains each one.
 
 - Use **Next** and **Back** (or the ← → keys) to move between steps.
 - **Skip**, **✕** or **Esc** closes the tour.
 - Reopen it any time from **? Guide** in the top bar.
 
-## 4. Log food in the Chat
+## 4. Your Home page
+
+**Home** is the first tab you see after logging in.
+
+- **Greeting:** "Good morning", "Good afternoon" or "Good evening" with your name, today's date, and a one-line status (e.g. "979 kcal in, 681 kcal to go").
+- **Log a meal** takes you straight to the Chat.
+- **Today's summary:** the calorie ring (**eaten / target**, with **Balance** and **Progress**), then protein, fiber, carbs and fat bars, then **Water** with +250 ml / +500 ml / Undo. **Open dashboard →** shows the full day, including meals and micronutrients.
+- **Streaks:**
+
+| Streak | Counts |
+|---|---|
+| **Meal logging streak** 🔥 | Days in a row with at least one confirmed meal |
+| **Target streak** 🎯 | Days in a row within ±10% of your calorie target with at least 90% of your protein target |
+
+Each card shows the current streak, your best streak, and the last 7 days as ticks. Today is still in progress, so it never breaks a streak. It is added as soon as it qualifies ("Today counts ✓"); otherwise the card nudges you, e.g. "Log a meal today to keep it going". A day is judged on its final numbers, so the target streak can drop back if you go well over your calories later in the day.
+
+## 5. Log food in the Chat
 
 The **Chat** tab is where you talk to MacBro.
 
@@ -107,9 +124,9 @@ If something is ambiguous, for example "a bowl of pasta", MacBro asks a short qu
 
 **Stop:** while MacBro is thinking, press **■ Stop**. Your message comes back to the input box so you can edit it and send again.
 
-Above the chat, the floating **summary bar** stays pinned while you scroll. It shows today's calories as **eaten / target** (e.g. `1,005 / 1,920 kcal today`) with protein, carbs and fat. Click it to open the Dashboard.
+Today's totals are on the **Home** tab (and in the **Day so far** card after each confirmed meal).
 
-## 5. Confirm, correct or cancel
+## 6. Confirm, correct or cancel
 
 Every change MacBro suggests arrives as a **card** marked **Not saved yet**. It lists each item with its quantity, calories and protein / carbs / fat, then the totals, meal and time.
 
@@ -123,7 +140,7 @@ After you confirm a meal, a **Day so far** card shows how much of each target yo
 
 Cards you leave unanswered expire after 24 hours. Unconfirmed cards never count toward your totals.
 
-## 6. Edit, move, copy and delete
+## 7. Edit, move, copy and delete
 
 You can do this **in the chat** (with a confirmation card) or **on the Dashboard** (straight away).
 
@@ -142,14 +159,14 @@ You can do this **in the chat** (with a confirmation card) or **on the Dashboard
 - **✎ Ask MacBro to edit**: opens the chat with the message started for you, e.g. to change ingredients.
 - **Delete**: asks you to confirm first.
 
-## 7. Water
+## 8. Water
 
 - **Chat:** `two glasses of water`, `drank 750 ml`. You'll get a water card; press **Log water**.
 - **Dashboard:** in the **Water** section, tap **+ 250 ml** or **+ 500 ml**, or **Undo** to remove the last entry.
 
 Your water target is based on your weight and activity level. The bar shows litres drunk against the target, with "to go" or "goal met ✓".
 
-## 8. Recipes and My foods
+## 9. Recipes and My foods
 
 **My foods** is your personal food library. Every food in a meal you confirm is saved there automatically, so the next time you log it MacBro reuses **exactly the same numbers** and scales them to the amount.
 
@@ -167,7 +184,7 @@ Your water target is based on your weight and activity level. The bar shows litr
 
 Editing a recipe only affects future logs.
 
-## 9. Ask about your history
+## 10. Ask about your history
 
 MacBro answers from your **confirmed** data only:
 
@@ -176,7 +193,7 @@ MacBro answers from your **confirmed** data only:
 - `what was my highest-calorie meal on Monday?`
 - `how many calories do I have left today?`
 
-## 10. The Dashboard
+## 11. The Dashboard
 
 | Section | What you see |
 |---|---|
@@ -190,11 +207,11 @@ MacBro answers from your **confirmed** data only:
 
 Micronutrients are estimates. Treat them as a guide, not a lab result.
 
-## 11. Analysis
+## 12. Analysis
 
 The **Analysis** tab shows trends over **7, 14 or 30 days**:
 
-- summary cards: average calories, average protein, **days on target**, average water
+- summary cards: average calories, average protein, average water (your target streak is on **Home**)
 - calories per day and protein per day against target
 - macro trends
 - where your calories came from
@@ -204,7 +221,7 @@ The **Analysis** tab shows trends over **7, 14 or 30 days**:
 
 Hover over any chart, or tab to it with the keyboard, to see exact values. A day counts as "on target" when calories are within ±10% of target and protein is at least 90% of target.
 
-## 12. Settings
+## 13. Settings
 
 Open **⚙ Settings** from the top bar.
 
@@ -216,7 +233,7 @@ Open **⚙ Settings** from the top bar.
 | **Password** | Change your password (needs the current one). |
 | **Delete account** | Permanently removes your account and **all** your data. Needs your password and can't be undone. |
 
-## 13. Tips for accurate logging
+## 14. Tips for accurate logging
 
 - **Give amounts:** grams, cups, pieces or "a medium bowl". Weighed amounts are the most accurate.
 - **Mention oil, butter, ghee and sauces.** They add a lot of calories.
@@ -225,7 +242,7 @@ Open **⚙ Settings** from the top bar.
 - **Save recipes** for home-cooked dishes you eat often.
 - **Correct once, reuse forever:** fix a food in *My foods* and every future log uses your numbers.
 
-## 14. Troubleshooting and FAQ
+## 15. Troubleshooting and FAQ
 
 **"MacBro's servers are temporarily down."** The AI model is unavailable or its free daily limit is used up. Your data is safe. Try again later. You can still use the Dashboard, water buttons and item actions, since they don't need the AI.
 

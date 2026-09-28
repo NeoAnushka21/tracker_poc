@@ -6,6 +6,8 @@ export default defineConfig({
   plugins: [react()],
   server: {
     port: 5173,
+    // Native file events were missed on Windows (stale modules after edits); polling is reliable.
+    watch: { usePolling: true, interval: 300 },
     proxy: { "/api": "http://127.0.0.1:8000" },
   },
 });

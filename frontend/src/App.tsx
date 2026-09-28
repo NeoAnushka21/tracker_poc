@@ -6,7 +6,7 @@ import Onboarding from "./components/Onboarding";
 import Chat from "./components/Chat";
 import Dashboard from "./components/Dashboard";
 import SettingsDialog from "./components/SettingsDialog";
-import SummaryStrip from "./components/SummaryStrip";
+import HomePage from "./components/HomePage";
 import FoodsPage from "./components/FoodsPage";
 import AnalysisPage from "./components/AnalysisPage";
 import AdminPage from "./components/AdminPage";
@@ -15,6 +15,7 @@ import GuideTour from "./components/GuideTour";
 import { MacBroAvatar, UserAvatar } from "./components/Avatar";
 
 const TABS = [
+  { id: "home", label: "Home" },
   { id: "chat", label: "Chat" },
   { id: "dashboard", label: "Dashboard" },
   { id: "analysis", label: "Analysis" },
@@ -24,12 +25,7 @@ type TabId = (typeof TABS)[number]["id"];
 
 function tabFromHash(): TabId {
   const h = window.location.hash.replace("#", "");
-  return (TABS.find((t) => t.id === h)?.id ?? "chat") as TabId;
-}
-
-function greeting(): string {
-  const h = new Date().getHours();
-  return h < 12 ? "Good morning" : h < 17 ? "Good afternoon" : "Good evening";
+  return (TABS.find((t) => t.id === h)?.id ?? "home") as TabId;
 }
 
 export default function App() {
@@ -78,7 +74,7 @@ export default function App() {
 
   function closeGuide() {
     setGuideOpen(false);
-    openTab("chat");
+    openTab("home");
     if (user && !user.guide_seen) api.guideSeen().then(setUser).catch(() => {});
   }
 
@@ -132,7 +128,7 @@ export default function App() {
   if (!user.onboarded) return <Onboarding onDone={setUser} />;
 
   const tabs = TABS;
-  const current = tabs.some((t) => t.id === tab) ? tab : "chat";
+  const current = tabs.some((t) => t.id === tab) ? tab : "home";
 
   return (
     <div className="app">
@@ -144,8 +140,7 @@ export default function App() {
           </button>
           {settingsButton}
           <button className="ghost" onClick={logout}>Log out</button>
-          <span className="topbar-user">
-            <span className="greeting">{greeting()}{user.preferred_name ? `, ${user.preferred_name}` : ""}</span>
+          <span className="topbar-user" title={user.email}>
             <UserAvatar name={user.preferred_name} email={user.email} size={34} />
           </span>
         </div>
@@ -168,8 +163,11 @@ export default function App() {
                             style={{ transform: `translateX(${indicator.left}px)`, width: indicator.width }} />}
       </nav>
       {/* Panels stay mounted so the chat keeps its scroll position and draft text. */}
+      <main className="page" id="panel-home" role="tabpanel" aria-labelledby="tab-home" hidden={current !== "home"}>
+        <HomePage user={user} dataVersion={dataVersion} onDataChanged={() => setDataVersion((v) => v + 1)}
+                  onOpenChat={() => openTab("chat")} onOpenDashboard={() => openTab("dashboard")} />
+      </main>
       <main className="page page-chat" id="panel-chat" role="tabpanel" aria-labelledby="tab-chat" hidden={current !== "chat"}>
-        <SummaryStrip dataVersion={dataVersion} onOpen={() => openTab("dashboard")} />
         <Chat user={user} onDataChanged={() => setDataVersion((v) => v + 1)} draft={chatDraft} />
       </main>
       <main className="page" id="panel-dashboard" role="tabpanel" aria-labelledby="tab-dashboard" hidden={current !== "dashboard"}>
