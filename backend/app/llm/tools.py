@@ -11,7 +11,7 @@ from datetime import date, datetime, timedelta, timezone
 from pydantic import ValidationError
 from sqlalchemy.orm import Session
 
-from app.config import MEAL_TYPES, MICRONUTRIENTS
+from app.config import LEGACY_SNACK, MEAL_TYPES, MICRONUTRIENTS, WATER_MAX_LOG_ML
 from app.models import PendingAction, User, utcnow
 from app.schemas import ItemIn
 from app.services.foods import (
@@ -20,7 +20,7 @@ from app.services.foods import (
 from app.services.logs import (
     daily_summary, entry_to_dict, get_active_entry, logs_by_day, sum_items,
 )
-from app.timeutil import infer_meal_type, local_to_utc, utc_to_local
+from app.timeutil import infer_meal_type, local_to_utc, resolve_meal_type, utc_to_local
 
 MAX_QUERY_DAYS = 31
 
@@ -72,7 +72,8 @@ _ITEM_SCHEMA = {
     "additionalProperties": False,
 }
 
-_MEAL_TYPE = {"type": "string", "enum": MEAL_TYPES}
+# "snack" is accepted when the user doesn't say which; the app picks morning/evening by time.
+_MEAL_TYPE = {"type": "string", "enum": MEAL_TYPES + [LEGACY_SNACK]}
 
 _NOTE = {
     "type": "string",
@@ -166,6 +167,24 @@ TOOLS = [
                 "note": _NOTE,
             },
             "required": ["name", "ingredients", "yield_pieces", "yield_servings", "cooked_weight_g", "note"],
+            "additionalProperties": False,
+        },
+    },
+    {
+        "name": "propose_water",
+        "description": (
+            "Propose logging plain drinking water to the separate water tracker (not a food entry). "
+            "Nothing is saved until the user confirms."
+        ),
+        "strict": True,
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "amount_ml": {"type": "number", "description": "Total ml (1 glass = 250 ml, 1 litre = 1000 ml)"},
+                "drank_at": _nullable({"type": "string"}, "Local time 'YYYY-MM-DDTHH:MM' if not just now, else null"),
+                "note": _NOTE,
+            },
+            "required": ["amount_ml", "drank_at", "note"],
             "additionalProperties": False,
         },
     },
@@ -369,7 +388,7 @@ def _propose_entry(ctx: ToolContext, args: dict) -> dict:
         "summary": args.get("summary") or "Food log",
         "eaten_at": eaten_local.strftime("%Y-%m-%dT%H:%M"),
         "eaten_at_utc": eaten_utc.isoformat(),
-        "meal_type": stated or infer_meal_type(eaten_local),
+        "meal_type": resolve_meal_type(stated, eaten_local),
         "meal_type_source": "stated" if stated else "inferred",
         "items": items,
         "totals": sum_items(items),
@@ -388,7 +407,7 @@ def _propose_edit(ctx: ToolContext, args: dict) -> dict:
         eaten_utc = entry.eaten_at
     eaten_local = utc_to_local(eaten_utc, tz)
     if args.get("meal_type"):
-        meal_type = args["meal_type"]
+        meal_type = resolve_meal_type(args["meal_type"], eaten_local)
     elif args.get("eaten_at"):
         meal_type = infer_meal_type(eaten_local)
     else:
@@ -451,6 +470,21 @@ def _propose_recipe(ctx: ToolContext, args: dict) -> dict:
     return _add_action(ctx, "save_recipe", payload, None, args.get("note"))
 
 
+def _propose_water(ctx: ToolContext, args: dict) -> dict:
+    amount = args.get("amount_ml")
+    if not isinstance(amount, (int, float)) or not 0 < amount <= WATER_MAX_LOG_ML:
+        raise ToolInputError(f"amount_ml must be between 1 and {WATER_MAX_LOG_ML}")
+    tz = ctx.user.timezone
+    drank_utc = _parse_local_dt(args["drank_at"], tz) if args.get("drank_at") else utcnow()
+    payload = {
+        "summary": f"Water: {amount:g} ml",
+        "amount_ml": round(float(amount)),
+        "drank_at": utc_to_local(drank_utc, tz).strftime("%Y-%m-%dT%H:%M"),
+        "drank_at_utc": drank_utc.isoformat(),
+    }
+    return _add_action(ctx, "water", payload, None, args.get("note"))
+
+
 def _get_food(ctx: ToolContext, args: dict) -> dict:
     food = get_user_food(ctx.db, ctx.user.id, args["food_id"])
     if food is None:
@@ -476,6 +510,7 @@ _HANDLERS = {
     "propose_edit": _propose_edit,
     "propose_delete": _propose_delete,
     "propose_recipe": _propose_recipe,
+    "propose_water": _propose_water,
     "get_food": _get_food,
     "get_logs": _get_logs,
     "get_daily_summary": _get_daily_summary,

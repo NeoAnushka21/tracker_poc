@@ -58,6 +58,9 @@ export type ActionPayload = {
   totals?: Nutrients;
   entry_id?: number;
   before?: Entry;
+  // water
+  amount_ml?: number;
+  drank_at?: string;
   // save_recipe
   name?: string;
   replaces_recipe_id?: number | null;
@@ -73,7 +76,7 @@ export type ActionPayload = {
 
 export type Action = {
   id: number;
-  action_type: "create" | "edit" | "delete" | "save_recipe";
+  action_type: "create" | "edit" | "delete" | "save_recipe" | "water";
   status: "pending" | "confirmed" | "rejected" | "superseded" | "expired";
   target_entry_id: number | null;
   result_entry_id: number | null;
@@ -94,7 +97,14 @@ export type DailySummary = {
   consumed: Nutrients;
   remaining: Nutrients | null;
   micronutrients: MicroSummary;
+  water: WaterSummary;
   entries: Entry[];
+};
+
+export type WaterSummary = {
+  target_ml: number | null;
+  consumed_ml: number;
+  logs: { id: number; amount_ml: number; drank_at: string }[];
 };
 
 export type Micronutrient = {

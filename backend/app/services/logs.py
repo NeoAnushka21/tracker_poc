@@ -7,6 +7,7 @@ from sqlalchemy.orm import Session, selectinload
 from app.models import LogEntry, User, UserTarget, WeightLog
 from app.nutrition import age_on, fiber_target_g, micronutrient_targets
 from app.services import micros
+from app.services.water import water_summary
 from app.timeutil import local_day_bounds_utc, utc_to_local
 
 NUTRIENTS = ["calories", "protein_g", "carbs_g", "fat_g", "fiber_g"]
@@ -125,8 +126,14 @@ def daily_summary(db: Session, user: User, day: date) -> dict:
         "consumed": consumed,
         "remaining": remaining,
         "micronutrients": _micros_summary(user, day, all_items),
+        "water": water_summary(db, user, day, _weight(db, user.id)),
         "entries": [entry_to_dict(e, user.timezone) for e in entries],
     }
+
+
+def _weight(db: Session, user_id: int) -> float | None:
+    w = current_weight(db, user_id)
+    return w.weight_kg if w else None
 
 
 def _micros_summary(user: User, day: date, items) -> dict:

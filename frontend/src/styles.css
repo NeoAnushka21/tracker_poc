@@ -18,6 +18,7 @@
   --fat: #eb6834;
   --fiber: #eda100;
   --micro: #6b7280;
+  --water: #4a3aa7;
   --status-warning: #b45309;
   --avatar-bg: #2f6f4f;
   --avatar-fg: #ffffff;
@@ -48,6 +49,7 @@
     --fat: #d95926;
     --fiber: #c98500;
     --micro: #9aa1ab;
+    --water: #9085e9;
     --status-warning: #f0a24a;
     --avatar-bg: #5fb88a;
     --avatar-fg: #0d1a13;
@@ -284,10 +286,39 @@ button.link { background: none; border: none; color: var(--accent); padding: 6px
 .bar-fill { height: 100%; background: var(--tone); border-radius: 999px; transition: width 0.3s; }
 .bar-fill.over { background: var(--status-warning); }
 
-.meal-group { margin-bottom: 12px; }
-.meal-head { display: flex; justify-content: space-between; font-weight: 600; font-size: 0.9rem; padding: 4px 0; border-bottom: 1px solid var(--border); }
-.entry { display: grid; grid-template-columns: 44px 1fr auto; gap: 8px; font-size: 0.85rem; padding: 6px 0; }
-.entry-items { overflow-wrap: anywhere; }
+/* meals */
+.meals { display: grid; gap: 10px; }
+.meal-card { border: 1px solid var(--border); border-radius: 10px; padding: 10px 14px; }
+.meal-card.empty { background: var(--surface-2); border-style: dashed; }
+.meal-card.empty p { margin: 2px 0 0; }
+.meal-head { display: flex; justify-content: space-between; font-weight: 600; font-size: 0.95rem; }
+.meal-macros { display: flex; flex-wrap: wrap; gap: 4px 12px; font-size: 0.8rem; color: var(--muted); margin: 4px 0 6px; }
+.macro-chip { display: inline-flex; align-items: center; gap: 5px; }
+.macro-chip i { width: 8px; height: 8px; border-radius: 2px; display: inline-block; }
+.macro-chip.protein i { background: var(--protein); }
+.macro-chip.fiber i { background: var(--fiber); }
+.macro-chip.carbs i { background: var(--carbs); }
+.macro-chip.fat i { background: var(--fat); }
+.meal-items { list-style: none; margin: 0; padding: 0; border-top: 1px solid var(--border); }
+.meal-items li {
+  display: grid; grid-template-columns: minmax(0, 1fr) auto 48px; gap: 10px;
+  font-size: 0.86rem; padding: 6px 0; border-bottom: 1px solid var(--border);
+}
+.meal-items li:last-child { border-bottom: none; padding-bottom: 0; }
+.meal-item-name { overflow-wrap: anywhere; }
+.meal-item-qty { white-space: nowrap; }
+.meal-items .num { text-align: right; }
+
+/* water */
+.water { margin-top: 16px; padding-top: 4px; border-top: 1px solid var(--border); }
+.water-head { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; flex-wrap: wrap; }
+.water-head h3 { display: inline-flex; align-items: center; gap: 6px; margin-bottom: 6px; }
+.water-icon { color: var(--water); display: inline-flex; }
+.water .bar { --tone: var(--water); height: 10px; }
+.water-actions { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-top: 10px; }
+.water-actions button { padding: 6px 12px; font-size: 0.85rem; }
+.water-proposal { display: flex; align-items: baseline; gap: 8px; margin-top: 6px; }
+.water-proposal b { font-size: 1.2rem; color: var(--water); }
 
 /* ---------- dialog ---------- */
 .backdrop { position: fixed; inset: 0; background: rgb(0 0 0 / 0.4); display: grid; place-items: center; padding: 16px; z-index: 10; }
@@ -303,6 +334,7 @@ button.link { background: none; border: none; color: var(--accent); padding: 6px
   .tabs { padding: 0 8px; }
   .strip-macros { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; min-width: 0; width: 100%; }
   .micro-grid { grid-template-columns: 1fr; }
+  .meal-items li { grid-template-columns: minmax(0, 1fr) auto 40px; gap: 6px; }
   .targets-grid { grid-template-columns: repeat(2, 1fr); }
   .row { flex-direction: column; gap: 0; }
   .row.tight { flex-direction: row; gap: 6px; }

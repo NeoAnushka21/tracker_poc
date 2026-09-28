@@ -32,13 +32,21 @@ CHAT_HISTORY_MESSAGES = int(os.getenv("CHAT_HISTORY_MESSAGES", "30" if _IS_ANTHR
 
 # --- Meal-type inference (user's local time, [start, end) hours) ----------
 MEAL_WINDOWS = [
-    ("breakfast", 5, 11),
-    ("lunch", 11, 15),
-    ("snack", 15, 19),
+    ("breakfast", 5, 10),
+    ("morning_snack", 10, 12),
+    ("lunch", 12, 15),
+    ("evening_snack", 15, 19),
     ("dinner", 19, 23),
 ]
-MEAL_FALLBACK = "snack"  # 23:00-05:00
-MEAL_TYPES = ["breakfast", "lunch", "dinner", "snack"]
+MEAL_FALLBACK = "evening_snack"  # late night, 23:00-05:00
+MEAL_TYPES = ["breakfast", "morning_snack", "lunch", "evening_snack", "dinner"]
+SNACK_TYPES = ("morning_snack", "evening_snack")
+LEGACY_SNACK = "snack"           # older entries; relabelled at startup
+
+# --- Water ---------------------------------------------------------------
+WATER_ML_PER_KG = 35             # common hydration guideline for drinking water
+WATER_ACTIVITY_EXTRA_ML = {"sedentary": 0, "light": 250, "moderate": 500, "active": 750, "very_active": 1000}
+WATER_MAX_LOG_ML = 5000          # sanity cap for a single water log
 
 # --- Pending proposals ---------------------------------------------------
 PENDING_TTL_HOURS = 24

@@ -104,6 +104,17 @@ class LogEntryItem(Base):
     entry: Mapped[LogEntry] = relationship(back_populates="items")
 
 
+class WaterLog(Base):
+    """Plain drinking water, tracked separately from food."""
+    __tablename__ = "water_logs"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), index=True)
+    amount_ml: Mapped[float] = mapped_column(Float)
+    drank_at: Mapped[datetime] = mapped_column(DateTime, index=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
+
+
 class UserFood(Base):
     """A food in the user's personal library, or a saved recipe.
 

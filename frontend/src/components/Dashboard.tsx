@@ -1,9 +1,7 @@
 import { useEffect, useState } from "react";
 import { api } from "../api";
-import type { DailySummary, Entry, MicroSummary } from "../types";
-import { MEAL_LABEL, friendlyDate, kcal, shiftDay, time } from "../format";
-
-const MEAL_ORDER = ["breakfast", "lunch", "snack", "dinner"];
+import type { DailySummary, Entry, Item, MicroSummary, WaterSummary } from "../types";
+import { MEAL_LABEL, MEAL_ORDER, friendlyDate, grams, kcal, litres, shiftDay } from "../format";
 
 /** A meter: one macro against its target. Identity comes from the label; the fill hue repeats it. */
 function Bar({ label, value, target, unit, tone }: {
@@ -98,7 +96,119 @@ function Micronutrients({ m }: { m: MicroSummary }) {
   );
 }
 
-export default function Dashboard({ dataVersion }: { dataVersion: number }) {
+function WaterDrop() {
+  return (
+    <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
+      <path d="M12 3c3.5 4.4 6 7.9 6 11a6 6 0 0 1-12 0c0-3.1 2.5-6.6 6-11z" fill="currentColor" />
+    </svg>
+  );
+}
+
+/** Independent water tracker: quick-add buttons save directly (they're the user's own clicks). */
+function Water({ w, isToday, onChanged }: { w: WaterSummary; isToday: boolean; onChanged: () => void }) {
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const target = w.target_ml ?? 0;
+  const pct = target > 0 ? Math.min(100, (w.consumed_ml / target) * 100) : 0;
+  const met = target > 0 && w.consumed_ml >= target;
+  const last = w.logs[w.logs.length - 1];
+
+  async function run(fn: () => Promise<unknown>) {
+    setBusy(true);
+    setError(null);
+    try {
+      await fn();
+      onChanged();
+    } catch (e) {
+      setError((e as Error).message);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <section className="water" aria-labelledby="water-heading">
+      <div className="water-head">
+        <h3 id="water-heading"><span className="water-icon"><WaterDrop /></span>Water</h3>
+        <span className="num">
+          {litres(w.consumed_ml)}{target > 0 && ` / ${litres(target)}`}
+          <span className="muted">
+            {target > 0 && (met ? " · goal met ✓" : ` · ${litres(target - w.consumed_ml)} to go`)}
+          </span>
+        </span>
+      </div>
+      <div className="bar water-bar" role="progressbar" aria-label="Water"
+           aria-valuenow={w.consumed_ml} aria-valuemax={target}>
+        <div className="bar-fill" style={{ width: `${pct}%` }} />
+      </div>
+      {isToday && (
+        <div className="water-actions">
+          <button onClick={() => run(() => api.addWater(250))} disabled={busy}>+ 250 ml</button>
+          <button onClick={() => run(() => api.addWater(500))} disabled={busy}>+ 500 ml</button>
+          <button className="ghost" onClick={() => last && run(() => api.deleteWater(last.id))}
+                  disabled={busy || !last} title={last ? `Remove the last ${last.amount_ml} ml` : undefined}>
+            Undo
+          </button>
+          <span className="muted small">or tell the chat, e.g. "drank 1 L water"</span>
+        </div>
+      )}
+      {!target && <p className="muted small">Add your weight under Targets &amp; weight to get a daily water goal.</p>}
+      {error && <p className="error small">{error}</p>}
+    </section>
+  );
+}
+
+function sumItems(items: Item[]) {
+  return items.reduce(
+    (t, i) => ({
+      calories: t.calories + i.calories, protein_g: t.protein_g + i.protein_g, fiber_g: t.fiber_g + (i.fiber_g ?? 0),
+      carbs_g: t.carbs_g + i.carbs_g, fat_g: t.fat_g + i.fat_g,
+    }),
+    { calories: 0, protein_g: 0, fiber_g: 0, carbs_g: 0, fat_g: 0 },
+  );
+}
+
+/** One meal: its own macro breakdown, then each food on its own line. */
+function MealSection({ meal, entries }: { meal: string; entries: Entry[] }) {
+  const items = entries.flatMap((e) => e.items);
+  const t = sumItems(items);
+  return (
+    <div className={`meal-card ${items.length ? "" : "empty"}`}>
+      <div className="meal-head">
+        <span className="meal-name">{MEAL_LABEL[meal] ?? meal}</span>
+        <span className="num">{items.length ? kcal(t.calories) : "–"}</span>
+      </div>
+      {items.length > 0 ? (
+        <>
+          <div className="meal-macros">
+            <span className="macro-chip protein"><i />P {grams(t.protein_g)}</span>
+            <span className="macro-chip fiber"><i />Fiber {grams(t.fiber_g)}</span>
+            <span className="macro-chip carbs"><i />C {grams(t.carbs_g)}</span>
+            <span className="macro-chip fat"><i />F {grams(t.fat_g)}</span>
+          </div>
+          <ul className="meal-items">
+            {items.map((it, idx) => (
+              <li key={idx}>
+                <span className="meal-item-name">
+                  {it.ingredient_name}
+                  {it.brand_name && <span className="muted"> · {it.brand_name}</span>}
+                </span>
+                <span className="muted meal-item-qty">{it.quantity} {it.unit}</span>
+                <span className="num">{Math.round(it.calories)}</span>
+              </li>
+            ))}
+          </ul>
+        </>
+      ) : (
+        <p className="muted small">Nothing logged</p>
+      )}
+    </div>
+  );
+}
+
+type DashboardProps = { dataVersion: number; onDataChanged: () => void };
+
+export default function Dashboard({ dataVersion, onDataChanged }: DashboardProps) {
   const [day, setDay] = useState<string | undefined>(undefined);
   const [today, setToday] = useState<string | null>(null);
   const [data, setData] = useState<DailySummary | null>(null);
@@ -142,27 +252,16 @@ export default function Dashboard({ dataVersion }: { dataVersion: number }) {
         <p className="muted">No targets set.</p>
       )}
 
+      {data.water && <Water w={data.water} isToday={data.date === today} onChanged={onDataChanged} />}
+
       {data.micronutrients && <Micronutrients m={data.micronutrients} />}
 
       <h3>Meals</h3>
-      {data.entries.length === 0 && <p className="muted small">Nothing logged{data.date === today ? " yet today" : ""}.</p>}
-      {MEAL_ORDER.filter((m) => byMeal[m]).map((meal) => (
-        <div key={meal} className="meal-group">
-          <div className="meal-head">
-            <span>{MEAL_LABEL[meal]}</span>
-            <span className="muted num">{kcal(byMeal[meal].reduce((s, e) => s + e.totals.calories, 0))}</span>
-          </div>
-          {byMeal[meal].map((e) => (
-            <div key={e.id} className="entry">
-              <span className="muted num">{time(e.eaten_at)}</span>
-              <span className="entry-items">
-                {e.items.map((i) => `${i.quantity} ${i.unit} ${i.ingredient_name}`).join(", ")}
-              </span>
-              <span className="num">{Math.round(e.totals.calories)}</span>
-            </div>
-          ))}
-        </div>
-      ))}
+      <div className="meals">
+        {[...MEAL_ORDER, ...Object.keys(byMeal).filter((m) => !MEAL_ORDER.includes(m))].map((meal) => (
+          <MealSection key={meal} meal={meal} entries={byMeal[meal] ?? []} />
+        ))}
+      </div>
     </section>
   );
 }

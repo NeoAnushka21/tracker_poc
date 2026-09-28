@@ -37,8 +37,9 @@ def test_gain_goal_is_a_surplus():
 
 
 @pytest.mark.parametrize("hour,meal", [
-    (4, "snack"), (5, "breakfast"), (10, "breakfast"), (11, "lunch"), (14, "lunch"),
-    (15, "snack"), (18, "snack"), (19, "dinner"), (22, "dinner"), (23, "snack"),
+    (4, "evening_snack"), (5, "breakfast"), (9, "breakfast"), (10, "morning_snack"), (11, "morning_snack"),
+    (12, "lunch"), (14, "lunch"), (15, "evening_snack"), (18, "evening_snack"), (19, "dinner"),
+    (22, "dinner"), (23, "evening_snack"),
 ])
 def test_meal_windows(hour, meal):
     assert infer_meal_type(datetime(2026, 1, 1, hour, 30)) == meal

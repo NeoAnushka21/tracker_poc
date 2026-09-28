@@ -14,12 +14,20 @@ export const ACTIVITY: Record<string, string> = {
   very_active: "Very active: hard training or physical job",
 };
 
+export const MEAL_ORDER = ["breakfast", "morning_snack", "lunch", "evening_snack", "dinner"];
+
 export const MEAL_LABEL: Record<string, string> = {
   breakfast: "Breakfast",
+  morning_snack: "Morning snack",
   lunch: "Lunch",
-  snack: "Snack",
+  evening_snack: "Evening snack",
   dinner: "Dinner",
+  snack: "Snack",
 };
+
+export function litres(ml: number): string {
+  return `${(Math.round(ml / 100) / 10).toFixed(1)} L`;
+}
 
 export const kcal = (n: number) => `${Math.round(n)} kcal`;
 export const grams = (n: number) => `${Math.round(n * 10) / 10}g`;

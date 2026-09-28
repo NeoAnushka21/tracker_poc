@@ -84,5 +84,8 @@ export const api = {
   updateFood: (id: number, data: FoodInput) => request<Food>("PUT", `/api/foods/${id}`, data),
   deleteFood: (id: number) => request<{ ok: boolean }>("DELETE", `/api/foods/${id}`),
 
+  addWater: (amount_ml: number) => request<{ id: number; amount_ml: number }>("POST", "/api/water", { amount_ml }),
+  deleteWater: (id: number) => request<{ ok: boolean }>("DELETE", `/api/water/${id}`),
+
   daily: (day?: string) => request<DailySummary>("GET", `/api/dashboard/daily${day ? `?day=${day}` : ""}`),
 };

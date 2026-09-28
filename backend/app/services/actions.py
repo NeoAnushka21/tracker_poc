@@ -15,6 +15,8 @@ from app.config import PENDING_TTL_HOURS
 from app.models import ChatMessage, LogEntry, LogEntryItem, PendingAction, User, utcnow
 from app.services.foods import FoodError, record_confirmed_items, save_recipe
 from app.services.logs import get_active_entry
+from app.services.water import add_water
+from app.timeutil import resolve_meal_type, utc_to_local
 
 
 def expire_stale(db: Session, user_id: int) -> None:
@@ -77,6 +79,12 @@ def _log_event(db: Session, user_id: int, text: str, entry_id: int | None = None
     return msg
 
 
+def _meal_type(payload: dict, user: User) -> str:
+    """Proposals made before morning/evening snacks existed may still say 'snack'."""
+    local = utc_to_local(datetime.fromisoformat(payload["eaten_at_utc"]), user.timezone)
+    return resolve_meal_type(payload["meal_type"], local)
+
+
 def _items_from_payload(payload: dict) -> list[LogEntryItem]:
     return [
         LogEntryItem(
@@ -99,6 +107,13 @@ def confirm_action(db: Session, user: User, action_id: int) -> tuple[PendingActi
     action = _get_open_action(db, user, action_id)
     p = action.payload
 
+    if action.action_type == "water":
+        log = add_water(db, user, p["amount_ml"], datetime.fromisoformat(p["drank_at_utc"]))
+        action.status, action.resolved_at = "confirmed", utcnow()
+        event = _log_event(db, user.id, f"User confirmed proposal #{action.id}; {log.amount_ml:g} ml water logged.")
+        db.commit()
+        return action, event
+
     if action.action_type == "save_recipe":
         try:
             recipe = save_recipe(db, user, p)
@@ -117,7 +132,7 @@ def confirm_action(db: Session, user: User, action_id: int) -> tuple[PendingActi
         entry = LogEntry(
             user_id=user.id,
             eaten_at=datetime.fromisoformat(p["eaten_at_utc"]),
-            meal_type=p["meal_type"],
+            meal_type=_meal_type(p, user),
             raw_user_message=p.get("raw_user_message"),
             items=_items_from_payload(p),
         )
@@ -135,7 +150,7 @@ def confirm_action(db: Session, user: User, action_id: int) -> tuple[PendingActi
 
         if action.action_type == "edit":
             entry.items = _items_from_payload(p)
-            entry.meal_type = p["meal_type"]
+            entry.meal_type = _meal_type(p, user)
             entry.eaten_at = datetime.fromisoformat(p["eaten_at_utc"])
             entry.updated_at = utcnow()
             record_confirmed_items(db, user, p["items"])

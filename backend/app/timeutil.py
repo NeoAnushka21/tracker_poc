@@ -2,7 +2,7 @@
 from datetime import date, datetime, time, timedelta, timezone
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
-from app.config import MEAL_FALLBACK, MEAL_WINDOWS
+from app.config import LEGACY_SNACK, MEAL_FALLBACK, MEAL_WINDOWS, SNACK_TYPES
 
 
 def get_zone(tz_name: str) -> ZoneInfo:
@@ -51,3 +51,13 @@ def infer_meal_type(local_dt: datetime) -> str:
         if start <= hour < end:
             return meal
     return MEAL_FALLBACK
+
+
+def resolve_meal_type(stated: str | None, local_dt: datetime) -> str:
+    """The user's stated meal wins. A plain 'snack' becomes morning or evening snack by time."""
+    if stated == LEGACY_SNACK:
+        inferred = infer_meal_type(local_dt)
+        if inferred in SNACK_TYPES:
+            return inferred
+        return "morning_snack" if 5 <= local_dt.hour < 12 else "evening_snack"
+    return stated or infer_meal_type(local_dt)

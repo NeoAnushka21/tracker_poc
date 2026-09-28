@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { api } from "../api";
 import type { DailySummary } from "../types";
+import { litres } from "../format";
 
 type Props = { dataVersion: number; onOpen: () => void };
 
@@ -28,6 +29,11 @@ export default function SummaryStrip({ dataVersion, onOpen }: Props) {
       <span className="strip-kcal">
         <b className={kcalLeft < 0 ? "warn" : ""}>{Math.abs(kcalLeft).toLocaleString()}</b>
         <span className="muted"> kcal {kcalLeft < 0 ? "over" : "left"} today</span>
+        {data.water?.target_ml ? (
+          <span className="strip-water muted">
+            {" · "}Water {litres(data.water.consumed_ml)} / {litres(data.water.target_ml)}
+          </span>
+        ) : null}
       </span>
       <span className="strip-macros">
         {macros.map((m) => {

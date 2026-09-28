@@ -25,6 +25,7 @@ function title(action: Action): string {
     case "edit": return `Edit entry #${p.entry_id}`;
     case "delete": return `Delete entry #${p.entry_id}`;
     case "save_recipe": return p.replaces_recipe_id ? "Update recipe" : "New recipe";
+    case "water": return "Water";
   }
 }
 
@@ -129,6 +130,13 @@ export default function ProposalCard({ action, busy, awaitingFeedback, onConfirm
 
       {action.action_type === "save_recipe" && <RecipeBody p={p} />}
 
+      {action.action_type === "water" && p.amount_ml != null && (
+        <div className="water-proposal">
+          <b>{p.amount_ml.toLocaleString()} ml</b>
+          <span className="muted small">{p.drank_at && ` at ${time(p.drank_at)} on ${p.drank_at.slice(0, 10)}`} · added to your water tracker</span>
+        </div>
+      )}
+
       {action.action_type === "delete" && before && (
         <>
           <div className="muted small">
@@ -141,7 +149,9 @@ export default function ProposalCard({ action, busy, awaitingFeedback, onConfirm
       {pending && (
         <div className="proposal-actions">
           <button className="primary" onClick={onConfirm} disabled={busy}>
-            {action.action_type === "delete" ? "Yes, delete" : action.action_type === "save_recipe" ? "Save recipe" : "Looks good"}
+            {action.action_type === "delete" ? "Yes, delete"
+              : action.action_type === "save_recipe" ? "Save recipe"
+              : action.action_type === "water" ? "Log water" : "Looks good"}
           </button>
           <button onClick={onNeedsChanges} disabled={busy}>Needs changes</button>
           <button className="ghost" onClick={onCancel} disabled={busy}>Cancel</button>

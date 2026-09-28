@@ -11,7 +11,7 @@ from app.llm.tools import TOOLS, ToolContext, ToolInputError, run_tool
 from app.models import ChatMessage, PendingAction, User
 from app.services.actions import action_to_dict, expire_stale, supersede_older
 
-PROPOSE_TOOLS = {"propose_entry", "propose_edit", "propose_delete", "propose_recipe"}
+PROPOSE_TOOLS = {"propose_entry", "propose_edit", "propose_delete", "propose_recipe", "propose_water"}
 FALLBACK_PROPOSAL_TEXT = "Here's what I've got. Check the card and confirm if it looks right."
 
 # The model sometimes claims it saved something without calling a propose_* tool.
@@ -30,6 +30,20 @@ FALSE_CLAIM_NUDGE = (
 SAVED_OPENER = re.compile(
     r"^\s*(?:I(?:'ve| have|'m| am)?\s+)?(?:logged|saved|added|recorded|created|logging|saving|adding)\b", re.I
 )
+
+
+WATER_MENTION = re.compile(r"\bwater\b", re.I)
+WATER_NUDGE = (
+    "[App check] The user's message also mentions water, but there's no propose_water card. "
+    "If they drank plain water, call propose_water for it now. If not (e.g. coconut water, "
+    "or water only used in cooking), don't call anything; just reply with a short note."
+)
+
+
+def _missed_water(ctx: ToolContext) -> bool:
+    return bool(WATER_MENTION.search(ctx.raw_user_message)) and not any(
+        a.action_type == "water" for a in ctx.created_actions
+    )
 
 
 def _unsaved_wording(note: str) -> str:
@@ -128,6 +142,7 @@ def _run_tool_loop(db: Session, user: User, messages: list[dict], ctx: ToolConte
     system_dynamic = build_dynamic_context(db, user)
     texts: list[str] = []
     nudged = False
+    water_checked = False
 
     for _ in range(LLM_MAX_TOOL_ROUNDS):
         resp = provider.complete(
@@ -169,10 +184,18 @@ def _run_tool_loop(db: Session, user: User, messages: list[dict], ctx: ToolConte
         # A round of only successful proposals ends the turn: the card plus the tool's
         # `note` is the reply, which saves a model call per logged meal.
         if all(c.name in PROPOSE_TOOLS for c in resp.tool_calls) and not any(r["is_error"] for r in results):
-            texts.extend(_unsaved_wording(n) for n in ctx.notes)
+            if not water_checked and _missed_water(ctx):
+                # Food was proposed but water the user mentioned wasn't: ask once.
+                water_checked = True
+                messages.append({"role": "user", "content": results + [{"type": "text", "text": WATER_NUDGE}]})
+                continue
             break
         messages.append({"role": "user", "content": results})
     else:
         raise LLMError("The assistant got stuck in a loop. Please try rephrasing.")
+
+    # Proposal notes lead the reply (including when a later check round ended in plain text).
+    if ctx.notes:
+        texts = [_unsaved_wording(n) for n in ctx.notes] + texts
 
     return "\n\n".join(texts)

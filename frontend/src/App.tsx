@@ -100,7 +100,7 @@ export default function App() {
         <Chat user={user} onDataChanged={() => setDataVersion((v) => v + 1)} />
       </main>
       <main className="page" id="panel-dashboard" role="tabpanel" aria-labelledby="tab-dashboard" hidden={tab !== "dashboard"}>
-        <Dashboard dataVersion={dataVersion} />
+        <Dashboard dataVersion={dataVersion} onDataChanged={() => setDataVersion((v) => v + 1)} />
       </main>
       <main className="page" id="panel-foods" role="tabpanel" aria-labelledby="tab-foods" hidden={tab !== "foods"}>
         <FoodsPage dataVersion={dataVersion} />
