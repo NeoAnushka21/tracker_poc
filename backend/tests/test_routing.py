@@ -223,6 +223,11 @@ def test_escalates_to_large_after_repeated_validation_errors(client, user, insta
 @pytest.mark.parametrize("model,ok", [
     ("openai/gpt-oss-120b", True), ("qwen/qwen3-32b", True), ("deepseek/deepseek-chat", True),
     ("mistralai/mistral-small", True), ("llama-3.3-70b-versatile", False),
+    ("deepseek-ai/deepseek-v4.1-flash", True), ("z-ai/glm-5.3-flash", True), ("z-ai/glm-5.3", False),
+    ("mistralai/mistral-large-2-instruct", False), ("mistralai/codestral-22b-instruct-v0.1", False),
+    ("nvidia/mistral-nemo-minitron-8b-8k-instruct", False), ("nvidia/nemotron-3-super-120b-a12b", False),
+    ("deepseek-ai/deepseek-coder-6.7b-instruct", False), ("qwen/qwen2.5-72b-instruct", False),
+    ("moonshotai/kimi-k3", False), ("writer/palmyra-med-70b", False),
     ("deepseek-r1-distill-llama-70b", False), ("google/gemma-3-27b", False), ("some-closed-model", False),
 ])
 def test_only_open_source_licences_are_allowed(model, ok):
@@ -254,3 +259,39 @@ def test_admin_usage_report(client, user, fake_llm, admin_emails):
     assert rep["fastpath"] == {"water": 1}
     assert rep["by_intent"] == [{"intent": "log", "calls": 1, "tokens": 0}]
     assert all(p["tier"] in ("small", "large") for p in rep["pool"])
+
+
+def test_backup_models_only_after_every_primary(client, user, install_pool):
+    """A slow backup host (priority 2) never takes normal traffic, even from the other tier."""
+    small = Named("gpt-oss-20b", error=LLMRateLimited("used up", retry_after=600))
+    large = Named("gpt-oss-120b", [text_reply("Which meal?")])
+    backup = Named("deepseek-v4.1-flash", [text_reply("Which meal?")])
+    install_pool(ModelSlot(small, "small"), ModelSlot(backup, "large", priority=2), ModelSlot(large, "large"))
+    chat(client, "had 2 eggs")
+    assert (len(large.calls), len(backup.calls)) == (1, 0)
+    large.error = LLMError("down")
+    chat(client, "had 2 eggs")
+    assert len(backup.calls) == 1
+
+
+def test_pool_file_backup_entries(tmp_path, monkeypatch):
+    import json
+    from app import config
+    f = tmp_path / "pool.json"
+    f.write_text(json.dumps({"models": [
+        {"provider": "nvidia", "tier": "large", "priority": 2, "timeout_s": 90, "base_url": "https://x/v1",
+         "model": "deepseek-ai/deepseek-v4.1-flash", "api_key_env": "TEST_POOL_KEY"},
+        {"provider": "nvidia", "tier": "large", "base_url": "https://x/v1",
+         "model": "z-ai/glm-5.3", "api_key_env": "TEST_POOL_KEY"},             # custom licence: dropped
+        {"provider": "other", "tier": "small", "base_url": "https://y/v1",
+         "model": "qwen/qwen3-32b", "api_key_env": "MISSING_KEY"},              # no key: skipped
+    ]}))
+    monkeypatch.setenv("TEST_POOL_KEY", "k")
+    monkeypatch.setattr(config, "LLM_PROVIDER", "openai_compatible")
+    monkeypatch.setattr(config, "LLM_SMALL_MODELS", ["openai/gpt-oss-20b"])
+    monkeypatch.setattr(config, "LLM_LARGE_MODELS", ["openai/gpt-oss-120b"])
+    monkeypatch.setattr(config, "LLM_POOL_FILE", str(f))
+    slots = pool_module.build_pool().slots
+    assert [(s.provider.model, s.priority) for s in slots] == [
+        ("openai/gpt-oss-20b", 1), ("openai/gpt-oss-120b", 1), ("deepseek-ai/deepseek-v4.1-flash", 2)]
+    assert slots[2].provider.timeout == 90 and slots[2].provider.provider_name == "nvidia"

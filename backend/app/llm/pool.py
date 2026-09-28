@@ -22,16 +22,14 @@ TIERS = ("small", "large")
 
 
 def model_license(model: str) -> str | None:
-    """Licence by model-name prefix. Restrictive families are checked anywhere in the name, so a
-    'deepseek-r1-distill-llama-70b' counts as Llama-licensed, not MIT."""
+    """Licence by model-name prefix (longest wins); restrictive families anywhere in the name,
+    so 'deepseek-r1-distill-llama-70b' counts as Llama-licensed. Unknown -> None (blocked)."""
     name = model.lower().split("/")[-1].split(":")[0]
-    for family in ("llama", "gemma"):
+    for family in config.RESTRICTIVE_FAMILIES:
         if family in name:
-            return config.MODEL_LICENSES.get(family)
-    for prefix, lic in config.MODEL_LICENSES.items():
-        if name.startswith(prefix):
-            return lic
-    return None
+            return config.MODEL_LICENSES[family]
+    matches = [p for p in config.MODEL_LICENSES if name.startswith(p)]
+    return config.MODEL_LICENSES[max(matches, key=len)] if matches else None
 
 
 def is_open_source(model: str) -> bool:
@@ -42,6 +40,9 @@ def is_open_source(model: str) -> bool:
 class ModelSlot:
     provider: LLMProvider
     tier: str
+    # 1 = primary; 2 = backup, used only when no primary model (in either tier) is available.
+    # Slow free hosts belong in 2 so they never take normal traffic.
+    priority: int = 1
     cooldown_until: float = 0.0
     failures: int = 0
     last_error: str | None = None
@@ -60,6 +61,7 @@ class ModelSlot:
             "provider": getattr(self.provider, "provider_name", "?"),
             "model": getattr(self.provider, "model", "?"),
             "tier": self.tier,
+            "priority": "primary" if self.priority == 1 else "backup",
             "license": model_license(getattr(self.provider, "model", "")),
             "available": self.available(now),
             "cooldown_seconds": max(0, round(self.cooldown_until - now)),
@@ -79,14 +81,16 @@ class ModelPool:
         return [s for s in self.slots if s.tier == tier]
 
     def _order(self, tier: str) -> list[ModelSlot]:
-        """This tier's models in rotation order, then the other tier as a last resort."""
+        """Primary models first (this tier, rotating, then the other tier), then backups in
+        the same order. So a fast primary model in the other tier beats a slow backup."""
         own = self.tier_slots(tier)
         if own:
             i = self._next[tier] % len(own)
             self._next[tier] = i + 1
             own = own[i:] + own[:i]
         other = [s for s in self.slots if s.tier != tier]
-        return own + other
+        ordered = own + other
+        return sorted(ordered, key=lambda s: s.priority)   # stable: keeps rotation within a priority
 
     def complete(self, tier: str, intent: str = "", escalated: bool = False, **kwargs) -> LLMResponse:
         last_error: LLMError | None = None
@@ -160,8 +164,11 @@ def _extra_slots() -> list[ModelSlot]:
         key = os.getenv(m.get("api_key_env", ""), "")
         if m.get("api_key_env") and not key:
             continue
-        slots.append(ModelSlot(OpenAICompatibleProvider(
-            model=m["model"], base_url=m["base_url"], api_key=key, provider_name=m.get("provider")), m.get("tier", "large")))
+        slots.append(ModelSlot(
+            OpenAICompatibleProvider(model=m["model"], base_url=m["base_url"], api_key=key,
+                                     provider_name=m.get("provider"), timeout=m.get("timeout_s", 90),
+                                     max_retries=int(m.get("max_retries", 0))),   # backups: fail fast
+            m.get("tier", "large"), priority=int(m.get("priority", 2))))
     return slots
 
 

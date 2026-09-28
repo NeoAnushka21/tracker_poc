@@ -1,6 +1,6 @@
 # OmniAI high-level design (HLD)
 
-> Last updated: 2026-09-28 (multi-model routing, phases 1–3). Update the diagrams whenever a component, data flow, table or external service changes (see [docs/README.md](README.md)).
+> Last updated: 2026-09-28 (NVIDIA backup, strict licences, consent update). Update the diagrams whenever a component, data flow, table or external service changes (see [docs/README.md](README.md)).
 > Diagrams are Mermaid. They render on GitHub and in VS Code with a Mermaid preview extension.
 
 ## 1. Purpose and principles
@@ -21,7 +21,7 @@ OmniAI is a chat-first calorie and macro tracker; its chat assistant is called M
 flowchart LR
     U([User<br/>browser]) -->|HTTPS| APP[OmniAI web app]
     A([Admin<br/>browser]) -->|HTTPS · Admin login| APP
-    APP -->|OpenAI-compatible API<br/>tool calling| LLM[(LLM provider<br/>Groq · gpt-oss-120b<br/>or Claude / Gemini / Ollama)]
+    APP -->|OpenAI-compatible API<br/>tool calling| LLM[(Open-source models<br/>Groq: gpt-oss-20b / 120b<br/>backup: NVIDIA DeepSeek V4.1 Flash)]
     U -.->|Web Speech API<br/>voice to text, in browser| U
 ```
 
@@ -172,7 +172,7 @@ Column-level detail is in [technical-overview.md](technical-overview.md#5-data-m
 
 | Aspect | Design |
 |---|---|
-| Models | **Open-source only** (Apache 2.0 / MIT licences enforced in code). Two tiers on Groq's free tier: `gpt-oss-20b` (small) and `gpt-oss-120b` (large), in a quota-aware pool with cooldowns and failover |
+| Models | **Open-source only** (Apache 2.0 / MIT licences enforced in code). Two tiers on Groq's free tier: `gpt-oss-20b` (small) and `gpt-oss-120b` (large), in a quota-aware pool with cooldowns and failover; NVIDIA-hosted `deepseek-v4.1-flash` (MIT) as a slow backup used only when Groq is unavailable |
 | Routing | L0 rule-based fast paths (no model) → rules pick intent + tier → small model, escalating to large on repeated validation errors |
 | Tools | Read: `get_food`, `get_logs`, `get_daily_summary`. Propose: `propose_entry`, `propose_edit`, `propose_delete`, `propose_move`, `propose_recipe`, `propose_water` |
 | Prompt | Stable system prompt (MacBro persona and rules, cacheable) plus per-turn dynamic context (date, time, targets, today's totals, my foods, item ids) |

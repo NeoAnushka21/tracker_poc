@@ -84,7 +84,7 @@ export default function AuthScreen({ onAuthed }: { onAuthed: (u: User) => void }
         ) : mode === "admin" ? null : (
           <p className="consent-note muted small">
             By logging in, you agree that the data you share with {APP_NAME} is used for your recommendations and to
-            improve the application.
+            improve the application, and that chat messages are processed by third-party AI services.
           </p>
         )}
 

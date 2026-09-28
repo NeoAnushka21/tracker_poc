@@ -133,13 +133,14 @@ class OpenAICompatibleProvider:
     """
 
     def __init__(self, model: str = LLM_MODEL, base_url: str = LLM_BASE_URL, api_key: str = LLM_API_KEY,
-                 provider_name: str | None = None, max_retries: int = 1):
+                 provider_name: str | None = None, max_retries: int = 1, timeout: float = 60):
         self.model = model
         self.base_url = base_url
         self.api_key = api_key
         self.provider_name = provider_name or _host_name(base_url)
         # Few retries: on a 429 the model pool fails over to another model instead of waiting.
         self.max_retries = max_retries
+        self.timeout = timeout   # seconds; a hung request fails over instead of freezing the chat
         self._client = None
 
     @property
@@ -147,7 +148,7 @@ class OpenAICompatibleProvider:
         if self._client is None:
             import openai
             self._client = openai.OpenAI(api_key=self.api_key or "none", base_url=self.base_url,
-                                         max_retries=self.max_retries)
+                                         max_retries=self.max_retries, timeout=self.timeout)
         return self._client
 
     def complete(self, *, system_stable, system_dynamic, messages, tools) -> LLMResponse:

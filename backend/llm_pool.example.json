@@ -1,9 +1,11 @@
 {
-  "_comment": "Optional extra providers for failover. Copy to llm_pool.json, set each api_key_env in backend/.env. Entries without a key are skipped; models without an allowed open-source licence (ALLOWED_MODEL_LICENSES) are dropped. Check each provider's current free models and terms first.",
+  "_comment": "Optional extra providers for failover. Copy to llm_pool.json and put each api_key_env in backend/.env. priority 1 = rotates with the main models, 2 = backup only (use 2 for slow hosts). timeout_s = give up and fail over after this many seconds. Entries without a key are skipped; models without an allowed open-source licence (ALLOWED_MODEL_LICENSES) are dropped. Check each provider's free-tier terms first.",
   "models": [
-    {"provider": "openrouter", "tier": "large", "base_url": "https://openrouter.ai/api/v1",
-     "model": "qwen/qwen3-235b-a22b:free", "api_key_env": "OPENROUTER_API_KEY"},
-    {"provider": "openrouter", "tier": "small", "base_url": "https://openrouter.ai/api/v1",
-     "model": "mistralai/mistral-small-3.2-24b-instruct:free", "api_key_env": "OPENROUTER_API_KEY"}
+    {"provider": "nvidia", "tier": "large", "priority": 2, "timeout_s": 90,
+     "base_url": "https://integrate.api.nvidia.com/v1",
+     "model": "deepseek-ai/deepseek-v4.1-flash", "api_key_env": "NVIDIA_API_KEY"},
+    {"provider": "openrouter", "tier": "small", "priority": 2, "timeout_s": 60,
+     "base_url": "https://openrouter.ai/api/v1",
+     "model": "qwen/qwen3-32b:free", "api_key_env": "OPENROUTER_API_KEY"}
   ]
 }

@@ -1,6 +1,6 @@
 # OmniAI: multi-model LLM strategy on free, open-weight models
 
-Status: **phases 1–3 implemented** (2026-09-28); phases 4–5 need decisions, see section 12 · Date: 2026-09-28
+Status: **phases 1–4 implemented** (2026-09-28): routing live-tested on Groq, NVIDIA added as a backup; the phase-5 evaluation is on hold (section 12) · Date: 2026-09-28
 
 ## 1. Constraints
 
@@ -101,11 +101,14 @@ Expected effect: 1.5k–2.5k tokens for most calls instead of ~4.4k. That's an e
 |---|---|---|---|---|
 | L1 (small) | `openai/gpt-oss-20b` | Apache 2.0 | Groq | **In use** |
 | L2 (large) | `openai/gpt-oss-120b` | Apache 2.0 | Groq | **In use** (was the only model before) |
+| L2 backup | `deepseek-ai/deepseek-v4.1-flash` | MIT | NVIDIA (build.nvidia.com) | **In use as backup** (priority 2): only when both Groq models are unavailable |
 | L1/L2 backup | Qwen3 (e.g. 32B) | Apache 2.0 | Groq, OpenRouter `:free` | Candidate; check availability |
 | L2 backup | DeepSeek V3 / R1 | MIT | OpenRouter `:free` | Candidate |
 | L1 backup | Mistral Small | Apache 2.0 | OpenRouter `:free` | Candidate |
 | Dev only | Small Qwen | Apache 2.0 | Ollama on a laptop | Works offline; too slow on CPU for real users |
-| Excluded | Llama 3.x/4, Gemma | Not OSI | – | Blocked by the licence gate |
+| Excluded | Llama 3.x/4, Gemma, Nemotron/Minitron, Mistral Large, Codestral, GLM-5.3, Kimi, DeepSeek Coder (v1) | Not OSI / custom | – | Blocked by the licence gate |
+
+**NVIDIA notes (tested 2026-09-28):** the key works and lists 81 models; only a few are Apache/MIT. Responses were very slow: DeepSeek V4.1 Flash answered a small tool call in 65 s but not a full app request within 90 s, GLM-5.3-Flash took 77 s, and gpt-oss-20b timed out at 180 s. So NVIDIA is configured as a **backup only** (priority 2, 90 s timeout, no retry). Its free tier is for **prototyping and testing**; serving real end users counts as production and needs an NVIDIA AI Enterprise licence, so replace it before a public launch.
 
 Provider accounts should belong to the project, and **one account per provider**. Creating extra accounts to multiply free quotas breaks the providers' terms, so we don't do it.
 
@@ -166,7 +169,7 @@ That's comfortably enough for you plus a small group of test users, at $0.
 | **1. Cut tokens (no new providers)** | Tool subsetting per intent, slimmer prompts, library filtered to foods named in the message, `llm_usage` logging | `llm/chat.py`, `llm/prompt.py`, `llm/tools.py`, new `models.LlmUsage` | ✅ Done |
 | **2. L0 fast paths** | Water, "yes" nudge, today-summary query, library-only logging, "same as yesterday" | new `llm/fastpath.py` (before the tool loop) | ✅ Done |
 | **3. Router + multi-model on Groq** | Rules-based intent/tier, `ModelPool` with quota tracking and cooldowns, escalation on validation failure | new `llm/router.py`, `llm/pool.py`, config registry | ✅ Done (licence gate added) |
-| **4. Second provider + failover** | Add a second free host of open-source models to the pool | `llm_pool.json` + env keys only (supported now) | ⏳ Needs an account |
+| **4. Second provider + failover** | Add a second free host of open-source models to the pool | `llm_pool.json` (priority, timeout, retries per entry) + env keys | ✅ NVIDIA added as backup (slow; prototyping terms) |
 | **5. Evaluation + admin usage panel** | Labelled set, one budgeted run, cassettes, AI-usage tab | `evals/`, `routers/admin.py`, `AdminPage.tsx` | Usage panel ✅; evaluation ⏳ needs approval |
 
 Phases 1 and 2 alone should roughly double or triple daily capacity with no new providers. Every phase is testable with the fake model; only the phase-5 evaluation spends real quota, once.
@@ -185,13 +188,25 @@ Instruction + tool-definition size per call, before and after routing (≈ chara
 
 On top of that: `my_foods` now lists only foods named in the message (it was up to 150 foods), the small tier gets 6 history messages instead of 12, and fast-path messages use no tokens at all. Real numbers will show in the admin **AI usage** panel once people use it.
 
-## 12. Open items (need a decision or an account)
+## 12. Decisions and live results (2026-09-28)
 
-1. **Strict licences:** confirm Apache/MIT only (current default) or allow Llama/Gemma (`ALLOWED_MODEL_LICENSES`).
-2. **Second provider (phase 4):** one free, no-card account on a host of open-source models, with its key in `backend/.env` and an entry in `llm_pool.json`.
-3. **Consent wording:** mention that messages are processed by third-party AI providers (bumps `CONSENT_VERSION`).
-4. **Evaluation run (phase 5):** approval for one budgeted real-model run (~60 messages per model), recorded for replay.
-5. **Live check of the small model:** routing to `gpt-oss-20b` is covered by tests with fake models only; a few real messages would confirm its quality.
+- **Licences: strict** (Apache-2.0 and MIT only). Licences are matched per model version (longest name prefix), restrictive families anywhere in the name, and unknown models are blocked.
+- **Consent:** the notice now says chat messages and related context go to third-party AI services running open-source models (`CONSENT_VERSION` 2026-09-28.2, so existing users accept once more).
+- **Second provider:** NVIDIA, as a backup (see section 4 notes).
+- **Evaluation run (phase 5):** on hold.
+- **Live check on Groq** (5 messages, throwaway database):
+
+| Message | Handled by | Tokens | Result |
+|---|---|---|---|
+| "had 2 boiled eggs" | small (gpt-oss-20b) | 2,644 + 563 | Correct card, 156 kcal |
+| "drank 500 ml water" | fast path | 0 | Water card |
+| "150g paneer for lunch" | small | 2,782 + 426 | Correct lunch card, 398 kcal |
+| "what did I eat today?" | small hit its per-minute limit → large answered | 2,162 + 192 | Correct summary |
+| "move the eggs to breakfast" | small | 4,023 + 158 | Move card (not a delete) |
+
+- **Failover test** with the Groq key disabled: both Groq models failed, the NVIDIA backup was tried, then the friendly "servers are down" message was shown, as designed.
+
+**Still open:** a faster second free provider to replace NVIDIA as the backup; the phase-5 evaluation; the small model occasionally uses **bold** markdown in answers (harmless: the chat renders bold).
 
 ## 13. Risks
 

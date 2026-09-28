@@ -4,7 +4,7 @@ OmniAI is a chat-based calorie and macro tracker. In the Chat you talk to **MacB
 
 This guide walks a new user through the app from sign-up to daily use. The same walkthrough appears inside the app as a short tour the first time you log in. You can reopen it any time with the **? Guide** button at the top.
 
-> Last updated: 2026-09-28 (multi-model routing, phases 1–3). Keep this file in step with the UI (see [docs/README.md](README.md)).
+> Last updated: 2026-09-28 (NVIDIA backup, strict licences, consent update). Keep this file in step with the UI (see [docs/README.md](README.md)).
 
 ---
 
@@ -32,12 +32,12 @@ This guide walks a new user through the app from sign-up to daily use. The same 
 
 1. Open the app and choose **Create account**.
 2. Enter your email and a password (at least 8 characters).
-3. Tick the **data-use consent** box. By creating an account you agree that the data you share is used for your recommendations and to develop the app.
+3. Tick the **data-use consent** box. By creating an account you agree that the data you share is used for your recommendations and to develop the app, and that your chat messages (with related context such as your targets and today's logs) are processed by third-party AI services running open-source models.
 4. Press **Create account**.
 
 Next time, use **Log in** with the same email and password.
 
-If the consent wording changes later, you'll see a **Before we continue** screen once. Choose **Agree and continue**, or **Log out instead**.
+If the consent wording changes later (it did on 2026-09-28, to mention the AI services), you'll see a **Before we continue** screen once. Choose **Agree and continue**, or **Log out instead**.
 
 > The **Admin login** link is for the app's administrators only. Normal accounts can't use it.
 

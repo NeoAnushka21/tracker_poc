@@ -1,0 +1,9 @@
+{
+  "_comment": "Backup providers (priority 2: used only when every Groq model is unavailable). Keys live in backend/.env. NVIDIA's free tier is for prototyping/testing; production use needs an NVIDIA licence.",
+  "models": [
+    {"provider": "nvidia", "tier": "large", "priority": 2, "timeout_s": 90,
+     "base_url": "https://integrate.api.nvidia.com/v1",
+     "model": "deepseek-ai/deepseek-v4.1-flash", "api_key_env": "LLM_API_KEY_2",
+     "license": "MIT"}
+  ]
+}

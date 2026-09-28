@@ -30,12 +30,15 @@ APP_NAME = "OmniAI"
 BOT_NAME = "MacBro"
 
 # Shown at sign-up; bump the version when the wording changes so users are asked again.
-CONSENT_VERSION = "2026-09-28"
+CONSENT_VERSION = "2026-09-28.2"   # .2: added third-party AI processing
 CONSENT_TEXT = (
     "By creating an account and logging in, you agree that the information you share with "
     f"{APP_NAME} (your email, profile details, food and water logs, and chat messages) is stored "
     "and used to give you recommendations and to improve and develop the application. "
-    "The app's administrators can view this data for those purposes."
+    "The app's administrators can view this data for those purposes. "
+    "To reply to your chat messages, they and the related context (such as your targets, today's "
+    "logs and saved foods) are sent to third-party AI services that run open-source models; "
+    "these services process them under their own terms and may keep them for a limited time."
 )
 
 # "anthropic" (Claude) or "openai_compatible" (Groq, Gemini, OpenRouter, Ollama, ...)
@@ -69,19 +72,47 @@ LLM_RATE_LIMIT_COOLDOWN_S = 60     # when a 429 doesn't say how long to wait
 LLM_FAILURE_COOLDOWN_S = 300       # after LLM_FAILURES_BEFORE_COOLDOWN errors in a row
 LLM_FAILURES_BEFORE_COOLDOWN = 3
 
-# Open source only: a model is used only if its licence (matched by name) is in the allowed
-# list. Llama/Gemma have open weights but not OSI licences, so they're off unless allowed.
+# Open source only: a model is used only if its licence is in the allowed list. Licences are
+# matched by model-name prefix, the longest prefix winning, so versions with different
+# licences are told apart (e.g. GLM-5.3 has a custom licence but GLM-5.3-Flash is MIT).
+# Families with restrictive licences (Llama, Gemma, Nemotron) are caught anywhere in the name,
+# so fine-tunes built on them are too. Unknown models get no licence and are blocked.
+# Check a new model's licence (e.g. on its Hugging Face page) before adding it here.
 MODEL_LICENSES = {
     "gpt-oss": "Apache-2.0",
-    "qwen": "Apache-2.0",
-    "mistral": "Apache-2.0",
+    "qwen3": "Apache-2.0",
+    "qwen2.5": "Apache-2.0",
+    "qwen2.5-72b": "Qwen License",
+    "qwen2.5-3b": "Qwen License",
+    "mistral-7b": "Apache-2.0",
+    "mistral-small": "Apache-2.0",
+    "mistral-nemo": "Apache-2.0",
     "mixtral": "Apache-2.0",
-    "devstral": "Apache-2.0",
-    "deepseek": "MIT",
+    "mistral-large": "Mistral Research License",
+    "mistral-medium": "Proprietary",
+    "codestral": "Mistral Non-Production License",
+    "deepseek-v3": "MIT",
+    "deepseek-r1": "MIT",
+    "deepseek-v4": "MIT",
+    "deepseek-chat": "MIT",
+    "deepseek-coder": "DeepSeek License",
+    "deepseek-v2": "DeepSeek License",
+    "glm-4.5": "MIT",
+    "glm-4.6": "MIT",
+    "glm-5.2": "MIT",
+    "glm-5.3": "GLM-5.3 License",
+    "glm-5.3-flash": "MIT",
+    "granite": "Apache-2.0",
+    "phi-3": "MIT",
+    "phi-4": "MIT",
     "kimi": "Modified MIT",
+    # restrictive families, matched anywhere in the name
     "llama": "Llama Community License",
     "gemma": "Gemma Terms of Use",
+    "nemotron": "NVIDIA Open Model License",
+    "minitron": "NVIDIA Open Model License",
 }
+RESTRICTIVE_FAMILIES = ("llama", "gemma", "nemotron", "minitron")
 ALLOWED_MODEL_LICENSES = {s.strip() for s in os.getenv(
     "ALLOWED_MODEL_LICENSES", "Apache-2.0,MIT").split(",") if s.strip()}
 # Past chat messages sent as context. Kept smaller for free tiers with tight token/minute limits.
