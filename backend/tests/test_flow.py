@@ -171,7 +171,8 @@ def test_llm_failure_rolls_back_turn(client, user, fake_llm):
     from app.llm.provider import set_provider
     set_provider(Broken())
     r = client.post("/api/chat", json={"message": "had an apple"})
-    assert r.status_code == 502
+    assert r.status_code == 503
+    assert r.json()["detail"] == "MacBro's servers are temporarily down. Please try again in a little while."
     assert client.get("/api/chat/history").json() == []
 
 

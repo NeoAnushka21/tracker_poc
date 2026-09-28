@@ -43,6 +43,10 @@ LLM_BASE_URL = os.getenv("LLM_BASE_URL", "https://api.groq.com/openai/v1")  # op
 LLM_API_KEY = os.getenv("LLM_API_KEY", "")                                  # openai_compatible only
 LLM_EFFORT = os.getenv("LLM_EFFORT", "medium" if _IS_ANTHROPIC else "low")  # reasoning effort
 LLM_MAX_TOKENS = int(os.getenv("LLM_MAX_TOKENS", "16000" if _IS_ANTHROPIC else "4096"))
+# Users see a friendly "servers are down" message when the LLM fails; the real reason is
+# logged. Set true in development to show the real reason in the chat instead.
+SHOW_LLM_ERRORS = os.getenv("SHOW_LLM_ERRORS", "false").lower() == "true"
+LLM_UNAVAILABLE_MESSAGE = "MacBro's servers are temporarily down. Please try again in a little while."
 LLM_MAX_TOOL_ROUNDS = 8          # safety cap on the tool loop per user message
 # Past chat messages sent as context. Kept smaller for free tiers with tight token/minute limits.
 CHAT_HISTORY_MESSAGES = int(os.getenv("CHAT_HISTORY_MESSAGES", "30" if _IS_ANTHROPIC else "12"))

@@ -10,7 +10,7 @@ from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from app.db import get_db
-from app.deps import admin_user
+from app.deps import admin_user, is_admin
 from app.llm.chat import message_to_dict, recent_messages
 from app.models import AdminAudit, ChatMessage, LogEntry, User, UserFood, WaterLog, WeightLog
 from app.routers.profile import user_to_dict
@@ -32,7 +32,7 @@ def _audit(db: Session, admin: User, target_id: int | None, action: str) -> None
 
 def _target(db: Session, user_id: int) -> User:
     user = db.get(User, user_id)
-    if user is None:
+    if user is None or is_admin(user):
         raise HTTPException(status.HTTP_404_NOT_FOUND, "User not found")
     return user
 
@@ -46,7 +46,9 @@ def _counts(db: Session, model, user_ids: list[int], extra=None) -> dict[int, in
 
 @router.get("/users")
 def list_users(admin: User = Depends(admin_user), db: Session = Depends(get_db)):
-    users = list(db.scalars(select(User).order_by(User.last_login_at.desc().nullslast(), User.id)))
+    # Only app users: admin accounts aren't users of the tracker, so they're left out.
+    users = [u for u in db.scalars(select(User).order_by(User.last_login_at.desc().nullslast(), User.id))
+             if not is_admin(u)]
     ids = [u.id for u in users]
     entries = _counts(db, LogEntry, ids, LogEntry.deleted_at.is_(None))
     foods = _counts(db, UserFood, ids)

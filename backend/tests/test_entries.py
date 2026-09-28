@@ -21,12 +21,13 @@ def logged_entry(client, fake_llm, items=(CHICKEN, OIL)):
 def test_move_one_item_splits_the_entry(client, user, fake_llm):
     entry = logged_entry(client, fake_llm)
     oil = entry["items"][1]
+    target = "breakfast" if entry["meal_type"] != "breakfast" else "lunch"   # never the same meal
     before = day(client)["consumed"]["calories"]
-    r = client.post(f"/api/entries/items/{oil['id']}/transfer", json={"to_meal_type": "dinner", "mode": "move"})
+    r = client.post(f"/api/entries/items/{oil['id']}/transfer", json={"to_meal_type": target, "mode": "move"})
     assert r.status_code == 200
     d = day(client)
     meals = {e["meal_type"]: [i["ingredient_name"] for i in e["items"]] for e in d["entries"]}
-    assert meals["dinner"] == ["sunflower oil"] and "chicken breast, cooked" in meals[entry["meal_type"]]
+    assert meals[target] == ["sunflower oil"] and meals[entry["meal_type"]] == ["chicken breast, cooked"]
     assert d["consumed"]["calories"] == before          # nothing lost or duplicated
 
 

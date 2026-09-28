@@ -151,3 +151,10 @@ def test_admin_account_cannot_be_deleted(client, admin_emails):
     login_admin(client)
     r = client.post("/api/auth/delete-account", json={"password": "boss-password-123"})
     assert r.status_code == 403
+
+
+def test_admin_accounts_are_not_listed_as_users(client, user, admin_emails):
+    admin = login_admin(client)
+    emails = [u["email"] for u in client.get("/api/admin/users").json()]
+    assert emails == ["me@example.com"]
+    assert client.get(f"/api/admin/users/{admin['id']}").status_code == 404

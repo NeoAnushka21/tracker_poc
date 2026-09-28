@@ -28,7 +28,7 @@ function AccountSection({ user }: { user: User }) {
       <div className="account-card">
         <UserAvatar name={user.preferred_name} email={user.email} size={48} />
         <div>
-          <div className="account-name">{user.preferred_name ?? "No preferred name"}</div>
+          <div className="account-name">{user.preferred_name ?? (user.is_admin ? "Administrator" : "No preferred name")}</div>
           <div className="muted">{user.email}</div>
         </div>
       </div>

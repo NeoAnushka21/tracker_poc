@@ -1,6 +1,9 @@
+import logging
+
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
+from app.config import LLM_UNAVAILABLE_MESSAGE, SHOW_LLM_ERRORS
 from app.db import get_db
 from app.deps import onboarded_user
 from app.llm.chat import handle_user_message, message_to_dict, recent_messages
@@ -11,6 +14,7 @@ from app.services import cancel
 from app.services.actions import expire_stale
 
 router = APIRouter(prefix="/api/chat", tags=["chat"])
+log = logging.getLogger("macbro.chat")
 
 
 @router.get("/history")
@@ -30,7 +34,9 @@ def send(body: ChatIn, user: User = Depends(onboarded_user), db: Session = Depen
         raise HTTPException(status.HTTP_409_CONFLICT, "cancelled")
     except LLMError as e:
         db.rollback()
-        raise HTTPException(status.HTTP_502_BAD_GATEWAY, str(e)) from e
+        log.warning("LLM call failed for user %s: %s", user.id, e)
+        detail = str(e) if SHOW_LLM_ERRORS else LLM_UNAVAILABLE_MESSAGE
+        raise HTTPException(status.HTTP_503_SERVICE_UNAVAILABLE, detail) from e
 
 
 @router.post("/cancel")
