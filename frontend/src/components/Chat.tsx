@@ -1,6 +1,7 @@
 import { Fragment, useEffect, useRef, useState, type FormEvent, type KeyboardEvent, type ReactNode } from "react";
 import { api } from "../api";
-import type { Action, ChatMessage, User } from "../types";
+import type { Action, ChatMessage, ProgressData, User } from "../types";
+import { dayLabel, localTodayIso } from "../format";
 import { useSpeechToText } from "../useSpeechToText";
 import { MacBroAvatar, UserAvatar } from "./Avatar";
 import ProposalCard from "./ProposalCard";
@@ -15,12 +16,16 @@ const EXAMPLES = [
 type Props = {
   user: User;
   onDataChanged: () => void;
-  /** Text handed over from elsewhere (e.g. the dashboard's "Ask MacBro to edit"). */
-  draft?: { text: string; nonce: number } | null;
+  /** Text (and optionally a day) handed over from elsewhere, e.g. the dashboard's "Edit in chat". */
+  draft?: { text: string; nonce: number; date?: string } | null;
+  /** True while the Chat tab is showing; opening it jumps to the latest message. */
+  active: boolean;
 };
 
+type DayBlock = { day: string; messages: ChatMessage[] };
+
 function ProgressCard({ m }: { m: ChatMessage }) {
-  const d = m.data!;
+  const d = m.data as ProgressData;
   const kcalPct = d.calories.pct ?? 0;
   return (
     <div className="progress-card">
@@ -77,8 +82,15 @@ function MicIcon() {
   );
 }
 
-export default function Chat({ user, onDataChanged, draft }: Props) {
+export default function Chat({ user, onDataChanged, draft, active }: Props) {
+  // Today's chat (a fresh one each day); earlier days load on request, oldest first.
   const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [earlier, setEarlier] = useState<DayBlock[]>([]);
+  const [prevDay, setPrevDay] = useState<string | null>(null);
+  const [loadingEarlier, setLoadingEarlier] = useState(false);
+  // Day new messages are about (null = today). Set with the date picker or from the dashboard.
+  const [logDate, setLogDate] = useState<string | null>(null);
+  const messagesRef = useRef<HTMLDivElement>(null);
   const [input, setInput] = useState("");
   const [sending, setSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -93,6 +105,7 @@ export default function Chat({ user, onDataChanged, draft }: Props) {
   useEffect(() => {
     if (draft) {
       setInput(draft.text);
+      setLogDate(draft.date && draft.date !== localTodayIso() ? draft.date : null);
       setTimeout(() => inputRef.current?.focus(), 0);
     }
   }, [draft]);
@@ -102,13 +115,51 @@ export default function Chat({ user, onDataChanged, draft }: Props) {
     setInput(base ? `${base} ${spoken}` : spoken);
   });
 
-  useEffect(() => {
-    api.history().then(setMessages).catch((e) => setError(e.message));
-  }, []);
+  async function loadToday() {
+    const d = await api.chatDay();
+    setMessages(d.messages);
+    // Earlier days already on screen stay; otherwise offer the most recent one.
+    setPrevDay((p) => (earlierRef.current.length ? p : d.prev_day));
+  }
+  const earlierRef = useRef<DayBlock[]>([]);
+  earlierRef.current = earlier;
 
   useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages, sending]);
+    loadToday().catch((e) => setError(e.message));
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  function scrollToLatest(smooth: boolean) {
+    bottomRef.current?.scrollIntoView({ behavior: smooth ? "smooth" : "auto", block: "end" });
+  }
+
+  // New messages scroll smoothly; opening the tab (or first load) jumps straight to the latest.
+  const firstScroll = useRef(true);
+  useEffect(() => {
+    if (!active) return;
+    scrollToLatest(!firstScroll.current);
+    if (messages.length) firstScroll.current = false;
+  }, [messages, sending]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    if (active) requestAnimationFrame(() => scrollToLatest(false));
+  }, [active, draft]);
+
+  async function showEarlier() {
+    if (!prevDay) return;
+    const box = messagesRef.current;
+    const fromBottom = box ? box.scrollHeight - box.scrollTop : 0;
+    setLoadingEarlier(true);
+    try {
+      const d = await api.chatDay(prevDay);
+      setEarlier((e) => [{ day: d.day, messages: d.messages }, ...e]);
+      setPrevDay(d.prev_day);
+      // Keep the reader where they were instead of jumping.
+      requestAnimationFrame(() => { if (box) box.scrollTop = box.scrollHeight - fromBottom; });
+    } catch (e) {
+      setError((e as Error).message);
+    } finally {
+      setLoadingEarlier(false);
+    }
+  }
 
   function toggleMic() {
     if (speech.listening) {
@@ -120,9 +171,10 @@ export default function Chat({ user, onDataChanged, draft }: Props) {
   }
 
   function updateAction(updated: Action) {
-    setMessages((ms) =>
-      ms.map((m) => ({ ...m, actions: m.actions.map((a) => (a.id === updated.id ? updated : a)) })),
-    );
+    const patch = (ms: ChatMessage[]) =>
+      ms.map((m) => ({ ...m, actions: m.actions.map((a) => (a.id === updated.id ? updated : a)) }));
+    setMessages(patch);
+    setEarlier((blocks) => blocks.map((b) => ({ ...b, messages: patch(b.messages) })));
   }
 
   async function send(e?: FormEvent) {
@@ -135,6 +187,7 @@ export default function Chat({ user, onDataChanged, draft }: Props) {
     setSending(true);
     const optimistic: ChatMessage = {
       id: -Date.now(), role: "user", content: text, created_at: new Date().toISOString(), actions: [],
+      data: logDate ? { log_date: logDate } : null,
     };
     setMessages((ms) => [...ms, optimistic]);
     setInput("");
@@ -143,11 +196,12 @@ export default function Chat({ user, onDataChanged, draft }: Props) {
     const controller = new AbortController();
     inflightRef.current = { id: requestId, controller, text, optimisticId: optimistic.id };
     try {
-      const newMsgs = await api.send(text, feedbackId, requestId, controller.signal);
+      const newMsgs = await api.send(text, feedbackId, requestId, controller.signal, logDate);
       const newActionIds = new Set(newMsgs.flatMap((m) => m.actions.map((a) => a.id)));
+      // The reply includes the saved copy of the user's message, which replaces the optimistic one.
       setMessages((ms) => [
         // The server supersedes older open proposals when a new one is made; mirror that.
-        ...ms.map((m) => ({
+        ...ms.filter((m) => m.id !== optimistic.id).map((m) => ({
           ...m,
           actions: m.actions.map((a) =>
             newActionIds.size > 0 && a.status === "pending" && !newActionIds.has(a.id)
@@ -188,7 +242,7 @@ export default function Chat({ user, onDataChanged, draft }: Props) {
       if (status === "finished") {
         // Too late to stop: the reply was saved, so show it rather than lose it.
         setInput("");
-        setMessages(await api.history());
+        await loadToday();
         setError("MacBro had already replied, so that message was kept.");
       }
     } catch {
@@ -207,7 +261,7 @@ export default function Chat({ user, onDataChanged, draft }: Props) {
       if (kind === "confirm") onDataChanged();
     } catch (err) {
       setError((err as Error).message);
-      api.history().then(setMessages).catch(() => {});
+      loadToday().catch(() => {});
     } finally {
       setBusyAction(null);
     }
@@ -226,8 +280,37 @@ export default function Chat({ user, onDataChanged, draft }: Props) {
   }
 
   // App events (confirm/cancel notes) are context for the LLM; the card status shows them in the UI.
-  const visible = messages.filter((m) => m.role !== "event");
+  const shown = (ms: ChatMessage[]) => ms.filter((m) => m.role !== "event");
+  const visible = shown(messages);
   const shownError = error ?? speech.error;
+  const today = localTodayIso();
+
+  function renderMessage(m: ChatMessage) {
+    const picked = m.role === "user" && m.data && "log_date" in m.data ? m.data.log_date : undefined;
+    return (
+      <div key={m.id} className={`msg-row ${m.role}`}>
+        {m.role === "assistant"
+          ? <MacBroAvatar />
+          : <UserAvatar name={user.preferred_name} email={user.email} />}
+        <div className="msg">
+          {picked && <span className="msg-date-tag">📅 for {dayLabel(picked, today)}</span>}
+          {m.kind === "progress" && m.data ? <ProgressCard m={m} /> : <div className="bubble">{renderText(m.content)}</div>}
+          {m.actions.map((a) => (
+            <ProposalCard
+              key={a.id}
+              action={a}
+              busy={busyAction === a.id}
+              awaitingFeedback={feedbackFor?.id === a.id}
+              onConfirm={() => resolve(a, "confirm")}
+              onNeedsChanges={() => needsChanges(a)}
+              onCancel={() => resolve(a, "reject")}
+            />
+          ))}
+          <span className="msg-time">{clock(m.created_at)}</span>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <section className="chat card">
@@ -239,7 +322,19 @@ export default function Chat({ user, onDataChanged, draft }: Props) {
         </div>
       </div>
 
-      <div className="messages">
+      <div className="messages" ref={messagesRef}>
+        {prevDay && (
+          <button type="button" className="ghost show-earlier" onClick={showEarlier} disabled={loadingEarlier}>
+            {loadingEarlier ? "Loading…" : `Show earlier chat (${dayLabel(prevDay, today)})`}
+          </button>
+        )}
+        {earlier.map((b) => (
+          <section key={b.day} className="chat-day" aria-label={`Chat on ${dayLabel(b.day, today)}`}>
+            <div className="day-divider"><span>{dayLabel(b.day, today)}</span></div>
+            {shown(b.messages).map(renderMessage)}
+          </section>
+        ))}
+        {earlier.length > 0 && <div className="day-divider"><span>Today</span></div>}
         {visible.length === 0 && (
           <div className="empty">
             <MacBroAvatar size={64} />
@@ -254,28 +349,7 @@ export default function Chat({ user, onDataChanged, draft }: Props) {
             </div>
           </div>
         )}
-        {visible.map((m) => (
-          <div key={m.id} className={`msg-row ${m.role}`}>
-            {m.role === "assistant"
-              ? <MacBroAvatar />
-              : <UserAvatar name={user.preferred_name} email={user.email} />}
-            <div className="msg">
-              {m.kind === "progress" && m.data ? <ProgressCard m={m} /> : <div className="bubble">{renderText(m.content)}</div>}
-              {m.actions.map((a) => (
-                <ProposalCard
-                  key={a.id}
-                  action={a}
-                  busy={busyAction === a.id}
-                  awaitingFeedback={feedbackFor?.id === a.id}
-                  onConfirm={() => resolve(a, "confirm")}
-                  onNeedsChanges={() => needsChanges(a)}
-                  onCancel={() => resolve(a, "reject")}
-                />
-              ))}
-              <span className="msg-time">{clock(m.created_at)}</span>
-            </div>
-          </div>
-        ))}
+        {visible.map(renderMessage)}
         {sending && (
           <div className="msg-row assistant">
             <MacBroAvatar />
@@ -299,6 +373,18 @@ export default function Chat({ user, onDataChanged, draft }: Props) {
             <button type="button" className="ghost" onClick={() => setFeedbackFor(null)} aria-label="Stop giving feedback">✕</button>
           </div>
         )}
+        <div className={`log-date ${logDate ? "past" : ""}`}>
+          <label htmlFor="log-date-input">
+            <span aria-hidden="true">📅</span> Logging for{" "}
+            <b>{logDate ? dayLabel(logDate, today) : "Today"}</b>
+          </label>
+          <input id="log-date-input" type="date" max={today} value={logDate ?? today}
+                 onChange={(e) => setLogDate(e.target.value && e.target.value < today ? e.target.value : null)}
+                 title="Pick a day to add or change food for" />
+          {logDate && (
+            <button type="button" className="link" onClick={() => setLogDate(null)}>Back to today</button>
+          )}
+        </div>
         {speech.listening && <div className="listening-hint">Listening… tap the mic again when you're done.</div>}
         <div className="composer-row">
           <textarea
@@ -312,6 +398,7 @@ export default function Chat({ user, onDataChanged, draft }: Props) {
             placeholder={
               speech.listening ? "Speak now…"
                 : feedbackFor ? "What should I change? e.g. 'the chicken was 150g'"
+                : logDate ? `What did you eat ${dayLabel(logDate, today) === "Yesterday" ? "yesterday" : `on ${dayLabel(logDate, today)}`}? Or what should change?`
                 : "What did you eat? Type or tap the mic"
             }
           />

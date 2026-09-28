@@ -37,7 +37,7 @@ export default function App() {
   const [dataVersion, setDataVersion] = useState(0);
   const [showSettings, setShowSettings] = useState(false);
   const [tab, setTab] = useState<TabId>(tabFromHash);
-  const [chatDraft, setChatDraft] = useState<{ text: string; nonce: number } | null>(null);
+  const [chatDraft, setChatDraft] = useState<{ text: string; nonce: number; date?: string } | null>(null);
   const [guideOpen, setGuideOpen] = useState(false);
   // Sliding underline under the active tab: measured from the button itself.
   const tabsRef = useRef<HTMLElement>(null);
@@ -169,13 +169,13 @@ export default function App() {
                   onOpenChat={() => openTab("chat")} onOpenDashboard={() => openTab("dashboard")} />
       </main>
       <main className="page page-chat" id="panel-chat" role="tabpanel" aria-labelledby="tab-chat" hidden={current !== "chat"}>
-        <Chat user={user} onDataChanged={() => setDataVersion((v) => v + 1)} draft={chatDraft} />
+        <Chat user={user} onDataChanged={() => setDataVersion((v) => v + 1)} draft={chatDraft} active={current === "chat"} />
       </main>
       <main className="page" id="panel-dashboard" role="tabpanel" aria-labelledby="tab-dashboard" hidden={current !== "dashboard"}>
         <Dashboard
           dataVersion={dataVersion}
           onDataChanged={() => setDataVersion((v) => v + 1)}
-          onAskMacBro={(text) => { setChatDraft({ text, nonce: Date.now() }); openTab("chat"); }}
+          onAskMacBro={(text, date) => { setChatDraft({ text, nonce: Date.now(), date }); openTab("chat"); }}
         />
       </main>
       {/* Analysis and Admin load only when opened (admin views are audited). */}

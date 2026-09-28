@@ -101,8 +101,11 @@ export type ChatMessage = {
   created_at: string;
   actions: Action[];
   kind?: "progress" | null;
-  data?: ProgressData | null;
+  /** Progress card numbers (kind "progress"), or the day picked for a user message. */
+  data?: (ProgressData & { log_date?: undefined }) | { log_date?: string } | null;
 };
+
+export type ChatDay = { day: string; messages: ChatMessage[]; prev_day: string | null };
 
 export type ProgressData = {
   calories: { consumed: number; target: number | null; pct: number | null };

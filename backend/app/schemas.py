@@ -96,6 +96,8 @@ class ChatIn(BaseModel):
     feedback_on_action_id: int | None = None
     # Lets the browser cancel this turn (Stop button) via /api/chat/cancel.
     client_request_id: str | None = Field(default=None, max_length=64)
+    # Day the user picked in the chat's date selector (past days only; None = today).
+    log_date: date | None = None
 
 
 class CancelIn(BaseModel):

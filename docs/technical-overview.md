@@ -1,6 +1,6 @@
 # OmniAI technical overview
 
-> Last updated: 2026-09-28 (app renamed OmniAI; MacBro is the chat assistant). Update this file in the same change as any code change it describes (see [docs/README.md](README.md)).
+> Last updated: 2026-09-28 (chat per day, date picker). Update this file in the same change as any code change it describes (see [docs/README.md](README.md)).
 > Architecture diagrams: [hld.md](hld.md). End-user manual: [user-guide.md](user-guide.md).
 
 ## 1. Tech stack
@@ -80,7 +80,7 @@ All endpoints are JSON under `/api`, authenticated by the session cookie. Every 
 |---|---|
 | `auth` | `GET consent-text` · `POST register` (needs `consent`; blocks admin emails) · `POST login` (blocks admin emails) · `POST admin-login` (only `ADMIN_EMAILS`) · `POST change-password` · `POST delete-account` · `POST logout` · `POST consent` · `POST guide-seen` · `GET me` |
 | `profile` | `POST onboarding` · `GET preview-targets` · `PUT targets` · `POST weight` · `GET body` · `POST height` · `POST measurements` · `DELETE measurements/{id}` |
-| `chat` | `GET history` · `POST ""` (send; 503 with friendly text if the LLM fails) · `POST cancel` |
+| `chat` | `GET day?day=` (one local day of chat, default today, plus `prev_day`, the latest earlier day with messages) · `GET history` (legacy, last N) · `POST ""` (send; body may include `log_date`, a past day picked in the UI; 503 with friendly text if the LLM fails) · `POST cancel` |
 | `actions` | `POST {id}/confirm` (returns the action + progress card) · `POST {id}/reject` |
 | `dashboard` | `GET daily?date=` · `GET range?days=&end=` · `GET streaks` (logging and target streaks, best, last 7 days) |
 | `entries` | `POST items/{id}/transfer` (move/copy) · `PATCH items/{id}` (quantity) · `DELETE items/{id}` |
@@ -114,9 +114,9 @@ FastAPI's interactive docs are at `http://localhost:8000/docs` while the backend
 | File | Role |
 |---|---|
 | `provider.py` | `AnthropicProvider` and `OpenAICompatibleProvider` behind `LLMProvider`. `to_openai_tools` uses `_relax` so optional fields aren't strictly required on OpenAI-compatible hosts. Retries once on a tool-validation error. Maps errors to a friendly message. `set_provider` injects the fake one in tests. |
-| `prompt.py` | `SYSTEM_STABLE`: the MacBro persona and all logging rules (stable, so it can be cached). `build_dynamic_context`: local date and time, meal window, targets, today's totals, recent entries with item ids, and the user's library foods. |
+| `prompt.py` | `SYSTEM_STABLE`: the MacBro persona and all logging rules (stable, so it can be cached). `build_dynamic_context`: local date and time, the picked day (`selected_date` with that day's entries and item ids) when set, meal window, targets, today's totals, recent entries with item ids, and the user's library foods. |
 | `tools.py` | Tool schemas and handlers (below). Proposal handlers validate, scale library foods, run the energy check, then insert a `PendingAction`. |
-| `chat.py` | `handle_user_message`: saves the user message, builds history (`CHAT_HISTORY_MESSAGES`), runs the tool loop, applies the nudges, saves the reply, and checks for a cancel before committing. |
+| `chat.py` | `handle_user_message`: saves the user message (with `data.log_date` when a past day is picked), builds history from **today's chat only** plus a `CHAT_DAY_GRACE_HOURS` (3 h) window before midnight (capped at `CHAT_HISTORY_MESSAGES`), runs the tool loop, applies the nudges, saves the reply, and checks for a cancel before committing. |
 
 **Tools**
 
@@ -152,7 +152,7 @@ FastAPI's interactive docs are at `http://localhost:8000/docs` while the backend
 | `ConsentGate` | Re-consent when `CONSENT_VERSION` changes |
 | `Onboarding` | Profile form, then editable target preview |
 | `GuideTour` | First-run walkthrough docked at the bottom. It switches tabs per step and calls `POST /auth/guide-seen` when closed. The **? Guide** button reopens it. **Its steps must match `docs/user-guide.md`.** |
-| `Chat` | Messages, example chips, mic, Stop, feedback mode, progress card |
+| `Chat` | Today's chat (fresh each day) with **Show earlier chat** loading previous days above a date divider; jumps to the latest message whenever the tab opens (`active` prop); **Logging for** date picker (sends `log_date`, tags the message); example chips, mic, Stop, feedback mode, progress card |
 | `ProposalCard` | Renders each action type with Looks good / Needs changes / Cancel |
 | `HomePage` | Default tab: time-of-day greeting, today's summary (reuses `CalorieRing`, `Bar`, `Water` from `Dashboard`), and the two streak cards |
 | `Dashboard` | Day navigation, calorie ring, macro bars, calorie split, water, micronutrients, meal sections; each item has a pencil that opens an edit panel (Move/Copy toggle + meal dropdown, quantity, and icon buttons for edit in chat, delete, close). Shared icons live in `components/icons.tsx` |
@@ -210,14 +210,14 @@ Domain constants (meal windows, goal multipliers, activity factors, water, fiber
 
 ```bash
 cd backend
-.venv\Scripts\python -m pytest -q      # 131 tests, fake LLM, no network
+.venv\Scripts\python -m pytest -q      # 134 tests, fake LLM, no network
 cd ../frontend
 npm run build                          # type-check + production build
 ```
 
-- The Vite dev server uses a polling file watcher (`vite.config.ts`), because native file events were missed on Windows and served stale modules.
+- The Vite dev server uses a polling file watcher (`vite.config.ts`), and the backend should be started with `WATCHFILES_FORCE_POLLING=true`, because native file events were missed on Windows and served stale code.
 - `tests/conftest.py` gives each test a fresh database and a scripted `FakeProvider`. It also pins `ADMIN_EMAILS` and blanks `ADMIN_INITIAL_PASSWORD` so the local `.env` can't leak into tests.
-- Coverage by file: `test_flow` (confirm loop, auth, guide flag), `test_foods` (library, recipes), `test_micros`, `test_water_meals`, `test_admin`, `test_analysis`, `test_entries` (move/copy/quantity/delete), `test_body`, `test_openai_provider`, `test_nutrition`, `test_streaks`.
+- Coverage by file: `test_flow` (confirm loop, auth, guide flag), `test_foods` (library, recipes), `test_micros`, `test_water_meals`, `test_admin`, `test_analysis`, `test_entries` (move/copy/quantity/delete), `test_body`, `test_openai_provider`, `test_nutrition`, `test_streaks`, `test_chat_days`.
 - **Policy:** development and tests use the fake model. Don't use the real LLM API for routine testing, because the free-tier quota is shared with real users.
 
 ## 11. Known limitations and next steps

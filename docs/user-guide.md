@@ -4,7 +4,7 @@ OmniAI is a chat-based calorie and macro tracker. In the Chat you talk to **MacB
 
 This guide walks a new user through the app from sign-up to daily use. The same walkthrough appears inside the app as a short tour the first time you log in. You can reopen it any time with the **? Guide** button at the top.
 
-> Last updated: 2026-09-28 (app renamed OmniAI; MacBro is the chat assistant). Keep this file in step with the UI (see [docs/README.md](README.md)).
+> Last updated: 2026-09-28 (chat per day, date picker). Keep this file in step with the UI (see [docs/README.md](README.md)).
 
 ---
 
@@ -124,6 +124,10 @@ If something is ambiguous, for example "a bowl of pasta", MacBro asks a short qu
 
 **Stop:** while MacBro is thinking, press **■ Stop**. Your message comes back to the input box so you can edit it and send again.
 
+**Opening the chat** always takes you to the latest message. **Each day starts with a fresh chat.** To see an earlier day's conversation, scroll to the top and tap **Show earlier chat (…)**. It loads the previous day that has messages, and you can keep tapping to go further back. Cards in earlier chats still work.
+
+**Log or change food for another day:** above the message box, **📅 Logging for Today** has a date picker. Pick any past date and everything you type is about that day: new food is logged on it, and edits, moves and deletes look at that day's meals first. Your message shows a small **"for Yesterday"** / **"for Fri, 25 Sep"** tag. Press **Back to today** when you're done. You can also just say the day in your message ("add 2 eggs to Monday's breakfast").
+
 Today's totals are on the **Home** tab (and in the **Day so far** card after each confirmed meal).
 
 ## 6. Confirm, correct or cancel
@@ -151,12 +155,12 @@ You can do this **in the chat** (with a confirmation card) or **on the Dashboard
 - `move the banana to morning snack`: a *Move* card shows *from → to*, and nothing is deleted.
 - `copy yesterday's breakfast to today`
 
-**On the Dashboard:** tap the **pencil** ✎ next to any item in a meal. A small panel opens:
+**On the Dashboard:** **+ Log food** (next to *Meals*) opens the chat set to the day you're viewing, which is handy for filling in a past day. For a single item, tap the **pencil** ✎ next to any item in a meal. A small panel opens:
 
 - **Move / Copy:** pick **Move** or **Copy**, choose the meal from the dropdown, and press the **→** button. Move lists only the other meals. When you're looking at a past day, Copy adds the item to *today's* meal.
 - **Quantity:** change the amount and press the **✓** button. Nutrients scale automatically.
 - Icon buttons on the right (hover for a label):
-  - **speech bubble**: edit in chat. It opens the chat with the message started for you, e.g. to change ingredients.
+  - **speech bubble**: edit in chat. It opens the chat with the message started for you and set to that item's day, e.g. to change ingredients.
   - **trash can**: delete. It asks you to confirm first.
   - **✕**: close the panel.
 

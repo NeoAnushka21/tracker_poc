@@ -40,6 +40,8 @@ Start it:
 .venv\Scripts\python -m uvicorn app.main:app --reload --port 8000
 ```
 
+On Windows, if code changes aren't picked up, start it with polling: `set WATCHFILES_FORCE_POLLING=true` first (PowerShell: `$env:WATCHFILES_FORCE_POLLING="true"`).
+
 **2. Frontend** (in a second terminal)
 
 ```bash

@@ -1,6 +1,6 @@
 import type {
   Action, AdminUserDetail, AdminUserRow, AuditRow, ChatMessage, DailySummary, Food, RangeSummary, User,
-  Streaks,
+  Streaks, ChatDay,
 } from "./types";
 
 export class ApiError extends Error {
@@ -100,9 +100,10 @@ export const api = {
   addMeasurements: (values: Record<string, number>) => request<BodyProfileData>("POST", "/api/profile/measurements", values),
   deleteMeasurement: (id: number) => request<BodyProfileData>("DELETE", `/api/profile/measurements/${id}`),
 
-  history: () => request<ChatMessage[]>("GET", "/api/chat/history"),
-  send: (message: string, feedback_on_action_id: number | null, client_request_id: string, signal?: AbortSignal) =>
-    request<ChatMessage[]>("POST", "/api/chat", { message, feedback_on_action_id, client_request_id }, signal),
+  chatDay: (day?: string) => request<ChatDay>("GET", `/api/chat/day${day ? `?day=${day}` : ""}`),
+  send: (message: string, feedback_on_action_id: number | null, client_request_id: string, signal?: AbortSignal,
+         log_date?: string | null) =>
+    request<ChatMessage[]>("POST", "/api/chat", { message, feedback_on_action_id, client_request_id, log_date: log_date ?? null }, signal),
   cancelChat: (client_request_id: string) =>
     request<{ status: "cancelled" | "finished" }>("POST", "/api/chat/cancel", { client_request_id }),
   transferItem: (itemId: number, to_meal_type: string, mode: "move" | "copy", to_date?: string) =>

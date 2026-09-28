@@ -52,3 +52,17 @@ export function greeting(): string {
   const h = new Date().getHours();
   return h >= 5 && h < 12 ? "Good morning" : h >= 12 && h < 17 ? "Good afternoon" : "Good evening";
 }
+
+/** Today's date (browser local) as YYYY-MM-DD. */
+export function localTodayIso(): string {
+  const d = new Date();
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+}
+
+/** "Today", "Yesterday" or e.g. "Fri, 25 Sep" for a YYYY-MM-DD day. */
+export function dayLabel(day: string, today = localTodayIso()): string {
+  if (day === today) return "Today";
+  if (day === shiftDay(today, -1)) return "Yesterday";
+  return new Date(`${day}T12:00:00`).toLocaleDateString(undefined, { weekday: "short", day: "numeric", month: "short" });
+}

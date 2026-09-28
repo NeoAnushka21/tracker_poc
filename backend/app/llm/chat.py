@@ -1,16 +1,18 @@
 """One chat turn: user message -> LLM tool loop -> assistant reply (+ any proposals)."""
 import re
+from datetime import date, timedelta
 
 from sqlalchemy import select
 from sqlalchemy.orm import Session, selectinload
 
-from app.config import CHAT_HISTORY_MESSAGES, LLM_MAX_TOOL_ROUNDS
+from app.config import CHAT_DAY_GRACE_HOURS, CHAT_HISTORY_MESSAGES, LLM_MAX_TOOL_ROUNDS
 from app.llm.prompt import SYSTEM_STABLE, build_dynamic_context
 from app.llm.provider import LLMError, get_provider
 from app.llm.tools import TOOLS, ToolContext, ToolInputError, run_tool
-from app.models import ChatMessage, PendingAction, User
+from app.models import ChatMessage, PendingAction, User, utcnow
 from app.services import cancel
 from app.services.actions import action_to_dict, expire_stale, supersede_older
+from app.timeutil import local_day_bounds_utc, local_today, utc_to_local
 
 PROPOSE_TOOLS = {"propose_entry", "propose_edit", "propose_delete", "propose_recipe", "propose_water", "propose_move"}
 FALLBACK_PROPOSAL_TEXT = "Here's what I've got. Check the card and confirm if it looks right."
@@ -74,6 +76,31 @@ def recent_messages(db: Session, user_id: int, limit: int) -> list[ChatMessage]:
     return list(reversed(db.scalars(stmt).all()))
 
 
+def messages_for_day(db: Session, user: User, day: date) -> tuple[list[ChatMessage], date | None]:
+    """The chat for one local day, plus the most recent earlier day that has messages."""
+    start, end = local_day_bounds_utc(day, user.timezone)
+    msgs = list(db.scalars(
+        select(ChatMessage)
+        .where(ChatMessage.user_id == user.id, ChatMessage.created_at >= start, ChatMessage.created_at < end)
+        .options(selectinload(ChatMessage.actions))
+        .order_by(ChatMessage.id)
+    ))
+    earlier = db.scalars(
+        select(ChatMessage.created_at)
+        .where(ChatMessage.user_id == user.id, ChatMessage.created_at < start)
+        .order_by(ChatMessage.created_at.desc()).limit(1)
+    ).first()
+    return msgs, (utc_to_local(earlier, user.timezone).date() if earlier else None)
+
+
+def _todays_messages(db: Session, user: User, limit: int) -> list[ChatMessage]:
+    """What the model sees: today's chat (fresh each day) plus a short grace window before
+    midnight, capped at `limit` messages."""
+    start, _ = local_day_bounds_utc(local_today(user.timezone), user.timezone)
+    since = min(start, utcnow() - timedelta(hours=CHAT_DAY_GRACE_HOURS))
+    return [m for m in recent_messages(db, user.id, limit) if m.created_at >= since]
+
+
 def _history_for_llm(messages: list[ChatMessage]) -> list[dict]:
     """Stored chat -> API messages. Proposals and app events are rendered as text notes."""
     out: list[dict] = []
@@ -92,7 +119,9 @@ def _history_for_llm(messages: list[ChatMessage]) -> list[dict]:
         elif m.role == "event":
             out.append({"role": "user", "content": f"[App event] {m.content}"})
         else:
-            out.append({"role": "user", "content": m.content})
+            picked = (m.data or {}).get("log_date")
+            prefix = f"[Date picked in the app: {picked}] " if picked else ""
+            out.append({"role": "user", "content": prefix + m.content})
     # The API requires the first message to be from the user.
     while out and out[0]["role"] != "user":
         out.pop(0)
@@ -101,7 +130,7 @@ def _history_for_llm(messages: list[ChatMessage]) -> list[dict]:
 
 def handle_user_message(
     db: Session, user: User, text: str, feedback_on_action_id: int | None = None,
-    request_id: str | None = None,
+    request_id: str | None = None, log_date: date | None = None,
 ) -> list[dict]:
     """Runs one turn. Returns the new messages (events + assistant reply) for the UI.
 
@@ -121,12 +150,18 @@ def handle_user_message(
             db.add(ev)
             new_messages.append(ev)
 
-    db.add(ChatMessage(user_id=user.id, role="user", content=text))
+    today = local_today(user.timezone)
+    if log_date is not None and log_date >= today:
+        log_date = None   # today (or a future date) is the default, not a selection
+    user_msg = ChatMessage(user_id=user.id, role="user", content=text,
+                           data={"log_date": log_date.isoformat()} if log_date else None)
+    db.add(user_msg)
     db.flush()
+    new_messages.append(user_msg)
 
-    history = _history_for_llm(recent_messages(db, user.id, CHAT_HISTORY_MESSAGES))
+    history = _history_for_llm(_todays_messages(db, user, CHAT_HISTORY_MESSAGES))
     ctx = ToolContext(db=db, user=user, raw_user_message=text)
-    reply_text = _run_tool_loop(db, user, history, ctx, request_id)
+    reply_text = _run_tool_loop(db, user, history, ctx, request_id, log_date)
 
     if not reply_text.strip():
         reply_text = FALLBACK_PROPOSAL_TEXT if ctx.created_actions else "Sorry, I didn't catch that. Could you rephrase?"
@@ -146,9 +181,9 @@ def handle_user_message(
 
 
 def _run_tool_loop(db: Session, user: User, messages: list[dict], ctx: ToolContext,
-                   request_id: str | None = None) -> str:
+                   request_id: str | None = None, log_date: date | None = None) -> str:
     provider = get_provider()
-    system_dynamic = build_dynamic_context(db, user)
+    system_dynamic = build_dynamic_context(db, user, log_date)
     texts: list[str] = []
     nudged = False
     water_checked = False

@@ -173,16 +173,17 @@ function sumItems(items: Item[]) {
 }
 
 type ItemActionsProps = {
+  day: string;
   item: Item;
   meal: string;
   isToday: boolean;
   onChanged: () => void;
-  onAskMacBro: (text: string) => void;
+  onAskMacBro: (text: string, date?: string) => void;
   onClose: () => void;
 };
 
 /** Inline edit panel for one logged food: move/copy via a dropdown, change quantity, and icon actions. */
-function ItemActions({ item, meal, isToday, onChanged, onAskMacBro, onClose }: ItemActionsProps) {
+function ItemActions({ day, item, meal, isToday, onChanged, onAskMacBro, onClose }: ItemActionsProps) {
   const [qty, setQty] = useState(String(item.quantity));
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -243,7 +244,7 @@ function ItemActions({ item, meal, isToday, onChanged, onAskMacBro, onClose }: I
         </form>
         <div className="ia-icons">
           <button type="button" className="ghost icon-btn" disabled={busy} aria-label="Edit in chat" title="Edit in chat"
-                  onClick={() => { onClose(); onAskMacBro(`Edit the ${item.ingredient_name} in my ${MEAL_LABEL[meal].toLowerCase()}: `); }}>
+                  onClick={() => { onClose(); onAskMacBro(`Edit the ${item.ingredient_name} in my ${MEAL_LABEL[meal].toLowerCase()}: `, day); }}>
             <ChatIcon />
           </button>
           <button type="button" className="ghost icon-btn danger" disabled={busy} aria-label="Delete" title="Delete"
@@ -261,8 +262,8 @@ function ItemActions({ item, meal, isToday, onChanged, onAskMacBro, onClose }: I
 }
 
 /** One meal: its own macro breakdown, then each food on its own line. */
-function MealSection({ meal, entries, isToday, onChanged, onAskMacBro }: {
-  meal: string; entries: Entry[]; isToday: boolean; onChanged: () => void; onAskMacBro: (text: string) => void;
+function MealSection({ day, meal, entries, isToday, onChanged, onAskMacBro }: {
+  day: string; meal: string; entries: Entry[]; isToday: boolean; onChanged: () => void; onAskMacBro: (text: string, date?: string) => void;
 }) {
   const [menuFor, setMenuFor] = useState<number | null>(null);
   const items = entries.flatMap((e) => e.items);
@@ -304,7 +305,7 @@ function MealSection({ meal, entries, isToday, onChanged, onAskMacBro }: {
                           onClick={() => setMenuFor(menuFor === it.id ? null : it.id!)}><PencilIcon /></button>
                 )}
                 {menuFor === it.id && (
-                  <ItemActions item={it} meal={meal} isToday={isToday} onChanged={onChanged}
+                  <ItemActions day={day} item={it} meal={meal} isToday={isToday} onChanged={onChanged}
                                onAskMacBro={onAskMacBro} onClose={() => setMenuFor(null)} />
                 )}
               </li>
@@ -318,7 +319,7 @@ function MealSection({ meal, entries, isToday, onChanged, onAskMacBro }: {
   );
 }
 
-type DashboardProps = { dataVersion: number; onDataChanged: () => void; onAskMacBro: (text: string) => void };
+type DashboardProps = { dataVersion: number; onDataChanged: () => void; onAskMacBro: (text: string, date?: string) => void };
 
 export default function Dashboard({ dataVersion, onDataChanged, onAskMacBro }: DashboardProps) {
   const [day, setDay] = useState<string | undefined>(undefined);
@@ -379,10 +380,15 @@ export default function Dashboard({ dataVersion, onDataChanged, onAskMacBro }: D
 
       {data.micronutrients && <Micronutrients m={data.micronutrients} />}
 
-      <h3>Meals</h3>
+      <div className="meals-head">
+        <h3>Meals</h3>
+        <button type="button" className="ghost log-day-btn" onClick={() => onAskMacBro("", data.date)}>
+          + Log food{data.date === today ? "" : ` for ${friendlyDate(data.date, today)}`}
+        </button>
+      </div>
       <div className="meals">
         {[...MEAL_ORDER, ...Object.keys(byMeal).filter((m) => !MEAL_ORDER.includes(m))].map((meal) => (
-          <MealSection key={meal} meal={meal} entries={byMeal[meal] ?? []} isToday={data.date === today}
+          <MealSection key={meal} day={data.date} meal={meal} entries={byMeal[meal] ?? []} isToday={data.date === today}
                        onChanged={onDataChanged} onAskMacBro={onAskMacBro} />
         ))}
       </div>

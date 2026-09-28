@@ -53,6 +53,9 @@ SHOW_LLM_ERRORS = os.getenv("SHOW_LLM_ERRORS", "false").lower() == "true"
 LLM_UNAVAILABLE_MESSAGE = "MacBro's servers are temporarily down. Please try again in a little while."
 LLM_MAX_TOOL_ROUNDS = 8          # safety cap on the tool loop per user message
 # Past chat messages sent as context. Kept smaller for free tiers with tight token/minute limits.
+# The chat starts fresh each local day; messages from the last few hours before midnight are
+# still sent to the model so a conversation that crosses midnight keeps its context.
+CHAT_DAY_GRACE_HOURS = 3
 CHAT_HISTORY_MESSAGES = int(os.getenv("CHAT_HISTORY_MESSAGES", "30" if _IS_ANTHROPIC else "12"))
 
 # --- Meal-type inference (user's local time, [start, end) hours) ----------

@@ -64,6 +64,7 @@ function steps(name: string | null): Step[] {
           <li>"Move the banana to morning snack" or "Copy yesterday's lunch to today"</li>
           <li>"Delete the cookie" or "Make the rice 150g"</li>
           <li>"Save my chapati as a recipe" to reuse a home-made dish</li>
+          <li>Use <b>📅 Logging for</b> above the message box to add or fix food on any past day. Each day starts a fresh chat, and <b>Show earlier chat</b> brings back older ones.</li>
         </ul>
       ),
     },

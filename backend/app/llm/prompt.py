@@ -1,5 +1,6 @@
 """System prompt: a stable part (cached) and a per-turn context part."""
 import json
+from datetime import date
 
 from sqlalchemy.orm import Session
 
@@ -105,6 +106,15 @@ propose_* tool again with the full corrected version. The new card replaces the 
 - Conversation lines starting with "[App event]" are written by the app, not typed by the \
 user. They record what happened to proposals (confirmed, cancelled, and so on).
 
+## Date picked in the app
+- The user can pick a past day in the chat's date selector. When the context has \
+selected_date (and their message starts with "[Date picked in the app: ...]"), that day is \
+the default for this message: log new food on it (set eaten_at to that date, at the time \
+they give, otherwise a typical time for the meal: breakfast 08:00, morning snack 11:00, \
+lunch 13:00, evening snack 17:00, dinner 20:00; if they give neither a meal nor a time, ask \
+which meal), and look for food to edit, move or delete in selected_date_entries first. Only \
+use a different day if they explicitly name one.
+
 ## Editing and deleting
 - For requests like "that chicken was 150g not 100g" or "delete the ice cream", find the \
 entry: first in today's entries below, otherwise with get_logs. Then call propose_edit (with \
@@ -135,15 +145,8 @@ don't give medical advice.
 """
 
 
-def build_dynamic_context(db: Session, user: User) -> str:
-    now = local_now(user.timezone)
-    today = daily_summary(db, user, now.date())
-    weight = current_weight(db, user.id)
-    proposals = [
-        {"proposal_id": a.id, "type": a.action_type, "summary": a.payload.get("summary")}
-        for a in open_actions(db, user.id)
-    ]
-    today_entries = [
+def _entries_for_context(summary: dict) -> list[dict]:
+    return [
         {
             "entry_id": e["id"],
             "time": e["eaten_at"][11:],
@@ -154,8 +157,19 @@ def build_dynamic_context(db: Session, user: User) -> str:
             ],
             "kcal": e["totals"]["calories"],
         }
-        for e in today["entries"]
+        for e in summary["entries"]
     ]
+
+
+def build_dynamic_context(db: Session, user: User, selected_date: date | None = None) -> str:
+    now = local_now(user.timezone)
+    today = daily_summary(db, user, now.date())
+    weight = current_weight(db, user.id)
+    proposals = [
+        {"proposal_id": a.id, "type": a.action_type, "summary": a.payload.get("summary")}
+        for a in open_actions(db, user.id)
+    ]
+    today_entries = _entries_for_context(today)
     context = {
         "now_local": now.strftime("%A %Y-%m-%d %H:%M"),
         "timezone": user.timezone,
@@ -169,4 +183,9 @@ def build_dynamic_context(db: Session, user: User) -> str:
         "open_proposals": proposals,
         "my_foods": library_context(db, user) or "(empty - nothing saved yet)",
     }
+    if selected_date is not None and selected_date != now.date():
+        picked = daily_summary(db, user, selected_date)
+        context["selected_date"] = selected_date.strftime("%A %Y-%m-%d")
+        context["selected_date_consumed"] = picked["consumed"]
+        context["selected_date_entries"] = _entries_for_context(picked) or "(nothing logged that day)"
     return "## Current context\n" + json.dumps(context, indent=1, ensure_ascii=False)

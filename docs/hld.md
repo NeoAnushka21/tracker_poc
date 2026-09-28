@@ -1,6 +1,6 @@
 # OmniAI high-level design (HLD)
 
-> Last updated: 2026-09-28 (app renamed OmniAI; MacBro is the chat assistant). Update the diagrams whenever a component, data flow, table or external service changes (see [docs/README.md](README.md)).
+> Last updated: 2026-09-28 (chat per day, date picker). Update the diagrams whenever a component, data flow, table or external service changes (see [docs/README.md](README.md)).
 > Diagrams are Mermaid. They render on GitHub and in VS Code with a Mermaid preview extension.
 
 ## 1. Purpose and principles
@@ -92,6 +92,8 @@ sequenceDiagram
     API-->>UI: action + "Day so far" progress card
 ```
 
+- **One chat per day:** the UI shows today's chat (older days load on request), and the model only sees today's messages plus a 3-hour grace window, which keeps prompts small.
+- **Date picker:** a past day picked in the chat is sent as `log_date`. The model gets that day's entries and logs or edits there by default.
 - **Needs changes:** the user's correction is sent with `feedback_on_action_id`. The model proposes again, and the old card becomes *superseded*.
 - **Cancel:** `POST /api/actions/{id}/reject`. Nothing is written except an event note that gives the model context.
 - **Stop:** `POST /api/chat/cancel` marks the request cancelled. The backend checks it atomically before committing the reply (`finish_or_cancelled`). If it's too late, the UI keeps the reply.
