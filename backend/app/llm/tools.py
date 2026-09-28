@@ -11,7 +11,7 @@ from datetime import date, datetime, timedelta, timezone
 from pydantic import ValidationError
 from sqlalchemy.orm import Session
 
-from app.config import MEAL_TYPES
+from app.config import MEAL_TYPES, MICRONUTRIENTS
 from app.models import PendingAction, User, utcnow
 from app.schemas import ItemIn
 from app.services.foods import (
@@ -27,6 +27,19 @@ MAX_QUERY_DAYS = 31
 def _nullable(schema: dict, description: str) -> dict:
     return {"anyOf": [schema, {"type": "null"}], "description": description}
 
+
+_MICROS_SCHEMA = {
+    "type": "object",
+    "description": (
+        "Best estimate of these micronutrients for this item's amount (not per 100 g); "
+        "null for any you can't reasonably estimate."
+    ),
+    "properties": {
+        key: _nullable({"type": "number"}, f"{label} in {unit}") for key, label, unit, _, _ in MICRONUTRIENTS
+    },
+    "required": [m[0] for m in MICRONUTRIENTS],
+    "additionalProperties": False,
+}
 
 _ITEM_SCHEMA = {
     "type": "object",
@@ -50,10 +63,11 @@ _ITEM_SCHEMA = {
             "Approximate grams in ONE unit when the unit isn't g/ml (e.g. 1 almond = 1.2, 1 chapati = 40, "
             "1 cup cooked rice = 160), else null.",
         ),
+        "micronutrients": _MICROS_SCHEMA,
     },
     "required": [
         "ingredient_name", "brand_name", "quantity", "unit",
-        "calories", "protein_g", "carbs_g", "fat_g", "fiber_g", "food_id", "unit_weight_g",
+        "calories", "protein_g", "carbs_g", "fat_g", "fiber_g", "food_id", "unit_weight_g", "micronutrients",
     ],
     "additionalProperties": False,
 }

@@ -6,7 +6,24 @@ protein is set per kg bodyweight, fat as a share of calories, carbs fill the res
 from dataclasses import dataclass
 from datetime import date
 
-from app.config import ACTIVITY_FACTORS, FAT_CALORIE_SHARE, GOAL_SETTINGS, KCAL_PER_G
+from app.config import (
+    ACTIVITY_FACTORS, FAT_CALORIE_SHARE, FIBER_G_PER_1000_KCAL, GOAL_SETTINGS, KCAL_PER_G, MICRONUTRIENTS,
+)
+
+
+def fiber_target_g(calorie_target: float) -> int:
+    return round(calorie_target * FIBER_G_PER_1000_KCAL / 1000)
+
+
+def micronutrient_targets(sex: str | None, age: int | None) -> list[dict]:
+    """Daily reference value per micronutrient for this person (adult values)."""
+    out = []
+    for key, label, unit, kind, bands in MICRONUTRIENTS:
+        a = age if age is not None else 30
+        _, male, female = next((b for b in bands if a <= b[0]), bands[-1])
+        out.append({"key": key, "label": label, "unit": unit, "kind": kind,
+                    "target": female if sex == "female" else male})
+    return out
 
 
 @dataclass

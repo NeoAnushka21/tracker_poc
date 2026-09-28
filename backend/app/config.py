@@ -62,6 +62,25 @@ GOAL_SETTINGS = {
 }
 FAT_CALORIE_SHARE = 0.25
 KCAL_PER_G = {"protein": 4, "carbs": 4, "fat": 9}
+FIBER_G_PER_1000_KCAL = 14       # dietary guideline: 14 g fiber per 1,000 kcal
+
+# --- Micronutrients ------------------------------------------------------
+# Daily reference values for adults (US Dietary Reference Intakes: RDA, or AI where no
+# RDA exists). Values by sex and age band: [(max_age_inclusive, male, female), ...].
+# "limit" nutrients are daily maximums (staying under is the goal), not targets.
+MICRONUTRIENTS = [
+    # key, label, unit, kind, [(max_age, male, female)]
+    ("iron_mg", "Iron", "mg", "target", [(50, 8, 18), (200, 8, 8)]),
+    ("calcium_mg", "Calcium", "mg", "target", [(50, 1000, 1000), (70, 1000, 1200), (200, 1200, 1200)]),
+    ("magnesium_mg", "Magnesium", "mg", "target", [(30, 400, 310), (200, 420, 320)]),
+    ("potassium_mg", "Potassium", "mg", "target", [(200, 3400, 2600)]),
+    ("zinc_mg", "Zinc", "mg", "target", [(200, 11, 8)]),
+    ("vitamin_c_mg", "Vitamin C", "mg", "target", [(200, 90, 75)]),
+    ("vitamin_b12_mcg", "Vitamin B12", "mcg", "target", [(200, 2.4, 2.4)]),
+    ("vitamin_d_mcg", "Vitamin D", "mcg", "target", [(70, 15, 15), (200, 20, 20)]),
+    ("sodium_mg", "Sodium", "mg", "limit", [(200, 2300, 2300)]),
+]
+MICRONUTRIENT_KEYS = [m[0] for m in MICRONUTRIENTS]
 
 # --- Dashboard adherence (used by weekly/monthly views, later phase) -----
 ADHERENCE_CALORIE_TOLERANCE = 0.10

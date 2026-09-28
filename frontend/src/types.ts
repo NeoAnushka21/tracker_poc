@@ -11,6 +11,7 @@ export type Targets = {
   protein_g: number;
   carbs_g: number;
   fat_g: number;
+  fiber_g: number;
   effective_date: string;
   is_custom: boolean;
 };
@@ -91,8 +92,24 @@ export type DailySummary = {
   date: string;
   targets: Targets | null;
   consumed: Nutrients;
-  remaining: Omit<Nutrients, "fiber_g"> | null;
+  remaining: Nutrients | null;
+  micronutrients: MicroSummary;
   entries: Entry[];
+};
+
+export type Micronutrient = {
+  key: string;
+  label: string;
+  unit: string;
+  kind: "target" | "limit";
+  target: number;
+  consumed: number;
+};
+
+export type MicroSummary = {
+  items_total: number;
+  items_with_data: number;
+  nutrients: Micronutrient[];
 };
 
 export type RecipeIngredient = Partial<Nutrients> & {

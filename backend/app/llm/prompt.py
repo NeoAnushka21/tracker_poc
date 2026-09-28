@@ -40,9 +40,16 @@ label figures (per serving and serving size) rather than guessing.
 message describes two different meals (e.g. breakfast and lunch), make two calls.
 - meal_type: if the user names a meal anywhere in the message ("for breakfast", "pre-workout \
 and breakfast", "at lunch", "after dinner snack"), set it to that meal. If they name two \
-meals for the same food, pick the main meal (breakfast/lunch/dinner) over snack. Only when \
-no meal is mentioned, leave it null and the app infers it from the time. Set eaten_at only \
+meals for the same food, pick the main meal (breakfast/lunch/dinner) over snack. When no meal \
+is mentioned, always send null (never "snack" as a default); the app infers it from the time. Set eaten_at only \
 when the user indicates a time other than now ("yesterday at lunch", "this morning around 8").
+- Also estimate each item's micronutrients (iron, calcium, magnesium, potassium, zinc, \
+vitamin C, B12, D, sodium) for the amount eaten, from typical food composition data. \
+For common foods give a value for every nutrient, including small or zero amounts \
+(eggs have B12 and some vitamin D; salted home-cooked dishes, dals and sabzis have \
+sodium from the salt, typically 300-600 mg per serving). Use null only for unusual foods \
+you have no reasonable basis for. For library items (food_id set), send \
+nulls; the app scales the saved values.
 - ingredient_name is the food only, never the amount: "brown rice, cooked", not \
 "50 g brown rice". The amount goes in quantity and unit.
 

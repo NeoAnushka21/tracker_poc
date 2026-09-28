@@ -16,6 +16,8 @@
   --protein: #2a78d6;
   --carbs: #1baf7a;
   --fat: #eb6834;
+  --fiber: #eda100;
+  --micro: #6b7280;
   --status-warning: #b45309;
   --avatar-bg: #2f6f4f;
   --avatar-fg: #ffffff;
@@ -44,6 +46,8 @@
     --protein: #3987e5;
     --carbs: #199e70;
     --fat: #d95926;
+    --fiber: #c98500;
+    --micro: #9aa1ab;
     --status-warning: #f0a24a;
     --avatar-bg: #5fb88a;
     --avatar-fg: #0d1a13;
@@ -166,7 +170,7 @@ button.link { background: none; border: none; color: var(--accent); padding: 6px
 }
 .summary-strip:hover { border-color: var(--accent); }
 .strip-kcal b { font-size: 1.25rem; }
-.strip-macros { flex: 1; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; min-width: 260px; }
+.strip-macros { flex: 1; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 16px; min-width: 320px; }
 .strip-macro { margin: 0; display: flex; flex-direction: column; gap: 4px; font-size: 0.8rem; }
 .strip-macro .bar { display: block; height: 6px; }
 .strip-macro .bar-fill { display: block; }
@@ -272,6 +276,7 @@ button.link { background: none; border: none; color: var(--accent); padding: 6px
 .bar-row.protein { --tone: var(--protein); }
 .bar-row.carbs { --tone: var(--carbs); }
 .bar-row.fat { --tone: var(--fat); }
+.bar-row.fiber { --tone: var(--fiber); }
 .bar-label { display: flex; justify-content: space-between; gap: 8px; font-size: 0.85rem; margin-bottom: 5px; }
 .bar-name { display: inline-flex; align-items: center; gap: 6px; font-weight: 600; }
 .swatch { width: 10px; height: 10px; border-radius: 3px; background: var(--tone); display: inline-block; }
@@ -296,7 +301,8 @@ button.link { background: none; border: none; color: var(--accent); padding: 6px
 @media (max-width: 860px) {
   .page { padding: 10px; }
   .tabs { padding: 0 8px; }
-  .strip-macros { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; min-width: 0; width: 100%; }
+  .strip-macros { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; min-width: 0; width: 100%; }
+  .micro-grid { grid-template-columns: 1fr; }
   .targets-grid { grid-template-columns: repeat(2, 1fr); }
   .row { flex-direction: column; gap: 0; }
   .row.tight { flex-direction: row; gap: 6px; }
@@ -337,3 +343,11 @@ button.danger { color: var(--error); }
   .food-edit-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 .badge.pending { background: color-mix(in srgb, var(--status-warning) 15%, var(--surface)); color: var(--status-warning); font-weight: 600; }
+
+/* ---------- micronutrients ---------- */
+.micros { margin-top: 8px; padding-top: 4px; border-top: 1px solid var(--border); }
+.micros h3 { margin-bottom: 2px; }
+.micro-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px 24px; margin-top: 10px; }
+.micro { --tone: var(--micro); }
+.micro-label { display: flex; justify-content: space-between; gap: 8px; font-size: 0.82rem; margin-bottom: 4px; }
+.micro .bar { height: 6px; }

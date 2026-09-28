@@ -1,24 +1,28 @@
 import { useEffect, useState } from "react";
 import { api } from "../api";
-import type { DailySummary, Entry } from "../types";
-import { MEAL_LABEL, friendlyDate, grams, kcal, shiftDay, time } from "../format";
+import type { DailySummary, Entry, MicroSummary } from "../types";
+import { MEAL_LABEL, friendlyDate, kcal, shiftDay, time } from "../format";
 
 const MEAL_ORDER = ["breakfast", "lunch", "snack", "dinner"];
 
 /** A meter: one macro against its target. Identity comes from the label; the fill hue repeats it. */
 function Bar({ label, value, target, unit, tone }: {
-  label: string; value: number; target: number; unit: string; tone: "protein" | "carbs" | "fat";
+  label: string; value: number; target: number; unit: string; tone: "protein" | "fiber" | "carbs" | "fat";
 }) {
   const pct = target > 0 ? Math.min(100, (value / target) * 100) : 0;
-  const over = target > 0 && value > target;
   const left = Math.round(target - value);
+  // Going past the fiber target is fine, so it never shows as a warning.
+  const over = target > 0 && value > target && tone !== "fiber";
+  const met = tone === "fiber" && target > 0 && value >= target;
   return (
     <div className={`bar-row ${tone}`} title={`${label}: ${Math.round(value)} of ${target} ${unit}`}>
       <div className="bar-label">
         <span className="bar-name"><i className="swatch" aria-hidden="true" />{label}</span>
         <span className="num">
           {Math.round(value)} / {target} {unit}
-          <span className={over ? "warn" : "muted"}> · {over ? `${-left} ${unit} over` : `${left} ${unit} left`}</span>
+          <span className={over ? "warn" : "muted"}>
+            {" · "}{met ? "goal met ✓" : over ? `${-left} ${unit} over` : `${left} ${unit} left`}
+          </span>
         </span>
       </div>
       <div className="bar" role="progressbar" aria-valuenow={Math.round(value)} aria-valuemax={target} aria-label={label}>
@@ -53,6 +57,44 @@ function CalorieRing({ eaten, target }: { eaten: number; target: number }) {
         <div><dt>Progress</dt><dd>{target > 0 ? Math.round((eaten / target) * 100) : 0}%</dd></div>
       </dl>
     </div>
+  );
+}
+
+function fmtMicro(v: number): string {
+  return v >= 100 ? Math.round(v).toLocaleString() : String(Math.round(v * 10) / 10);
+}
+
+/** Secondary panel: one muted hue for every nutrient; the label carries identity. */
+function Micronutrients({ m }: { m: MicroSummary }) {
+  return (
+    <section className="micros" aria-labelledby="micros-heading">
+      <h3 id="micros-heading">Additional micronutrients</h3>
+      <p className="muted small">
+        Approximate: estimated by the assistant from typical food data.
+        {m.items_total > 0 && m.items_with_data < m.items_total &&
+          ` ${m.items_with_data} of ${m.items_total} items today have estimates (older entries don't).`}
+      </p>
+      <div className="micro-grid">
+        {m.nutrients.map((n) => {
+          const pct = n.target > 0 ? Math.min(100, (n.consumed / n.target) * 100) : 0;
+          const over = n.kind === "limit" && n.consumed > n.target;
+          return (
+            <div key={n.key} className={`micro ${n.kind}`} title={`${n.label}: ${fmtMicro(n.consumed)} of ${n.target} ${n.unit}`}>
+              <div className="micro-label">
+                <span>{n.label}{n.kind === "limit" && <span className="muted"> (limit)</span>}</span>
+                <span className={`num ${over ? "warn" : ""}`}>
+                  {fmtMicro(n.consumed)} / {n.target.toLocaleString()} {n.unit}
+                </span>
+              </div>
+              <div className="bar" role="progressbar" aria-label={n.label}
+                   aria-valuenow={Math.round(n.consumed)} aria-valuemax={n.target}>
+                <div className={`bar-fill ${over ? "over" : ""}`} style={{ width: `${pct}%` }} />
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </section>
   );
 }
 
@@ -92,13 +134,15 @@ export default function Dashboard({ dataVersion }: { dataVersion: number }) {
         <>
           <CalorieRing eaten={c.calories} target={t.calories} />
           <Bar label="Protein" value={c.protein_g} target={t.protein_g} unit="g" tone="protein" />
+          <Bar label="Fiber" value={c.fiber_g} target={t.fiber_g} unit="g" tone="fiber" />
           <Bar label="Carbs" value={c.carbs_g} target={t.carbs_g} unit="g" tone="carbs" />
           <Bar label="Fat" value={c.fat_g} target={t.fat_g} unit="g" tone="fat" />
-          <div className="muted small">Fiber: {grams(c.fiber_g)}</div>
         </>
       ) : (
         <p className="muted">No targets set.</p>
       )}
+
+      {data.micronutrients && <Micronutrients m={data.micronutrients} />}
 
       <h3>Meals</h3>
       {data.entries.length === 0 && <p className="muted small">Nothing logged{data.date === today ? " yet today" : ""}.</p>}

@@ -99,7 +99,7 @@ class LogEntryItem(Base):
     carbs_g: Mapped[float] = mapped_column(Float)
     fat_g: Mapped[float] = mapped_column(Float)
     fiber_g: Mapped[float] = mapped_column(Float, default=0)
-    micronutrients: Mapped[dict | None] = mapped_column(JSON)   # reserved for a later phase
+    micronutrients: Mapped[dict | None] = mapped_column(JSON)   # {iron_mg: 1.2, ...}; keys in config
 
     entry: Mapped[LogEntry] = relationship(back_populates="items")
 
@@ -133,6 +133,7 @@ class UserFood(Base):
     fiber_g: Mapped[float] = mapped_column(Float, default=0)
     grams_per_piece: Mapped[float | None] = mapped_column(Float)
     grams_per_serving: Mapped[float | None] = mapped_column(Float)
+    micronutrients: Mapped[dict | None] = mapped_column(JSON)       # per reference amount
 
     # Recipe yield (recipes only): at least one is set.
     yield_pieces: Mapped[float | None] = mapped_column(Float)

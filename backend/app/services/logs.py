@@ -5,6 +5,8 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session, selectinload
 
 from app.models import LogEntry, User, UserTarget, WeightLog
+from app.nutrition import age_on, fiber_target_g, micronutrient_targets
+from app.services import micros
 from app.timeutil import local_day_bounds_utc, utc_to_local
 
 NUTRIENTS = ["calories", "protein_g", "carbs_g", "fat_g", "fiber_g"]
@@ -100,6 +102,7 @@ def targets_to_dict(t: UserTarget | None) -> dict | None:
         "protein_g": t.protein_target_g,
         "carbs_g": t.carbs_target_g,
         "fat_g": t.fat_target_g,
+        "fiber_g": fiber_target_g(t.daily_calorie_target),
         "effective_date": t.effective_date.isoformat(),
         "is_custom": t.is_custom,
     }
@@ -107,20 +110,36 @@ def targets_to_dict(t: UserTarget | None) -> dict | None:
 
 def daily_summary(db: Session, user: User, day: date) -> dict:
     entries = entries_between(db, user, day, day)
-    consumed = sum_items([it for e in entries for it in e.items])
+    all_items = [it for e in entries for it in e.items]
+    consumed = sum_items(all_items)
     targets = targets_to_dict(current_targets(db, user.id, day))
     remaining = None
     if targets:
         remaining = {
             k: round(targets[k] - consumed[k], 1)
-            for k in ("calories", "protein_g", "carbs_g", "fat_g")
+            for k in ("calories", "protein_g", "carbs_g", "fat_g", "fiber_g")
         }
     return {
         "date": day.isoformat(),
         "targets": targets,
         "consumed": consumed,
         "remaining": remaining,
+        "micronutrients": _micros_summary(user, day, all_items),
         "entries": [entry_to_dict(e, user.timezone) for e in entries],
+    }
+
+
+def _micros_summary(user: User, day: date, items) -> dict:
+    """Consumed vs reference value per micronutrient, plus how many items had estimates."""
+    consumed = micros.total(it.micronutrients for it in items)
+    age = age_on(user.date_of_birth, day) if user.date_of_birth else None
+    return {
+        "items_total": len(items),
+        "items_with_data": sum(1 for it in items if it.micronutrients),
+        "nutrients": [
+            {**t, "consumed": round(consumed.get(t["key"], 0), 1)}
+            for t in micronutrient_targets(user.sex, age)
+        ],
     }
 
 

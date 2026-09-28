@@ -81,3 +81,11 @@ class ItemIn(BaseModel):
     food_id: int | None = None
     # Approximate grams in one unit, when the unit is a piece/serving/cup etc.
     unit_weight_g: float | None = Field(default=None, gt=0)
+    # Estimated micronutrients for this amount ({"iron_mg": 1.2, ...}); unknown keys dropped.
+    micronutrients: dict | None = None
+
+    @field_validator("micronutrients", mode="before")
+    @classmethod
+    def clean_micros(cls, v):
+        from app.services.micros import clean
+        return clean(v) if isinstance(v, dict) else None

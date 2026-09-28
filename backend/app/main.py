@@ -3,15 +3,16 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 
 from app import models  # noqa: F401  (registers tables)
-from app.db import Base, engine
+from app.db import Base, add_missing_columns, engine
 from app.routers import actions, auth, chat, dashboard, foods, profile
 
 
 @asynccontextmanager
 async def lifespan(_app: FastAPI):
-    # V1: create tables directly. Switch to Alembic migrations before the schema
-    # needs to change on a database with real data in it.
+    # V1: create tables directly and add any new nullable columns. Switch to Alembic
+    # before making changes this can't handle (renames, NOT NULL columns, type changes).
     Base.metadata.create_all(engine)
+    add_missing_columns()
     yield
 
 

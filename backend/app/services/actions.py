@@ -89,6 +89,7 @@ def _items_from_payload(payload: dict) -> list[LogEntryItem]:
             carbs_g=i["carbs_g"],
             fat_g=i["fat_g"],
             fiber_g=i.get("fiber_g", 0),
+            micronutrients=i.get("micronutrients"),
         )
         for i in payload["items"]
     ]

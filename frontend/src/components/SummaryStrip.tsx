@@ -18,6 +18,7 @@ export default function SummaryStrip({ dataVersion, onOpen }: Props) {
   const kcalLeft = Math.round(data.remaining.calories);
   const macros = [
     { key: "protein", label: "Protein", value: c.protein_g, target: t.protein_g },
+    { key: "fiber", label: "Fiber", value: c.fiber_g, target: t.fiber_g },
     { key: "carbs", label: "Carbs", value: c.carbs_g, target: t.carbs_g },
     { key: "fat", label: "Fat", value: c.fat_g, target: t.fat_g },
   ];
@@ -30,7 +31,8 @@ export default function SummaryStrip({ dataVersion, onOpen }: Props) {
       </span>
       <span className="strip-macros">
         {macros.map((m) => {
-          const left = Math.round(m.target - m.value);
+          // Extra fiber is fine, so it never shows as "over".
+          const left = m.key === "fiber" ? Math.max(0, Math.round(m.target - m.value)) : Math.round(m.target - m.value);
           const pct = m.target > 0 ? Math.min(100, (m.value / m.target) * 100) : 0;
           return (
             <span key={m.key} className={`strip-macro bar-row ${m.key}`}>

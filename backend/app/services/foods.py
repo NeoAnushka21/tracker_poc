@@ -10,6 +10,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session, selectinload
 
 from app.models import RecipeIngredient, User, UserFood, utcnow
+from app.services import micros
 
 NUTRIENTS = ("calories", "protein_g", "carbs_g", "fat_g", "fiber_g")
 MASS_UNITS = ("g", "ml")          # treated as interchangeable (density ~1; fine for most foods)
@@ -82,7 +83,10 @@ def scale_factor(food: UserFood, qty: float, unit: str) -> float:
 
 def nutrients_for(food: UserFood, qty: float, unit: str) -> dict:
     f = scale_factor(food, qty, unit)
-    return {k: round((getattr(food, k) or 0) * f, 1) for k in NUTRIENTS}
+    return {
+        **{k: round((getattr(food, k) or 0) * f, 1) for k in NUTRIENTS},
+        "micronutrients": micros.scale(food.micronutrients, f),
+    }
 
 
 def reference_for(qty: float, unit: str, nutrients: dict) -> tuple[float, str, dict]:
@@ -151,6 +155,7 @@ def food_to_dict(food: UserFood, with_ingredients: bool = False) -> dict:
         "yield_servings": food.yield_servings,
         "cooked_weight_g": food.cooked_weight_g,
         "measures": _measures(food),
+        "micronutrients": food.micronutrients,
         "last_used_at": food.last_used_at.isoformat() + "Z",
     }
     if with_ingredients and food.kind == "recipe":
@@ -166,7 +171,7 @@ def nutrients_for_safe(food: UserFood, qty: float, unit: str) -> dict:
     try:
         return nutrients_for(food, qty, unit)
     except FoodError:
-        return {k: None for k in NUTRIENTS}
+        return {**{k: None for k in NUTRIENTS}, "micronutrients": None}
 
 
 def library_context(db: Session, user: User) -> list[str]:
@@ -198,6 +203,7 @@ def compute_recipe(ingredients: list[dict], yield_pieces: float | None,
                    yield_servings: float | None, cooked_weight_g: float | None) -> dict:
     """Whole-batch totals -> the recipe's stored reference amount and nutrients."""
     total = {k: sum(i[k] for i in ingredients) for k in NUTRIENTS}
+    total_micros = micros.total(i.get("micronutrients") for i in ingredients)
     if yield_pieces:
         ref_qty, ref_unit, divisor = 1.0, "piece", yield_pieces
     elif cooked_weight_g:
@@ -214,6 +220,7 @@ def compute_recipe(ingredients: list[dict], yield_pieces: float | None,
         "ref_qty": ref_qty,
         "ref_unit": ref_unit,
         "per_ref": per_ref,
+        "per_ref_micronutrients": micros.scale(total_micros, 1 / divisor),
         "batch_totals": {k: round(v, 1) for k, v in total.items()},
         "grams_per_piece": round(cooked_weight_g / yield_pieces, 1) if yield_pieces and cooked_weight_g else None,
         "grams_per_serving": round(cooked_weight_g / yield_servings, 1) if yield_servings and cooked_weight_g else None,
@@ -243,6 +250,7 @@ def upsert_estimate(db: Session, user: User, item: dict) -> UserFood | None:
     food.ref_qty, food.ref_unit = ref_qty, ref_unit
     for k in NUTRIENTS:
         setattr(food, k, per_ref[k])
+    food.micronutrients = micros.scale(item.get("micronutrients"), ref_qty / (item["quantity"] * normalize_unit(item["unit"])[1]))
     weight = item.get("unit_weight_g")
     if weight and ref_unit == "piece":
         food.grams_per_piece = weight
@@ -284,6 +292,7 @@ def save_recipe(db: Session, user: User, payload: dict) -> UserFood:
     recipe.ref_qty, recipe.ref_unit = payload["ref_qty"], payload["ref_unit"]
     for k in NUTRIENTS:
         setattr(recipe, k, payload["per_ref"][k])
+    recipe.micronutrients = payload.get("per_ref_micronutrients")
     recipe.yield_pieces = payload.get("yield_pieces")
     recipe.yield_servings = payload.get("yield_servings")
     recipe.cooked_weight_g = payload.get("cooked_weight_g")
