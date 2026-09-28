@@ -51,7 +51,7 @@ npm install
 npm run dev
 ```
 
-Open http://omniai.localhost:5173 (any `*.localhost` name reaches your machine; the hostname is `APP_DEV_HOST` in `frontend/src/brand.ts`). The dev server proxies `/api` to the backend on port 8000.
+Open http://omniai.localhost:5173 (any `*.localhost` name reaches your machine; the hostname is `APP_DEV_HOST` in `frontend/src/brand.ts`). The dev server proxies `/api` to the backend on port 8000. The launcher page (the dancing-MacBro wake screen used in production) is at http://omniai.localhost:5173/launcher.html; with the backend running it opens the app straight away, and with it stopped it shows the wake screen until it's back.
 
 **Tests**
 
@@ -141,7 +141,7 @@ Full details: [docs/technical-overview.md](docs/technical-overview.md).
 - Branded-product web search. For now Claude uses what it knows about the label and asks you for the figures if it doesn't know the product.
 - A cleanup job for stale proposals (they expire lazily on the next request)
 
-**Deployment:** live at https://omniai-hkv2.onrender.com on Render (free web service) + Neon (free Postgres), see [docs/deployment.md](docs/deployment.md). Locally the app still uses SQLite.
+**Deployment:** open it from the always-on launcher (Render static site `omniai-app`, e.g. https://omniai-app.onrender.com), which shows a dancing-MacBro screen while the app at https://omniai-hkv2.onrender.com (free web service) wakes up, with data in Neon (free Postgres). See [docs/deployment.md](docs/deployment.md). Locally the app still uses SQLite.
 
 **Differences from the spec's schema:**
 

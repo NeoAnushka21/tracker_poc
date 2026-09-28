@@ -20,7 +20,7 @@ function steps(name: string | null): Step[] {
       body: (
         <ul>
           <li>A greeting and <b>today's summary</b>: calories eaten / target, your balance, and protein, fiber, carbs and fat.</li>
-          <li><b>Water</b> with quick +250 ml / +500 ml buttons.</li>
+          <li>A separate <b>Water</b> tile with quick +250 ml / +500 ml buttons.</li>
           <li>Two <b>streaks</b>: days in a row you logged a meal, and days in a row you hit your target.</li>
         </ul>
       ),
@@ -51,6 +51,7 @@ function steps(name: string | null): Step[] {
             <li><b>Needs changes</b> lets you type a correction, e.g. "the rice was 200g".</li>
             <li><b>Cancel</b> throws it away.</li>
           </ul>
+          <p>After you confirm, a summary card shows your day so far: calories and macros after food, or water against your goal after water.</p>
           <p className="muted small">Changed your mind while I'm thinking? Press <b>■ Stop</b> to get your message back and edit it.</p>
         </>
       ),
@@ -73,9 +74,7 @@ function steps(name: string | null): Step[] {
       title: "4. Your day on the Dashboard",
       body: (
         <ul>
-          <li>The ring shows <b>eaten / target</b> calories and your <b>balance</b> left.</li>
-          <li>Bars for protein, fiber, carbs and fat, plus micronutrients.</li>
-          <li><b>Water</b>: tap +250 ml or +500 ml.</li>
+          <li>Tiles in order: <b>macros</b> (the ring shows <b>eaten / target</b> calories and your <b>balance</b>, with bars for protein, fiber, carbs and fat), then <b>micronutrients</b>, then <b>water</b> (tap +250 ml or +500 ml).</li>
           <li>Meals are split into breakfast, snacks, lunch and dinner. Tap the <b>pencil</b> on an item to move, copy, change the amount or delete it.</li>
           <li>Use <b>‹ ›</b> to look at earlier days.</li>
         </ul>
@@ -84,7 +83,7 @@ function steps(name: string | null): Step[] {
     {
       tab: "analysis",
       title: "5. Trends in Analysis",
-      body: <p>Switch between <b>7, 14 or 30 days</b> to see calories and protein against target, macro trends, calories by meal, water, and how many days you hit your target. Hover or tab onto any chart for exact numbers.</p>,
+      body: <p>Switch between <b>7, 14 or 30 days</b> to see calories and protein against target, macro trends, calories by meal, and water. Your target streak is on <b>Home</b>. Hover or tab onto any chart for exact numbers.</p>,
     },
     {
       tab: "foods",

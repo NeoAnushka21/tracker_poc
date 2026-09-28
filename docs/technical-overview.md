@@ -53,10 +53,14 @@ POC_new/
 │   ├── scripts/copy_to_postgres.py  # one-off SQLite → Postgres data copy
 │   └── tests/                    # pytest suite
 └── frontend/
-    ├── vite.config.ts            # dev proxy /api → :8000
+    ├── vite.config.ts            # dev proxy /api → :8000; two pages (app + launcher)
+    ├── index.html, launcher.html # the app, and the always-on launcher page (static site)
     └── src/
+        ├── main.tsx              # mounts App + the wake overlay
+        ├── launcher.tsx          # launcher: waits for the app server, then opens it
+        ├── wake.ts               # "server asleep?" detection, wait and retry (used by api.ts)
         ├── App.tsx               # auth gate, tabs (Home default), top bar, guide tour
-        ├── api.ts                # typed fetch client
+        ├── api.ts                # typed fetch client (retries once after the server wakes)
         ├── types.ts, format.ts, theme.ts, useSpeechToText.ts
         ├── styles.css
         └── components/           # section 7

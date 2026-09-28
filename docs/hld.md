@@ -36,7 +36,7 @@ flowchart LR
 ```mermaid
 flowchart TB
     subgraph Browser
-        SPA[React 19 + Vite SPA<br/>Home · Chat · Dashboard · Analysis · My foods<br/>Settings · Guide tour · Admin console]
+        SPA[React 19 + Vite SPA<br/>Home · Chat · Dashboard · Analysis · My foods<br/>Settings · Guide tour · Admin console<br/>wake screen while the server wakes]
         STT[Web Speech API]
         SPA --- STT
     end
