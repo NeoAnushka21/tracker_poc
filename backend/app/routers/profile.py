@@ -36,6 +36,7 @@ def user_to_dict(db: Session, user: User) -> dict:
         "created_at": user.created_at.isoformat() + "Z" if user.created_at else None,
         "last_login_at": user.last_login_at.isoformat() + "Z" if user.last_login_at else None,
         "consented_at": user.consent_at.isoformat() + "Z" if user.consent_at else None,
+        "guide_seen": user.guide_seen_at is not None,
     }
 
 

@@ -35,6 +35,7 @@ export type User = {
   created_at: string | null;
   last_login_at: string | null;
   consented_at: string | null;
+  guide_seen: boolean;
 };
 
 export type Item = Nutrients & {

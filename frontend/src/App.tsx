@@ -11,6 +11,7 @@ import FoodsPage from "./components/FoodsPage";
 import AnalysisPage from "./components/AnalysisPage";
 import AdminPage from "./components/AdminPage";
 import ConsentGate from "./components/ConsentGate";
+import GuideTour from "./components/GuideTour";
 import { MacBroAvatar, UserAvatar } from "./components/Avatar";
 
 const TABS = [
@@ -40,6 +41,7 @@ export default function App() {
   const [showSettings, setShowSettings] = useState(false);
   const [tab, setTab] = useState<TabId>(tabFromHash);
   const [chatDraft, setChatDraft] = useState<{ text: string; nonce: number } | null>(null);
+  const [guideOpen, setGuideOpen] = useState(false);
 
   useEffect(() => {
     const onHash = () => setTab(tabFromHash());
@@ -64,6 +66,17 @@ export default function App() {
   async function logout() {
     await api.logout();
     setUser(null);
+  }
+
+  // First-run guide: opens once for a new user after onboarding; the Guide button reopens it.
+  useEffect(() => {
+    if (user && !user.is_admin && user.consented && user.onboarded && !user.guide_seen) setGuideOpen(true);
+  }, [user?.id, user?.onboarded, user?.consented]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  function closeGuide() {
+    setGuideOpen(false);
+    openTab("chat");
+    if (user && !user.guide_seen) api.guideSeen().then(setUser).catch(() => {});
   }
 
   if (loading) return <div className="center muted">Loading…</div>;
@@ -113,6 +126,9 @@ export default function App() {
       <header className="topbar">
         <span className="brand"><MacBroAvatar size={34} />MacBro</span>
         <div className="topbar-actions">
+          <button className="ghost guide-btn" onClick={() => setGuideOpen(true)} aria-label="Guide" title="How to use MacBro">
+            <span aria-hidden="true">?</span><span className="settings-label">Guide</span>
+          </button>
           {settingsButton}
           <button className="ghost" onClick={logout}>Log out</button>
           <span className="topbar-user">
@@ -158,6 +174,7 @@ export default function App() {
         <FoodsPage dataVersion={dataVersion} />
       </main>
       {settings}
+      {guideOpen && <GuideTour name={user.preferred_name} onTab={openTab} onClose={closeGuide} />}
     </div>
   );
 }

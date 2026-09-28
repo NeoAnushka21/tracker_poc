@@ -2,7 +2,18 @@
 
 MacBro (macro + bro) is a chat-based calorie and macro tracker. You describe what you ate in plain language. Claude estimates the nutrition and proposes a log entry, and **nothing is saved until you click Confirm**.
 
-Spec: [macro_tracker_build_spec (1).md](macro_tracker_build_spec%20(1).md). This is the **base version** (see "Scope" below).
+Spec: [macro_tracker_build_spec (1).md](macro_tracker_build_spec%20(1).md).
+
+## Documentation
+
+| Doc | For |
+|---|---|
+| [docs/user-guide.md](docs/user-guide.md) | User manual and walkthrough (the in-app **? Guide** tour is its short version) |
+| [docs/hld.md](docs/hld.md) | High-level design with diagrams |
+| [docs/technical-overview.md](docs/technical-overview.md) | Stack, API, data model, LLM layer, components |
+| [docs/llm-routing-strategy.md](docs/llm-routing-strategy.md) | Multi-model open-source routing plan |
+
+Keep these in sync with every code or UI change. See the checklist in [docs/README.md](docs/README.md).
 
 ## Run it locally
 
@@ -71,7 +82,7 @@ user message ─► FastAPI /api/chat ─► LLM (Groq gpt-oss-120b or Claude) w
 - **Personal food library (`user_foods`):** each confirmed meal teaches the app its foods. They're stored per 100 g/ml, or per piece/serving with a gram weight when known. Next time the model only has to match the food (`food_id`), and **the app scales the nutrients in code**, so the same food always gets the same numbers. A food you edit by hand in *My foods* is never overwritten by later estimates. Cancelled proposals teach nothing.
 - **Recipes:** say "save this as a recipe" (or accept the assistant's offer), give the raw ingredients for the whole batch and its yield (pieces, servings and/or cooked weight), and confirm the card. Logging "3 chapatis" then uses the recipe's per-piece values. Editing a recipe changes future logs only; past entries keep their numbers.
 - **Guard against false claims:** if the model says it logged or saved something without creating a card, the app sends it back once to either create the proposal or correct itself.
-- Meal type is inferred from your local time (breakfast 05–11, lunch 11–15, snack 15–19, dinner 19–23, otherwise snack). It's overridden when you say "for breakfast".
+- Meal type is inferred from your local time: breakfast 05–10, morning snack 10–12, lunch 12–15, evening snack 15–19, dinner 19–23, and evening snack otherwise. It's overridden when you say "for breakfast".
 - Targets use Mifflin-St Jeor for BMR, multiplied by an activity factor for TDEE, then adjusted for your goal. Protein is set in g/kg, fat is 25% of calories, and carbs fill the rest. All the tunable numbers are in `backend/app/config.py`.
 
 ## Screens
@@ -81,8 +92,9 @@ user message ─► FastAPI /api/chat ─► LLM (Groq gpt-oss-120b or Claude) w
 - **Analysis:** 7, 14 or 30-day trends: calories and protein vs target, macro lines, calorie split, calories by meal, water, days on target, and a data table. All charts have hover and keyboard tooltips.
 - **My foods:** your saved foods and recipes.
 - **Admin console:** reached through **Admin login** on the login page, and only for `ADMIN_EMAILS`. Admin emails can't sign up or use the normal login. The admin account is created at startup from `ADMIN_INITIAL_PASSWORD` if it doesn't exist yet. The console shows users, logins and activity, with read-only access to each user's logs, foods and chat, and every view is written to an audit log.
-- **Settings (⚙):** account details (email, registration date, last login, consent), targets and weight, change password, and **delete account**, which requires your password and permanently removes all of your data.
-- Light, dark or system theme (toggle in the header), with text contrast checked against WCAG AA in both.
+- **Settings (⚙):** Account (email, registration date, last login, consent, and appearance), Targets, Body profile (weight, height, optional body measurements), Password, and **Delete account**, which requires your password and permanently removes all of your data.
+- **? Guide:** the first-run walkthrough. It opens once for new users and can be reopened any time.
+- Light, dark or system theme (in Settings → Account), with text contrast checked against WCAG AA in both.
 - Sign-up requires accepting a data-use consent notice. Existing accounts are asked once, and again if the wording (`CONSENT_VERSION`) changes.
 
 ## Code map
@@ -99,18 +111,30 @@ user message ─► FastAPI /api/chat ─► LLM (Groq gpt-oss-120b or Claude) w
 | `backend/app/services/foods.py` | Food library + recipes: units, scaling, recipe maths |
 | `backend/app/routers/foods.py` | My foods API (list / edit / delete) |
 | `backend/app/nutrition.py` | BMR / TDEE / target calculation |
-| `frontend/src/components/` | Auth, Onboarding, Chat (with voice input), ProposalCard, Dashboard, My foods, Settings |
+| `frontend/src/components/` | Auth, Onboarding, GuideTour, Chat (with voice input), ProposalCard, Dashboard, Analysis, My foods, Settings, Admin |
+
+Full details: [docs/technical-overview.md](docs/technical-overview.md).
 
 ## Scope of this base version
 
-**Included:** email + password login; onboarding (DOB, sex, height, weight, metric/imperial, time zone, goal, activity) with editable targets; chat logging with clarifying questions; proposal cards with confirm buttons; editing and deleting through chat; questions about past logs; a daily dashboard (calories, protein, carbs, fat, fiber) with previous-day navigation; weight updates with optional target recalculation.
+**Included:**
+
+- email + password login, consent, and an admin console
+- onboarding with editable targets
+- chat logging (typed or by voice) with clarifying questions, and confirm cards
+- editing, deleting, moving and copying through chat or the dashboard
+- questions about past logs
+- a daily dashboard with macros, fiber, micronutrients, water and five meals
+- 7, 14 and 30-day analysis
+- a food library and recipes
+- a body profile
+- a first-run guide
+- light and dark themes
 
 **Deferred** (the schema already has room for these):
 
 - OTP email verification
 - Branded-product web search. For now Claude uses what it knows about the label and asks you for the figures if it doesn't know the product.
-- Micronutrients (`log_entry_items.micronutrients` exists but is left empty)
-- Weekly and monthly views and adherence (the thresholds are already in `config.py`)
 - A cleanup job for stale proposals (they expire lazily on the next request)
 - Deployment
 

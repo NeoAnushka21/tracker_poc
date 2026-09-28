@@ -83,6 +83,7 @@ export const api = {
   deleteAccount: (password: string) => request<{ ok: boolean }>("POST", "/api/auth/delete-account", { password }),
   consentText: () => request<{ version: string; text: string }>("GET", "/api/auth/consent-text"),
   giveConsent: () => request<User>("POST", "/api/auth/consent"),
+  guideSeen: () => request<User>("POST", "/api/auth/guide-seen"),
   login: (email: string, password: string) => request<User>("POST", "/api/auth/login", { email, password }),
   logout: () => request<{ ok: boolean }>("POST", "/api/auth/logout"),
 

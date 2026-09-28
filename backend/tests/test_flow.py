@@ -219,3 +219,10 @@ def test_normal_answers_mentioning_logs_are_not_nudged(client, user, fake_llm):
     provider = fake_llm(text_reply("Today you've logged 2 meals, 900 kcal."))
     client.post("/api/chat", json={"message": "how am I doing?"})
     assert len(provider.calls) == 1
+
+
+def test_first_run_guide_is_shown_once(client, user):
+    assert client.get("/api/auth/me").json()["guide_seen"] is False
+    assert client.post("/api/auth/guide-seen").json()["guide_seen"] is True
+    assert client.post("/api/auth/guide-seen").json()["guide_seen"] is True   # idempotent
+    assert client.get("/api/auth/me").json()["guide_seen"] is True

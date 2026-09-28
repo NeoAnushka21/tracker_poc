@@ -43,6 +43,7 @@ class User(Base):
     consent_version: Mapped[str | None] = mapped_column(String(32))
     last_login_at: Mapped[datetime | None] = mapped_column(DateTime)
     login_count: Mapped[int | None] = mapped_column(Integer, default=0)
+    guide_seen_at: Mapped[datetime | None] = mapped_column(DateTime)   # first-run tour finished or skipped
 
     @property
     def onboarded(self) -> bool:

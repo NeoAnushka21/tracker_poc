@@ -119,6 +119,15 @@ def give_consent(user: User = Depends(current_user), db: Session = Depends(get_d
     return user_to_dict(db, user)
 
 
+@router.post("/guide-seen")
+def guide_seen(user: User = Depends(current_user), db: Session = Depends(get_db)):
+    """The first-run guide was finished or skipped; don't open it automatically again."""
+    if user.guide_seen_at is None:
+        user.guide_seen_at = utcnow()
+        db.commit()
+    return user_to_dict(db, user)
+
+
 @router.get("/me")
 def me(user: User = Depends(current_user), db: Session = Depends(get_db)):
     return user_to_dict(db, user)
