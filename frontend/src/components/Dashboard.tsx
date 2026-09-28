@@ -47,12 +47,14 @@ function CalorieRing({ eaten, target }: { eaten: number; target: number }) {
         <circle className="ring-fill" cx="60" cy="60" r={r}
                 strokeDasharray={`${frac * circumference} ${circumference}`}
                 transform="rotate(-90 60 60)" />
-        <text x="60" y="58" className="ring-value">{Math.abs(remaining).toLocaleString()}</text>
-        <text x="60" y="76" className="ring-caption">{over ? "kcal over" : "kcal left"}</text>
+        <text x="60" y="57" className="ring-value">{Math.round(eaten).toLocaleString()}</text>
+        <text x="60" y="75" className="ring-caption">/ {target.toLocaleString()} kcal</text>
       </svg>
       <dl className="kcal-stats">
-        <div><dt>Eaten</dt><dd>{Math.round(eaten).toLocaleString()}</dd></div>
-        <div><dt>Budget</dt><dd>{target.toLocaleString()}</dd></div>
+        <div>
+          <dt>{over ? "Over budget by" : "Balance"}</dt>
+          <dd className={over ? "warn" : ""}>{Math.abs(remaining).toLocaleString()} kcal</dd>
+        </div>
         <div><dt>Progress</dt><dd>{target > 0 ? Math.round((eaten / target) * 100) : 0}%</dd></div>
       </dl>
     </div>

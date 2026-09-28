@@ -27,8 +27,8 @@ export default function SummaryStrip({ dataVersion, onOpen }: Props) {
   return (
     <button className="summary-strip card" onClick={onOpen} title="Open the dashboard">
       <span className="strip-kcal">
-        <b className={kcalLeft < 0 ? "warn" : ""}>{Math.abs(kcalLeft).toLocaleString()}</b>
-        <span className="muted"> kcal {kcalLeft < 0 ? "over" : "left"} today</span>
+        <b className={kcalLeft < 0 ? "warn" : ""}>{Math.round(c.calories).toLocaleString()}</b>
+        <span className="muted"> / {t.calories.toLocaleString()} kcal today</span>
         {data.water?.target_ml ? (
           <span className="strip-water muted">
             {" · "}Water {litres(data.water.consumed_ml)} / {litres(data.water.target_ml)}
