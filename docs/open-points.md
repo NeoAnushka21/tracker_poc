@@ -1,6 +1,6 @@
 # Open points
 
-> Last updated: 2026-09-29 (standing rule; follow-ups, decisions and done log added). Until at least 2026-10-06 the app is used by one person (the owner), and the focus is the single-user experience, UI and features.
+> Last updated: 2026-09-29 (Body tab done; body follow-ups added). Until at least 2026-10-06 the app is used by one person (the owner), and the focus is the single-user experience, UI and features.
 
 **How this doc works (standing rule, 2026-09-29):** every idea, option or follow-up that comes up in a discussion but isn't built goes here, in the same change as the discussion's work, so nothing gets lost. Each item is either **open** (may be built later), **on hold**, or **decided against** (kept with the reason, so it isn't re-discussed from scratch). When an item is built, it moves to **Done** at the bottom with the date, and the feature itself is documented in the relevant doc.
 
@@ -93,6 +93,9 @@ The launcher (live since 2026-09-29) replaces Render's waking page with our danc
 | Dancing MacBro while MacBro is replying in Chat | 2026-09-29 | Open | Reuse the wake-screen animation (small) instead of the "thinking" dots. |
 | Chat side panel with today's totals on laptops | 2026-09-29 | On hold | Owner: keep Chat as it is for now. |
 | Embedding-based food matching ("roti" = "chapati", typos) | 2026-09-28 | On hold | See section 3; pgvector on Neon when needed. |
+| Trend line per body measurement (and weight) on the Body tab | 2026-09-29 | Open | Today the tab shows the latest value and the change since the previous one; the dated history is stored, so a small chart per part is frontend-only work. |
+| Body-fat category labels (e.g. athletic / average) | 2026-09-29 | Open | Only the estimate is shown now. Category tables (e.g. ACE) vary by source, sex and age, so choose one deliberately before adding. |
+| Height history | 2026-09-29 | Open | Height is stored on the profile (latest only); weight and measurements keep full history. Rarely needed for adults. |
 
 ## 6. Decided against (kept for the record)
 
@@ -114,4 +117,5 @@ The launcher (live since 2026-09-29) replaces Render's waking page with our danc
 | Own loading screen instead of Render's ("Option 2"): dancing MacBro, always-on launcher | 2026-09-29 | [deployment.md](deployment.md), user guide "Opening OmniAI" |
 | Water summary card after water logs; separate macro and water tiles; Dashboard order | 2026-09-29 | user guide §6, §4, §11 |
 | Micronutrients visible and editable in My foods | 2026-09-29 | user guide §9 |
+| Body tab: weight, height, BMI (WHO), US Navy body-fat estimate, male/female diagram with tap-to-measure, shoulders and wrist added, edit saved entries | 2026-09-29 | user guide §13 |
 | Open-source-only models, NVIDIA backup, consent wording | 2026-09-28 | [llm-routing-strategy.md](llm-routing-strategy.md) |

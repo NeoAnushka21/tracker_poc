@@ -81,11 +81,13 @@ class HeightIn(BaseModel):
 class MeasurementsIn(BaseModel):
     """All optional; at least one required. Values in cm."""
     neck_cm: float | None = Field(default=None, ge=10, le=250)
+    shoulders_cm: float | None = Field(default=None, ge=10, le=250)
     chest_cm: float | None = Field(default=None, ge=10, le=250)
     waist_cm: float | None = Field(default=None, ge=10, le=250)
     hips_cm: float | None = Field(default=None, ge=10, le=250)
     biceps_cm: float | None = Field(default=None, ge=10, le=250)
     forearm_cm: float | None = Field(default=None, ge=10, le=250)
+    wrist_cm: float | None = Field(default=None, ge=5, le=250)
     thigh_cm: float | None = Field(default=None, ge=10, le=250)
     calf_cm: float | None = Field(default=None, ge=10, le=250)
 

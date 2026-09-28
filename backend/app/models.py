@@ -146,11 +146,13 @@ class BodyMeasurement(Base):
     user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), index=True)
     measured_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow, index=True)
     neck_cm: Mapped[float | None] = mapped_column(Float)
+    shoulders_cm: Mapped[float | None] = mapped_column(Float)
     chest_cm: Mapped[float | None] = mapped_column(Float)
     waist_cm: Mapped[float | None] = mapped_column(Float)
     hips_cm: Mapped[float | None] = mapped_column(Float)
     biceps_cm: Mapped[float | None] = mapped_column(Float)
     forearm_cm: Mapped[float | None] = mapped_column(Float)
+    wrist_cm: Mapped[float | None] = mapped_column(Float)
     thigh_cm: Mapped[float | None] = mapped_column(Float)
     calf_cm: Mapped[float | None] = mapped_column(Float)
 

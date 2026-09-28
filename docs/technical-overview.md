@@ -1,6 +1,6 @@
 # OmniAI technical overview
 
-> Last updated: 2026-09-29 (editable micronutrients in My foods). Update this file in the same change as any code change it describes (see [docs/README.md](README.md)).
+> Last updated: 2026-09-29 (Body tab, BMI and US Navy body fat). Update this file in the same change as any code change it describes (see [docs/README.md](README.md)).
 > Architecture diagrams: [hld.md](hld.md). End-user manual: [user-guide.md](user-guide.md).
 
 ## 1. Tech stack
@@ -59,7 +59,7 @@ POC_new/
         ├── main.tsx              # mounts App + the wake overlay
         ├── launcher.tsx          # launcher: waits for the app server, then opens it
         ├── wake.ts               # "server asleep?" detection, wait and retry (used by api.ts)
-        ├── App.tsx               # auth gate, tabs (Home default), top bar, guide tour
+        ├── App.tsx               # auth gate, tabs (Home default, Body last), top bar, guide tour
         ├── api.ts                # typed fetch client (retries once after the server wakes)
         ├── types.ts, format.ts, theme.ts, useSpeechToText.ts
         ├── styles.css
@@ -76,6 +76,7 @@ POC_new/
 | `services/entries.py` | Direct item operations: `transfer_items` (move/copy), `set_item_quantity`, `delete_item` (soft-deletes an empty entry), `record_event` (chat note so the model knows) |
 | `services/water.py` | Water target (35 ml/kg + activity extra), add/delete, daily summary |
 | `services/analysis.py` | `range_summary` for 7/14/30 days, `on_target` (±10% kcal, ≥90% protein); `streaks` (365-day window; today only counts once it qualifies, so it never breaks a streak) |
+| `services/body.py` | `bmi()` (WHO categories on the displayed one-decimal value) and `body_fat_navy()` (US Navy equations, Hodgdon & Beckett 1984; men: height, neck, waist; women: + hips). Returns `missing` or `implausible` (non-positive log argument, or outside `BODY_FAT_PLAUSIBLE`) instead of a number; `routers/profile.body_profile` adds a warning when the inputs are more than 30 days apart. |
 | `services/progress.py` | Card after a confirm, for the day the change landed on (`routers/actions._action_day`: `drank_at_utc` / `eaten_at_utc` / `to_date`, else today). Water confirms get `build_water_progress` (`focus: "water"`: litres, % of goal, hydration line); food changes get `build_progress` (`focus: "macros"`: calories, macro %, motivational line). Both carry `date` and `is_today`. |
 | `services/micros.py` | Clean, scale and total the micronutrient JSON |
 | `services/cancel.py` | In-memory registry for the Stop button: `start`, `raise_if_cancelled`, `finish_or_cancelled` (atomic check before commit), `cancel` |
@@ -88,7 +89,7 @@ All endpoints are JSON under `/api`, authenticated by the session cookie. Every 
 | Router | Endpoints |
 |---|---|
 | `auth` | `GET consent-text` · `POST register` (needs `consent`; blocks admin emails) · `POST login` (blocks admin emails) · `POST admin-login` (only `ADMIN_EMAILS`) · `POST change-password` · `POST delete-account` · `POST logout` · `POST consent` · `POST guide-seen` · `GET me` |
-| `profile` | `POST onboarding` · `GET preview-targets` · `PUT targets` · `POST weight` · `GET body` · `POST height` · `POST measurements` · `DELETE measurements/{id}` |
+| `profile` | `POST onboarding` · `GET preview-targets` · `PUT targets` · `POST weight` · `GET body` (weight, height, sex, `bmi`, `body_fat`, latest value/change/tip per part, history) · `POST height` · `POST measurements` (a new dated set; any subset) · `PUT measurements/{id}` (correct a saved set; the body is the whole set, nulls clear) · `DELETE measurements/{id}` |
 | `chat` | `GET day?day=` (one local day of chat, default today, plus `prev_day`, the latest earlier day with messages) · `GET history` (legacy, last N) · `POST ""` (send; body may include `log_date`, a past day picked in the UI; 503 with friendly text if the LLM fails) · `POST cancel` |
 | `actions` | `POST {id}/confirm` (returns the action + progress card) · `POST {id}/reject` |
 | `dashboard` | `GET daily?date=` · `GET range?days=&end=` · `GET streaks` (logging and target streaks, best, last 7 days) |
@@ -110,7 +111,7 @@ When `frontend/dist` exists (`FRONTEND_DIST`), `main.mount_frontend` also serves
 | `users` | email, hashed_password, preferred_name, date_of_birth, sex, height_cm, unit_system, timezone, goal_type, activity_level, consent_at, consent_version, last_login_at, login_count, guide_seen_at | `onboarded` = DOB and goal set. `guide_seen_at` stops the first-run tour reopening. |
 | `weight_logs` | weight_kg, logged_at | Latest row = current weight |
 | `user_targets` | daily_calorie_target, protein/carbs/fat_target_g, effective_date, is_custom | Dated: history is kept, and the latest effective row applies |
-| `body_measurements` | measured_at, neck/chest/waist/hips/biceps/forearm/thigh/calf `_cm` | Optional, any subset per row |
+| `body_measurements` | measured_at, neck/shoulders/chest/biceps/forearm/wrist/waist/hips/thigh/calf `_cm` | Optional, any subset per row; shoulders and wrist added 2026-09-29 (nullable, added at startup) |
 | `log_entries` | eaten_at (UTC), meal_type, raw_user_message, deleted_at | Soft delete. `meal_type` ∈ breakfast, morning_snack, lunch, evening_snack, dinner |
 | `log_entry_items` | ingredient_name, brand_name, quantity, unit, calories, protein_g, carbs_g, fat_g, fiber_g, micronutrients (JSON) | Nutrients are stored, not recomputed, so past logs never change |
 | `water_logs` | amount_ml, drank_at | |
@@ -176,7 +177,8 @@ When `frontend/dist` exists (`FRONTEND_DIST`), `main.mount_frontend` also serves
 | `Dashboard` | Separate tiles (cards): day navigation, then macros (calorie ring, macro bars, calorie split), micronutrients, water, and meals; water, micronutrients, meal sections; each item has a pencil that opens an edit panel (Move/Copy toggle + meal dropdown, quantity, and icon buttons for edit in chat, delete, close). Shared icons live in `components/icons.tsx` |
 | `AnalysisPage` + `charts.tsx` | 7/14/30-day range: stat tiles, line, bar and stacked charts with hover/keyboard tooltips and data tables |
 | `FoodsPage` | Library search, filter, edit and delete. Cards fold out the saved micronutrients (`FoodMicros`); the edit form has an **Additional nutrients** section (blank = unknown). |
-| `SettingsDialog` | Account (and appearance), Targets (`TargetsEditor`), Body profile (`BodyProfile`), Password, Delete account |
+| `SettingsDialog` | Account (and appearance), Targets (`TargetsEditor`), Password, Delete account |
+| `BodyPage` + `BodyFigure` | Body tab: weight, height, BMI, body-fat tiles; the diagram (`BodyCallouts`: labelled arrows on both sides, `BodyDots`: numbered dots for narrow cards, switched by a container query at 520px) with an editor showing each part's tip; weight/height forms; history with edit and delete. The figure is a mirrored half outline smoothed with Catmull-Rom curves; anchors per sex in `BodyFigure.tsx`. |
 | `AdminPage` | User table, per-user detail, audit log |
 | `MacroChips` | Bold kcal plus colour-coded P / C / F / Fiber chips (chat cards, My foods) |
 | `Avatar`, `ThemeToggle` | `AppLogo` (placeholder "OAI" tile, used everywhere outside the chat), `MacBroAvatar` (chat and the wake screen), user avatar; theme switch (Settings only) |
@@ -235,13 +237,13 @@ The environment is set in `backend/.env` (template: `backend/.env.example`):
 
 Production values live in the Render dashboard (`render.yaml` declares them; secrets are `sync: false` or generated), never in the repo.
 
-Domain constants (meal windows, goal multipliers, activity factors, water, fiber, micronutrient reference values, adherence thresholds, consent text and version) are in `backend/app/config.py`.
+Domain constants (`BODY_PARTS` with how-to-measure tips, `BMI_CATEGORIES`, `BODY_FAT_PLAUSIBLE`, meal windows, goal multipliers, activity factors, water, fiber, micronutrient reference values, adherence thresholds, consent text and version) are in `backend/app/config.py`.
 
 ## 10. Testing
 
 ```bash
 cd backend
-.venv\Scripts\python -m pytest -q      # 200 tests (1 needs Postgres), fake LLM, no network
+.venv\Scripts\python -m pytest -q      # 214 tests (1 needs Postgres), fake LLM, no network
 cd ../frontend
 npm run build                          # type-check + production build
 ```
@@ -257,7 +259,7 @@ npm run build                          # type-check + production build
 
   Never point `TEST_DATABASE_URL` at real data: tables are dropped per test.
 - `tests/conftest.py` gives each test a fresh database and a scripted `FakeProvider`. It also pins `ADMIN_EMAILS` and blanks `ADMIN_INITIAL_PASSWORD` so the local `.env` can't leak into tests.
-- Coverage by file: `test_flow` (confirm loop, auth, guide flag), `test_foods` (library, recipes, micronutrients learned on first log, repeat logs from the library without the model, editing micronutrients), `test_micros`, `test_water_meals`, `test_admin`, `test_analysis`, `test_entries` (move/copy/quantity/delete, progress cards: macros vs water, logged day), `test_body`, `test_openai_provider`, `test_nutrition`, `test_streaks`, `test_chat_days`, `test_deploy` (URL handling, frontend serving, health CORS for the launcher, SQLite → Postgres copy), `test_routing` (router, fast paths, pool failover and cooldowns, licence gate, escalation, usage report).
+- Coverage by file: `test_flow` (confirm loop, auth, guide flag), `test_foods` (library, recipes, micronutrients learned on first log, repeat logs from the library without the model, editing micronutrients), `test_micros`, `test_water_meals`, `test_admin`, `test_analysis`, `test_entries` (move/copy/quantity/delete, progress cards: macros vs water, logged day), `test_body` (BMI bands, US Navy equations, missing/implausible inputs, edits), `test_openai_provider`, `test_nutrition`, `test_streaks`, `test_chat_days`, `test_deploy` (URL handling, frontend serving, health CORS for the launcher, SQLite → Postgres copy), `test_routing` (router, fast paths, pool failover and cooldowns, licence gate, escalation, usage report).
 - **Policy:** development and tests use the fake model. Don't use the real LLM API for routine testing, because the free-tier quota is shared with real users.
 
 ## 11. Known limitations and next steps

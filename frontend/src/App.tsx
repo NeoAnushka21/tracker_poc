@@ -8,6 +8,7 @@ import Dashboard from "./components/Dashboard";
 import SettingsDialog from "./components/SettingsDialog";
 import HomePage from "./components/HomePage";
 import FoodsPage from "./components/FoodsPage";
+import BodyPage from "./components/BodyPage";
 import AnalysisPage from "./components/AnalysisPage";
 import AdminPage from "./components/AdminPage";
 import ConsentGate from "./components/ConsentGate";
@@ -23,6 +24,7 @@ const TABS = [
   { id: "dashboard", label: "Dashboard" },
   { id: "analysis", label: "Analysis" },
   { id: "foods", label: "My foods" },
+  { id: "body", label: "Body" },
 ] as const;
 type TabId = (typeof TABS)[number]["id"];
 
@@ -189,6 +191,9 @@ export default function App() {
       )}
       <main className="page" id="panel-foods" role="tabpanel" aria-labelledby="tab-foods" hidden={current !== "foods"}>
         <FoodsPage dataVersion={dataVersion} />
+      </main>
+      <main className="page" id="panel-body" role="tabpanel" aria-labelledby="tab-body" hidden={current !== "body"}>
+        <BodyPage user={user} onUserChanged={(u) => { setUser(u); setDataVersion((v) => v + 1); }} />
       </main>
       {settings}
       {guideOpen && <GuideTour name={user.preferred_name} onTab={openTab} onClose={closeGuide} />}

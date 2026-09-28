@@ -9,6 +9,7 @@ from app.config import BODY_PARTS, BODY_PART_KEYS
 from app.models import BodyMeasurement, User, UserTarget, WeightLog
 from app.nutrition import age_on, calculate_targets
 from app.schemas import HeightIn, MeasurementsIn, OnboardingIn, TargetsIn, WeightIn
+from app.services.body import SAME_SESSION_DAYS, bmi, body_fat_navy
 from app.services.logs import current_targets, current_weight, targets_to_dict
 from app.timeutil import is_valid_timezone, local_today
 
@@ -126,20 +127,32 @@ def body_profile(db: Session, user: User) -> dict:
         select(BodyMeasurement).where(BodyMeasurement.user_id == user.id)
         .order_by(BodyMeasurement.measured_at.desc(), BodyMeasurement.id.desc())
     ))
-    latest = []
-    for key, label in BODY_PARTS:
+    latest, when = [], {}
+    for key, label, tip in BODY_PARTS:
         values = [(m.measured_at, getattr(m, key)) for m in sets if getattr(m, key) is not None]
         current = values[0] if values else None
         previous = values[1] if len(values) > 1 else None
+        if current:
+            when[key] = current[0]
         latest.append({
-            "key": key, "label": label,
+            "key": key, "label": label, "tip": tip,
             "value_cm": current[1] if current else None,
             "measured_at": _iso(current[0]) if current else None,
             "change_cm": round(current[1] - previous[1], 1) if current and previous else None,
         })
+    now = {p["key"]: p["value_cm"] for p in latest}
+    weight_kg = weights[0].weight_kg if weights else None
+    fat = body_fat_navy(user.sex, user.height_cm, now["neck_cm"], now["waist_cm"], now["hips_cm"])
+    if fat["status"] == "ok":
+        used = [when[k] for k in ("neck_cm", "waist_cm", "hips_cm") if k in when and (k != "hips_cm" or user.sex == "female")]
+        if (max(used) - min(used)).days > SAME_SESSION_DAYS:
+            fat["warning"] = "These measurements were taken more than a month apart; re-measure them together for a better estimate."
     return {
+        "sex": user.sex,
         "height_cm": user.height_cm,
-        "weight_kg": weights[0].weight_kg if weights else None,
+        "weight_kg": weight_kg,
+        "bmi": bmi(weight_kg, user.height_cm),
+        "body_fat": fat,
         "weight_history": [{"weight_kg": w.weight_kg, "logged_at": _iso(w.logged_at)} for w in weights[:10]],
         "latest": latest,
         "history": [
@@ -172,6 +185,23 @@ def add_measurements(body: MeasurementsIn, user: User = Depends(onboarded_user),
     if not values:
         raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT, "Enter at least one measurement")
     db.add(BodyMeasurement(user_id=user.id, **values))
+    db.commit()
+    return body_profile(db, user)
+
+
+@router.put("/measurements/{measurement_id}")
+def edit_measurement(measurement_id: int, body: MeasurementsIn, user: User = Depends(onboarded_user),
+                     db: Session = Depends(get_db)):
+    """Correct a saved set (e.g. a typo). The body is the whole set: empty fields are cleared.
+    To record a new value, add a new set instead, so the history keeps the change."""
+    m = db.get(BodyMeasurement, measurement_id)
+    if m is None or m.user_id != user.id:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Measurement not found")
+    values = body.model_dump()
+    if all(v is None for v in values.values()):
+        raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT, "Keep at least one measurement, or delete the set")
+    for k, v in values.items():
+        setattr(m, k, round(v, 1) if v is not None else None)
     db.commit()
     return body_profile(db, user)
 

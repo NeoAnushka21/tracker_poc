@@ -3,7 +3,7 @@ import { AppLogo } from "./Avatar";
 import { APP_NAME, BOT_NAME } from "../brand";
 
 // Keep these steps in sync with docs/user-guide.md whenever the UI changes.
-export type GuideTab = "home" | "chat" | "dashboard" | "analysis" | "foods";
+export type GuideTab = "home" | "chat" | "dashboard" | "analysis" | "foods" | "body";
 
 type Step = { tab: GuideTab; title: string; body: ReactNode };
 
@@ -91,11 +91,22 @@ function steps(name: string | null): Step[] {
       body: <p>Every food you confirm is saved here with its macros and micronutrients, so the next time you log it (e.g. "40g pineapple") the numbers are exactly the same, straight from your library. Recipes you save show up here too. You can search, correct (micronutrients too) or delete any of them.</p>,
     },
     {
+      tab: "body",
+      title: "7. Your Body",
+      body: (
+        <ul>
+          <li>Your <b>weight</b>, <b>height</b> and <b>BMI</b>, and an estimated <b>body fat</b> once you add your neck and waist (and hips for women).</li>
+          <li>Tap a body part on the figure to see how to measure it and add a value. All measurements are optional and dated, so you can see them change.</li>
+          <li>Update your weight or height here too.</li>
+        </ul>
+      ),
+    },
+    {
       tab: "chat",
-      title: "7. Settings",
+      title: "8. Settings",
       body: (
         <>
-          <p>Open <b>⚙ Settings</b> to change your calorie and macro <b>targets</b>, update weight and height or add body measurements under <b>Body profile</b>, switch <b>light or dark</b> theme, change your password, or delete your account.</p>
+          <p>Open <b>⚙ Settings</b> to change your calorie and macro <b>targets</b>, switch <b>light or dark</b> theme, change your password, or delete your account.</p>
           <p>That's it. Head to <b>Chat</b> and tell {BOT_NAME} what you had today!</p>
         </>
       ),

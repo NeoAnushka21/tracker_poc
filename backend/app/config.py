@@ -139,11 +139,27 @@ SNACK_TYPES = ("morning_snack", "evening_snack")
 LEGACY_SNACK = "snack"           # older entries; relabelled at startup
 
 # --- Body profile (optional measurements, stored in cm) --------------------
+# key, label, how to measure. Neck, waist and hips follow the US Navy body-fat protocol, so the
+# estimate below is only as good as these instructions being followed.
 BODY_PARTS = [
-    ("neck_cm", "Neck"), ("chest_cm", "Chest"), ("waist_cm", "Waist"), ("hips_cm", "Hips"),
-    ("biceps_cm", "Biceps"), ("forearm_cm", "Forearm"), ("thigh_cm", "Thigh"), ("calf_cm", "Calf"),
+    ("neck_cm", "Neck", "Just below the Adam's apple, tape sloping slightly down to the front."),
+    ("shoulders_cm", "Shoulders", "Around the widest point of both shoulders, arms relaxed."),
+    ("chest_cm", "Chest", "Around the fullest part of the chest, under the armpits, after a normal breath out."),
+    ("biceps_cm", "Biceps", "Around the thickest part of the upper arm, relaxed."),
+    ("forearm_cm", "Forearm", "Around the thickest part of the forearm, relaxed."),
+    ("wrist_cm", "Wrist", "Just above the wrist bone, towards the hand."),
+    ("waist_cm", "Waist", "Men: level with the navel. Women: at the narrowest point. Relaxed, after a normal breath out."),
+    ("hips_cm", "Hips", "Around the widest part of the buttocks, feet together."),
+    ("thigh_cm", "Thigh", "Around the thickest part of the thigh, standing."),
+    ("calf_cm", "Calf", "Around the thickest part of the calf, standing."),
 ]
-BODY_PART_KEYS = [k for k, _ in BODY_PARTS]
+BODY_PART_KEYS = [k for k, _, _ in BODY_PARTS]
+
+# BMI = kg / m². WHO adult categories (international cut-offs), upper bounds exclusive.
+BMI_CATEGORIES = [(18.5, "Underweight"), (25.0, "Healthy weight"), (30.0, "Overweight"), (float("inf"), "Obesity")]
+# Body-fat estimates outside this range mean the measurements are off (or the method doesn't
+# apply), so none is shown. Essential fat is ~2-5% (men) / ~10-13% (women).
+BODY_FAT_PLAUSIBLE = {"male": (2.0, 60.0), "female": (8.0, 65.0)}
 
 # --- Water ---------------------------------------------------------------
 WATER_ML_PER_KG = 35             # common hydration guideline for drinking water

@@ -71,11 +71,24 @@ export type TargetsInput = {
 
 type ActionResult = { action: Action; event: ChatMessage; progress: ChatMessage | null };
 
+/** BMI with WHO adult categories, or which inputs are missing. */
+export type Bmi =
+  | { status: "ok"; value: number; category: string; note: string }
+  | { status: "missing"; missing: string[] };
+/** US Navy body-fat estimate: a number only when every input is present and the result is plausible. */
+export type BodyFat =
+  | { status: "ok"; value: number; method: string; typical_error: number; warning?: string }
+  | { status: "missing"; missing: string[]; method: string }
+  | { status: "implausible"; reason: string; method: string };
+
 export type BodyProfileData = {
+  sex: "male" | "female" | null;
   height_cm: number | null;
   weight_kg: number | null;
+  bmi: Bmi;
+  body_fat: BodyFat;
   weight_history: { weight_kg: number; logged_at: string }[];
-  latest: { key: string; label: string; value_cm: number | null; measured_at: string | null; change_cm: number | null }[];
+  latest: { key: string; label: string; tip: string; value_cm: number | null; measured_at: string | null; change_cm: number | null }[];
   history: ({ id: number; measured_at: string } & Record<string, number | string | null>)[];
 };
 
@@ -120,6 +133,9 @@ export const api = {
     request<User>("POST", "/api/profile/height", { height_cm, recalculate_targets }),
   addMeasurements: (values: Record<string, number>) => request<BodyProfileData>("POST", "/api/profile/measurements", values),
   deleteMeasurement: (id: number) => request<BodyProfileData>("DELETE", `/api/profile/measurements/${id}`),
+  /** Fix a saved set; the body is the whole set (null clears a value). */
+  editMeasurement: (id: number, values: Record<string, number | null>) =>
+    request<BodyProfileData>("PUT", `/api/profile/measurements/${id}`, values),
 
   chatDay: (day?: string) => request<ChatDay>("GET", `/api/chat/day${day ? `?day=${day}` : ""}`),
   send: (message: string, feedback_on_action_id: number | null, client_request_id: string, signal?: AbortSignal,

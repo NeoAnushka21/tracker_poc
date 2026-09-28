@@ -96,7 +96,8 @@ user message ─► FastAPI /api/chat ─► LLM (Groq gpt-oss-120b or Claude) w
 - **Analysis:** 7, 14 or 30-day trends: calories and protein vs target, macro lines, calorie split, calories by meal, water, and a data table. All charts have hover and keyboard tooltips.
 - **My foods:** your saved foods and recipes.
 - **Admin console:** reached through **Admin login** on the login page, and only for `ADMIN_EMAILS`. Admin emails can't sign up or use the normal login. The admin account is created at startup from `ADMIN_INITIAL_PASSWORD` if it doesn't exist yet. The console shows users, logins and activity, with read-only access to each user's logs, foods and chat, and every view is written to an audit log.
-- **Settings (⚙):** Account (email, registration date, last login, consent, and appearance), Targets, Body profile (weight, height, optional body measurements), Password, and **Delete account**, which requires your password and permanently removes all of your data.
+- **Body:** weight, height, BMI (WHO categories) and an estimated body-fat percentage (US Navy equations, shown only when the needed measurements are there), plus a male/female body diagram: tap a body part to see how to measure it and add a dated measurement.
+- **Settings (⚙):** Account (email, registration date, last login, consent, and appearance), Targets, Password, and **Delete account**, which requires your password and permanently removes all of your data.
 - **? Guide:** the first-run walkthrough. It opens once for new users and can be reopened any time.
 - Light, dark or system theme (in Settings → Account), with text contrast checked against WCAG AA in both.
 - Sign-up requires accepting a data-use consent notice. Existing accounts are asked once, and again if the wording (`CONSENT_VERSION`) changes.
@@ -131,7 +132,7 @@ Full details: [docs/technical-overview.md](docs/technical-overview.md).
 - a daily dashboard with macros, fiber, micronutrients, water and five meals
 - 7, 14 and 30-day analysis
 - a food library and recipes
-- a body profile
+- a Body tab with BMI, a body-fat estimate and an interactive body diagram for measurements
 - a first-run guide
 - light and dark themes
 

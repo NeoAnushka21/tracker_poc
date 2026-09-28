@@ -1,6 +1,6 @@
 # OmniAI high-level design (HLD)
 
-> Last updated: 2026-09-29 (food library learns micronutrients). Update the diagrams whenever a component, data flow, table or external service changes (see [docs/README.md](README.md)).
+> Last updated: 2026-09-29 (Body tab). Update the diagrams whenever a component, data flow, table or external service changes (see [docs/README.md](README.md)).
 > Diagrams are Mermaid. They render on GitHub and in VS Code with a Mermaid preview extension.
 
 ## 1. Purpose and principles
@@ -36,7 +36,7 @@ flowchart LR
 ```mermaid
 flowchart TB
     subgraph Browser
-        SPA[React 19 + Vite SPA<br/>Home · Chat · Dashboard · Analysis · My foods<br/>Settings · Guide tour · Admin console<br/>wake screen while the server wakes]
+        SPA[React 19 + Vite SPA<br/>Home · Chat · Dashboard · Analysis · My foods · Body<br/>Settings · Guide tour · Admin console<br/>wake screen while the server wakes]
         STT[Web Speech API]
         SPA --- STT
     end

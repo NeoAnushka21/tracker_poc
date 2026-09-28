@@ -3,11 +3,10 @@ import { api } from "../api";
 import type { User } from "../types";
 import { GOALS } from "../format";
 import TargetsEditor from "./TargetsEditor";
-import BodyProfile from "./BodyProfile";
 import ThemeToggle from "./ThemeToggle";
 import { UserAvatar } from "./Avatar";
 
-type Section = "account" | "targets" | "body" | "security" | "delete";
+type Section = "account" | "targets" | "security" | "delete";
 
 type Props = {
   user: User;
@@ -54,8 +53,8 @@ function TargetsSection({ user, onSaved }: { user: User; onSaved: (u: User) => v
   return (
     <>
       <h3 className="first">Daily calorie &amp; macro targets</h3>
-      <p className="muted small">Calculated from your profile; adjust any number. Changing weight or height under
-        Body profile can recalculate these.</p>
+      <p className="muted small">Calculated from your profile; adjust any number. Changing weight or height on the
+        Body tab can recalculate these.</p>
       <TargetsEditor
         key={`${user.targets?.effective_date}-${user.targets?.calories}-${user.targets?.protein_g}`}
         user={user}
@@ -147,7 +146,6 @@ export default function SettingsDialog({ user, onClose, onSaved, onDeleted }: Pr
     { id: "account", label: "Account" },
     ...(!user.is_admin ? [
       { id: "targets" as const, label: "Targets" },
-      { id: "body" as const, label: "Body profile" },
     ] : []),
     { id: "security", label: "Password" },
     ...(!user.is_admin ? [{ id: "delete" as const, label: "Delete account" }] : []),
@@ -174,7 +172,6 @@ export default function SettingsDialog({ user, onClose, onSaved, onDeleted }: Pr
           <div className="settings-panel" role="tabpanel">
             {section === "account" && <AccountSection user={user} />}
             {section === "targets" && <TargetsSection user={user} onSaved={onSaved} />}
-            {section === "body" && <BodyProfile user={user} onUserChanged={onSaved} />}
             {section === "security" && <SecuritySection />}
             {section === "delete" && <DeleteSection user={user} onDeleted={onDeleted} />}
           </div>

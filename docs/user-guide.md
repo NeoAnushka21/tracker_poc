@@ -4,7 +4,7 @@ OmniAI is a chat-based calorie and macro tracker. In the Chat you talk to **MacB
 
 This guide walks a new user through the app from sign-up to daily use. The same walkthrough appears inside the app as a short tour the first time you log in. You can reopen it any time with the **? Guide** button at the top.
 
-> Last updated: 2026-09-29 (micronutrients in My foods; how repeat foods skip the AI). Keep this file in step with the UI (see [docs/README.md](README.md)).
+> Last updated: 2026-09-29 (new Body tab: BMI, body-fat estimate, body diagram). Keep this file in step with the UI (see [docs/README.md](README.md)).
 
 ---
 
@@ -23,9 +23,10 @@ This guide walks a new user through the app from sign-up to daily use. The same 
 10. [Ask about your history](#10-ask-about-your-history)
 11. [The Dashboard](#11-the-dashboard)
 12. [Analysis](#12-analysis)
-13. [Settings](#13-settings)
-14. [Tips for accurate logging](#14-tips-for-accurate-logging)
-15. [Troubleshooting and FAQ](#15-troubleshooting-and-faq)
+13. [Body](#13-body)
+14. [Settings](#14-settings)
+15. [Tips for accurate logging](#15-tips-for-accurate-logging)
+16. [Troubleshooting and FAQ](#16-troubleshooting-and-faq)
 
 ---
 
@@ -78,7 +79,7 @@ After you submit, **Your daily targets** shows the calories, protein, carbs, fat
 
 ## 3. The first-run tour
 
-The first time you reach the main screen, a small panel opens at the bottom. It steps through the tabs (Home → Chat → Dashboard → Analysis → My foods) and explains each one.
+The first time you reach the main screen, a small panel opens at the bottom. It steps through the tabs (Home → Chat → Dashboard → Analysis → My foods → Body) and explains each one.
 
 - Use **Next** and **Back** (or the ← → keys) to move between steps.
 - **Skip**, **✕** or **Esc** closes the tour.
@@ -93,6 +94,7 @@ The first time you reach the main screen, a small panel opens at the bottom. It 
 | Dashboard | The macros, micronutrients and water tiles on the left, your **meals** on the right |
 | Analysis | Charts in two columns: calories beside protein, macro trends beside water, the calorie split beside calories by meal |
 | My foods | Food cards in two columns; the food you're editing opens across the full width |
+| Body | The body diagram with labelled arrows on both sides and the measurement editor beside it (on a phone: numbered dots and a list) |
 
 On very wide screens, content stays at a comfortable width (about 1,200 px) in the middle, lined up with the top bar.
 
@@ -257,7 +259,37 @@ The **Analysis** tab shows trends over **7, 14 or 30 days**:
 
 Hover over any chart, or tab to it with the keyboard, to see exact values. A day counts as "on target" when calories are within ±10% of target and protein is at least 90% of target.
 
-## 13. Settings
+## 13. Body
+
+The **Body** tab (it used to be *Settings → Body profile*) shows your body numbers and lets you record measurements. Everything beyond weight and height is optional.
+
+**At the top:**
+
+| Tile | What it shows |
+|---|---|
+| **Weight** | Your latest weight and the change since the previous one |
+| **Height** | Your height, and whether your profile is male or female (used by the diagram and the body-fat formula) |
+| **BMI** | Weight (kg) ÷ height (m)², with the WHO adult category: under 18.5 underweight, 18.5–24.9 healthy weight, 25–29.9 overweight, 30 and over obesity. BMI doesn't tell muscle from fat. |
+| **Body fat (estimate)** | Worked out with the **US Navy tape-measure equations** (Hodgdon & Beckett, 1984) from your height, **neck** and **waist**, plus **hips** for women. Usually within about ±3–4 percentage points of lab methods. |
+
+**Body fat is only shown when it can be trusted:**
+
+- If a measurement it needs is missing, it says **"Not enough info to estimate"** and names what to add.
+- If the numbers can't be right (for example a waist smaller than the neck, or a result outside the human range), it asks you to re-measure instead of showing a number.
+- If the measurements it used were taken more than a month apart, it says so.
+
+**Measurements diagram:**
+
+- A front-view figure (male or female, from your profile) with an arrow to each body part: neck, shoulders, chest, biceps, forearm, wrist, waist, hips, thigh and calf.
+- **Tap a body part** (on a phone, tap its number or its row in the list) to see **how to measure it**, its latest value and change, and to **add a new value**. Each save is dated, so the history shows how it changes. Values show in cm or inches, following your unit setting.
+- For the body-fat estimate, measure as the tips describe: neck just below the Adam's apple, waist at the navel (men) or the narrowest point (women), hips at the widest part.
+
+**Also on this tab:**
+
+- **Update weight & height.** Tick *Recalculate my targets* if you want your calorie and macro targets updated.
+- **Measurement history:** each dated entry. **Edit** fixes a mistake in a saved entry (to record a new value, use the diagram so the history keeps the change); **Delete** removes it.
+
+## 14. Settings
 
 Open **⚙ Settings** from the top bar.
 
@@ -265,11 +297,10 @@ Open **⚙ Settings** from the top bar.
 |---|---|
 | **Account** | See your email, registration date, last login, when you gave data consent, your goal and time zone. Switch the **Appearance** between light, dark or system. |
 | **Targets** | Edit daily calories, protein, carbs, fat and fiber. |
-| **Body profile** | See current weight (with change since last time) and height, and save new values. Tick *Recalculate my targets* if you want targets updated. Add optional **body measurements** (neck, chest, waist, hips, biceps, forearm, thigh, calf). Each save is dated so you can track change, and entries can be deleted from the history. |
 | **Password** | Change your password (needs the current one). |
 | **Delete account** | Permanently removes your account and **all** your data. Needs your password and can't be undone. |
 
-## 14. Tips for accurate logging
+## 15. Tips for accurate logging
 
 - **Give amounts:** grams, cups, pieces or "a medium bowl". Weighed amounts are the most accurate.
 - **Mention oil, butter, ghee and sauces.** They add a lot of calories.
@@ -278,7 +309,7 @@ Open **⚙ Settings** from the top bar.
 - **Save recipes** for home-cooked dishes you eat often.
 - **Correct once, reuse forever:** fix a food in *My foods* and every future log uses your numbers.
 
-## 15. Troubleshooting and FAQ
+## 16. Troubleshooting and FAQ
 
 **"MacBro's servers are temporarily down."** The AI model is unavailable or its free daily limit is used up. Your data is safe. Try again later. You can still use the Dashboard, water buttons and item actions, since they don't need the AI.
 
