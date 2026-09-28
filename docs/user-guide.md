@@ -151,13 +151,14 @@ You can do this **in the chat** (with a confirmation card) or **on the Dashboard
 - `move the banana to morning snack`: a *Move* card shows *from → to*, and nothing is deleted.
 - `copy yesterday's breakfast to today`
 
-**On the Dashboard:** tap **⋯** next to any item in a meal:
+**On the Dashboard:** tap the **pencil** ✎ next to any item in a meal. A small panel opens:
 
-- **Move to**: pick another meal.
-- **Copy to** (or **Copy to today's** when looking at a past day): duplicates the item.
-- **Quantity**: change the amount and press **Save**. Nutrients scale automatically.
-- **✎ Edit in chat**: opens the chat with the message started for you, e.g. to change ingredients.
-- **Delete**: asks you to confirm first.
+- **Move / Copy:** pick **Move** or **Copy**, choose the meal from the dropdown, and press the **→** button. Move lists only the other meals. When you're looking at a past day, Copy adds the item to *today's* meal.
+- **Quantity:** change the amount and press the **✓** button. Nutrients scale automatically.
+- Icon buttons on the right (hover for a label):
+  - **speech bubble**: edit in chat. It opens the chat with the message started for you, e.g. to change ingredients.
+  - **trash can**: delete. It asks you to confirm first.
+  - **✕**: close the panel.
 
 ## 8. Water
 
@@ -203,7 +204,7 @@ MacBro answers from your **confirmed** data only:
 | **Where today's calories came from** | A split bar of protein, carbs and fat calories (hover for numbers). |
 | **Water** | Litres against target, quick-add buttons, undo. |
 | **Additional micronutrients** | Iron, calcium, magnesium, potassium, zinc, vitamin C, vitamin B12 and vitamin D, against daily reference values for your age and sex. Sodium is shown as a limit to stay under. |
-| **Meals** | Breakfast, Morning snack, Lunch, Evening snack and Dinner, each with its own calories and macros. Tap a meal to expand it and **⋯** on an item for actions. |
+| **Meals** | Breakfast, Morning snack, Lunch, Evening snack and Dinner, each with its own calories and macros. Tap a meal to expand it and the **pencil** on an item to move, copy, change or delete it. |
 
 Micronutrients are estimates. Treat them as a guide, not a lab result.
 
@@ -248,9 +249,9 @@ Open **⚙ Settings** from the top bar.
 
 **The mic button is missing.** Your browser doesn't support speech recognition. Use Chrome or Edge, or type instead.
 
-**I confirmed the wrong thing.** Fix it on the Dashboard with **⋯**, or ask in the chat, e.g. "delete the pizza from lunch".
+**I confirmed the wrong thing.** Fix it on the Dashboard with the **pencil** on that item, or ask in the chat, e.g. "delete the pizza from lunch".
 
-**The meal was put in the wrong slot.** Move it with **⋯ → Move to**, or say "move it to lunch".
+**The meal was put in the wrong slot.** Move it with **pencil → Move → pick the meal → →**, or say "move it to lunch".
 
 **Why didn't MacBro say "logged"?** MacBro never saves anything on its own. Only your button press saves.
 

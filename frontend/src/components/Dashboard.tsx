@@ -3,6 +3,7 @@ import { api } from "../api";
 import type { DailySummary, Entry, Item, MicroSummary, WaterSummary } from "../types";
 import { MEAL_LABEL, MEAL_ORDER, friendlyDate, grams, kcal, litres, shiftDay } from "../format";
 import { StackedBar } from "./charts";
+import { ArrowRightIcon, ChatIcon, CheckIcon, CloseIcon, PencilIcon, TrashIcon } from "./icons";
 
 /** A meter: one macro against its target. Identity comes from the label; the fill hue repeats it. */
 export function Bar({ label, value, target, unit, tone }: {
@@ -180,7 +181,7 @@ type ItemActionsProps = {
   onClose: () => void;
 };
 
-/** Inline panel for one logged food: move, copy, change quantity, delete, or hand off to chat. */
+/** Inline edit panel for one logged food: move/copy via a dropdown, change quantity, and icon actions. */
 function ItemActions({ item, meal, isToday, onChanged, onAskMacBro, onClose }: ItemActionsProps) {
   const [qty, setQty] = useState(String(item.quantity));
   const [busy, setBusy] = useState(false);
@@ -202,42 +203,57 @@ function ItemActions({ item, meal, isToday, onChanged, onAskMacBro, onClose }: I
     }
   }
 
-  const otherMeals = MEAL_ORDER.filter((m) => m !== meal);
+  const [mode, setMode] = useState<"move" | "copy">("move");
+  const targets = mode === "move" ? MEAL_ORDER.filter((m) => m !== meal) : MEAL_ORDER;
+  const [dest, setDest] = useState<string>(targets[0]);
+  const destValid = targets.includes(dest) ? dest : targets[0];
+  const qtyChanged = Number(qty) > 0 && Number(qty) !== item.quantity;
+  const id = item.id!;
+
   return (
     <div className="item-actions" role="group" aria-label={`Actions for ${item.ingredient_name}`}>
-      <div className="ia-row">
-        <span className="ia-label">Move to</span>
-        {otherMeals.map((m) => (
-          <button key={m} type="button" className="chip" disabled={busy}
-                  onClick={() => run(() => api.transferItem(item.id!, m, "move"))}>{MEAL_LABEL[m]}</button>
-        ))}
-      </div>
-      <div className="ia-row">
-        <span className="ia-label">{isToday ? "Copy to" : "Copy to today's"}</span>
-        {MEAL_ORDER.map((m) => (
-          <button key={m} type="button" className="chip" disabled={busy}
-                  onClick={() => run(() => api.transferItem(item.id!, m, "copy", isToday ? undefined : todayIso))}>
-            {MEAL_LABEL[m]}
-          </button>
-        ))}
-      </div>
-      <form className="ia-row" onSubmit={(e) => { e.preventDefault(); run(() => api.setItemQuantity(item.id!, Number(qty))); }}>
-        <label className="ia-label" htmlFor={`qty-${item.id}`}>Quantity</label>
-        <input id={`qty-${item.id}`} type="number" step="any" min="0.01" value={qty} onChange={(e) => setQty(e.target.value)} className="ia-qty" />
-        <span className="muted small">{item.unit}</span>
-        <button className="primary" disabled={busy || Number(qty) <= 0 || Number(qty) === item.quantity}>Save</button>
-        <span className="muted tiny">nutrients scale with the amount</span>
+      <form className="ia-row" onSubmit={(e) => {
+        e.preventDefault();
+        run(() => api.transferItem(id, destValid, mode, mode === "copy" && !isToday ? todayIso : undefined));
+      }}>
+        <div className="segmented ia-mode" role="radiogroup" aria-label="Move or copy">
+          {(["move", "copy"] as const).map((m) => (
+            <button key={m} type="button" role="radio" aria-checked={mode === m} className={mode === m ? "on" : ""}
+                    onClick={() => setMode(m)}>{m === "move" ? "Move" : "Copy"}</button>
+          ))}
+        </div>
+        <label className="sr-only" htmlFor={`dest-${id}`}>{mode === "move" ? "Move to" : "Copy to"}</label>
+        <select id={`dest-${id}`} className="ia-select" value={destValid} onChange={(e) => setDest(e.target.value)}>
+          {targets.map((m) => <option key={m} value={m}>{mode === "copy" && !isToday ? `Today's ${MEAL_LABEL[m].toLowerCase()}` : MEAL_LABEL[m]}</option>)}
+        </select>
+        <button className="primary icon-btn ia-go" disabled={busy}
+                aria-label={`${mode === "move" ? "Move" : "Copy"} to ${MEAL_LABEL[destValid]}`} title={mode === "move" ? "Move" : "Copy"}>
+          <ArrowRightIcon />
+        </button>
       </form>
-      <div className="ia-row">
-        <button type="button" className="ghost" disabled={busy}
-                onClick={() => { onClose(); onAskMacBro(`Edit the ${item.ingredient_name} in my ${MEAL_LABEL[meal].toLowerCase()}: `); }}>
-          ✎ Edit in chat
-        </button>
-        <button type="button" className="ghost danger" disabled={busy}
-                onClick={() => window.confirm(`Delete ${name} from ${MEAL_LABEL[meal]}?`) && run(() => api.deleteItem(item.id!))}>
-          Delete
-        </button>
-        <button type="button" className="ghost" onClick={onClose}>Close</button>
+      <div className="ia-row ia-bottom">
+        <form className="ia-qty-form" onSubmit={(e) => { e.preventDefault(); if (qtyChanged) run(() => api.setItemQuantity(id, Number(qty))); }}>
+          <label className="sr-only" htmlFor={`qty-${id}`}>Quantity</label>
+          <input id={`qty-${id}`} type="number" step="any" min="0.01" value={qty} onChange={(e) => setQty(e.target.value)}
+                 className="ia-qty" title="Quantity (nutrients scale with the amount)" />
+          <span className="muted small">{item.unit}</span>
+          <button className="ghost icon-btn ia-save" disabled={busy || !qtyChanged} aria-label="Save quantity" title="Save quantity">
+            <CheckIcon />
+          </button>
+        </form>
+        <div className="ia-icons">
+          <button type="button" className="ghost icon-btn" disabled={busy} aria-label="Edit in chat" title="Edit in chat"
+                  onClick={() => { onClose(); onAskMacBro(`Edit the ${item.ingredient_name} in my ${MEAL_LABEL[meal].toLowerCase()}: `); }}>
+            <ChatIcon />
+          </button>
+          <button type="button" className="ghost icon-btn danger" disabled={busy} aria-label="Delete" title="Delete"
+                  onClick={() => window.confirm(`Delete ${name} from ${MEAL_LABEL[meal]}?`) && run(() => api.deleteItem(id))}>
+            <TrashIcon />
+          </button>
+          <button type="button" className="ghost icon-btn" onClick={onClose} aria-label="Close" title="Close">
+            <CloseIcon />
+          </button>
+        </div>
       </div>
       {error && <p className="error small">{error}</p>}
     </div>
@@ -284,8 +300,8 @@ function MealSection({ meal, entries, isToday, onChanged, onAskMacBro }: {
                 <span className="num">{Math.round(it.calories)}</span>
                 {it.id != null && (
                   <button type="button" className="ghost item-menu-btn" aria-expanded={menuFor === it.id}
-                          aria-label={`Move, copy, edit or delete ${it.ingredient_name}`}
-                          onClick={() => setMenuFor(menuFor === it.id ? null : it.id!)}>⋯</button>
+                          aria-label={`Edit ${it.ingredient_name}`} title="Edit"
+                          onClick={() => setMenuFor(menuFor === it.id ? null : it.id!)}><PencilIcon /></button>
                 )}
                 {menuFor === it.id && (
                   <ItemActions item={it} meal={meal} isToday={isToday} onChanged={onChanged}

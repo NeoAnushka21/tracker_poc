@@ -75,7 +75,7 @@ function steps(name: string | null): Step[] {
           <li>The ring shows <b>eaten / target</b> calories and your <b>balance</b> left.</li>
           <li>Bars for protein, fiber, carbs and fat, plus micronutrients.</li>
           <li><b>Water</b>: tap +250 ml or +500 ml.</li>
-          <li>Meals are split into breakfast, snacks, lunch and dinner. Tap <b>⋯</b> on an item to move, copy, change the amount or delete it.</li>
+          <li>Meals are split into breakfast, snacks, lunch and dinner. Tap the <b>pencil</b> on an item to move, copy, change the amount or delete it.</li>
           <li>Use <b>‹ ›</b> to look at earlier days.</li>
         </ul>
       ),

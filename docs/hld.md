@@ -101,7 +101,7 @@ sequenceDiagram
 
 ```mermaid
 flowchart LR
-    D[Dashboard ⋯ menu] -->|POST /api/entries/items/id/transfer<br/>move or copy| E[services/entries]
+    D[Dashboard item edit panel] -->|POST /api/entries/items/id/transfer<br/>move or copy| E[services/entries]
     D -->|PATCH /api/entries/items/id<br/>quantity| E
     D -->|DELETE /api/entries/items/id| E
     W[Water buttons<br/>Home and Dashboard] -->|POST · DELETE /api/water| WS[services/water]

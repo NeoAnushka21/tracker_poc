@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState, type FormEvent } from "react";
 import { api } from "../api";
 import type { Food } from "../types";
 import MacroChips from "./MacroChips";
+import { PencilIcon, TrashIcon } from "./icons";
 
 type Filter = "all" | "food" | "recipe";
 
@@ -90,24 +91,6 @@ function EditForm({ food, onSaved, onCancel }: { food: Food; onSaved: (f: Food) 
         <button type="button" className="ghost" onClick={onCancel}>Cancel</button>
       </div>
     </form>
-  );
-}
-
-function PencilIcon() {
-  return (
-    <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" fill="none" stroke="currentColor"
-         strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M4 20h4L19 9a2.8 2.8 0 0 0-4-4L4 16v4z" /><path d="M13.5 6.5l4 4" />
-    </svg>
-  );
-}
-
-function TrashIcon() {
-  return (
-    <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" fill="none" stroke="currentColor"
-         strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M4 7h16M9 7V4.5h6V7M6.5 7l1 12.5h9l1-12.5M10 11v5M14 11v5" />
-    </svg>
   );
 }
 

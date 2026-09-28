@@ -155,7 +155,7 @@ FastAPI's interactive docs are at `http://localhost:8000/docs` while the backend
 | `Chat` | Messages, example chips, mic, Stop, feedback mode, progress card |
 | `ProposalCard` | Renders each action type with Looks good / Needs changes / Cancel |
 | `HomePage` | Default tab: time-of-day greeting, today's summary (reuses `CalorieRing`, `Bar`, `Water` from `Dashboard`), and the two streak cards |
-| `Dashboard` | Day navigation, calorie ring, macro bars, calorie split, water, micronutrients, meal sections with the ⋯ item menu |
+| `Dashboard` | Day navigation, calorie ring, macro bars, calorie split, water, micronutrients, meal sections; each item has a pencil that opens an edit panel (Move/Copy toggle + meal dropdown, quantity, and icon buttons for edit in chat, delete, close). Shared icons live in `components/icons.tsx` |
 | `AnalysisPage` + `charts.tsx` | 7/14/30-day range: stat tiles, line, bar and stacked charts with hover/keyboard tooltips and data tables |
 | `FoodsPage` | Library search, filter, edit and delete |
 | `SettingsDialog` | Account (and appearance), Targets (`TargetsEditor`), Body profile (`BodyProfile`), Password, Delete account |
