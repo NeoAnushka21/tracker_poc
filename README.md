@@ -17,12 +17,11 @@ python -m venv .venv
 # .venv/bin/python -m pip install -r requirements.txt       # macOS/Linux
 ```
 
-Put your Anthropic API key in `backend/.env` (see `backend/.env.example`):
+Create `backend/.env` from `backend/.env.example` and choose a model:
 
-```
-ANTHROPIC_API_KEY=sk-ant-...
-SECRET_KEY=<long random string>
-```
+- **Free, open-source (default setup):** Groq running `openai/gpt-oss-120b`. Get a free key at https://console.groq.com (no card needed). Free-tier limits allow roughly 20–30 messages a day.
+- **Claude:** set `LLM_PROVIDER=anthropic` and `ANTHROPIC_API_KEY`. This gives the best estimates and costs about 1–3 cents per message.
+- **Any other OpenAI-compatible endpoint** (Gemini, OpenRouter, Mistral, local Ollama) works by changing `LLM_BASE_URL` and `LLM_MODEL`.
 
 Start it:
 
@@ -52,7 +51,7 @@ The tests use a fake LLM, so they don't need an API key.
 ## How it works
 
 ```
-user message ─► FastAPI /api/chat ─► Claude (Sonnet 5) with tools
+user message ─► FastAPI /api/chat ─► LLM (Groq gpt-oss-120b or Claude) with tools
                                         │
              ┌──────────────────────────┼─────────────────────────┐
      get_logs / get_daily_summary   propose_entry / propose_edit / propose_delete
@@ -64,6 +63,8 @@ user message ─► FastAPI /api/chat ─► Claude (Sonnet 5) with tools
 ```
 
 - **Confirmation is enforced in code, not only in the prompt.** The LLM can only create `pending_actions`. The write happens in `services/actions.py → confirm_action`, which only runs from the Confirm button's endpoint.
+- **Sanity check on estimates:** each item's calories must roughly match its macros (4/4/9 kcal per gram, ±25%, alcohol exempt). If they don't, the model is told to recalculate before any card is shown.
+- **One model call per logged meal:** proposals carry the model's reply in a `note` field, so the turn ends as soon as the card is created.
 - **Needs changes** lets you type a correction. Claude re-proposes the entry, and the new card replaces the old one (the old one is marked "superseded").
 - Proposals left pending for 24 hours expire. Pending proposals never count toward totals.
 - The dashboard reads the database directly and never goes through the LLM.
@@ -78,7 +79,7 @@ user message ─► FastAPI /api/chat ─► Claude (Sonnet 5) with tools
 | `backend/app/llm/tools.py` | Tool definitions + handlers the LLM can call |
 | `backend/app/llm/prompt.py` | System prompt (stable, cached) + per-turn context |
 | `backend/app/llm/chat.py` | One chat turn: history → tool loop → reply |
-| `backend/app/llm/provider.py` | Thin wrapper around the Claude API (swappable) |
+| `backend/app/llm/provider.py` | LLM providers: Claude, and any OpenAI-compatible API (Groq, Gemini, Ollama…) |
 | `backend/app/services/actions.py` | Confirm / reject / expire proposals |
 | `backend/app/services/logs.py` | Totals, daily summary, log queries |
 | `backend/app/nutrition.py` | BMR / TDEE / target calculation |

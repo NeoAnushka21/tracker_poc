@@ -9,7 +9,8 @@ from app.llm.tools import TOOLS, ToolContext, ToolInputError, run_tool
 from app.models import ChatMessage, PendingAction, User
 from app.services.actions import action_to_dict, expire_stale, supersede_older
 
-FALLBACK_PROPOSAL_TEXT = "Here's what I've got. Check the card and confirm if it looks right."
+PROPOSE_TOOLS = {"propose_entry", "propose_edit", "propose_delete"}
+FALLBACK_PROPOSAL_TEXT ="Here's what I've got. Check the card and confirm if it looks right."
 
 
 def message_to_dict(m: ChatMessage) -> dict:
@@ -133,6 +134,11 @@ def _run_tool_loop(db: Session, user: User, messages: list[dict], ctx: ToolConte
                 "type": "tool_result", "tool_use_id": call.id,
                 "content": content, "is_error": is_error,
             })
+        # A round of only successful proposals ends the turn: the card plus the tool's
+        # `note` is the reply, which saves a model call per logged meal.
+        if all(c.name in PROPOSE_TOOLS for c in resp.tool_calls) and not any(r["is_error"] for r in results):
+            texts.extend(ctx.notes)
+            break
         messages.append({"role": "user", "content": results})
     else:
         raise LLMError("The assistant got stuck in a loop. Please try rephrasing.")

@@ -9,6 +9,7 @@ CHICKEN = {
     "ingredient_name": "chicken breast, cooked", "brand_name": None, "quantity": 100, "unit": "g",
     "calories": 165, "protein_g": 31, "carbs_g": 0, "fat_g": 3.6, "fiber_g": 0,
 }
+CHICKEN_150 = {**CHICKEN, "quantity": 150, "calories": 248, "protein_g": 46.5, "fat_g": 5.4}
 OIL = {
     "ingredient_name": "olive oil", "brand_name": None, "quantity": 10, "unit": "ml",
     "calories": 80, "protein_g": 0, "carbs_g": 0, "fat_g": 9.1, "fiber_g": 0,
@@ -78,7 +79,7 @@ def test_new_proposal_supersedes_old_one(client, user, fake_llm):
     fake_llm(
         tool_reply("propose_entry", {
             "summary": "Chicken 150g", "eaten_at": None, "meal_type": None,
-            "items": [{**CHICKEN, "quantity": 150, "calories": 248}],
+            "items": [CHICKEN_150],
         }),
         text_reply("Updated."),
     )
@@ -98,7 +99,7 @@ def test_edit_and_delete_go_through_confirmation(client, user, fake_llm):
     fake_llm(
         tool_reply("propose_edit", {
             "entry_id": entry_id, "summary": "Chicken 100g -> 150g", "eaten_at": None, "meal_type": None,
-            "items": [{**CHICKEN, "quantity": 150, "calories": 248}, OIL],
+            "items": [CHICKEN_150, OIL],
         }),
         text_reply("Here's the change."),
     )
@@ -172,3 +173,28 @@ def test_llm_failure_rolls_back_turn(client, user, fake_llm):
     r = client.post("/api/chat", json={"message": "had an apple"})
     assert r.status_code == 502
     assert client.get("/api/chat/history").json() == []
+
+
+def test_proposal_ends_turn_in_one_call_and_uses_note(client, user, fake_llm):
+    provider = fake_llm(tool_reply("propose_entry", {
+        "summary": "Guava", "eaten_at": None, "meal_type": None, "note": "Assumed one medium guava.",
+        "items": [{"ingredient_name": "guava", "brand_name": None, "quantity": 1, "unit": "piece",
+                   "calories": 68, "protein_g": 2.6, "carbs_g": 14.3, "fat_g": 1, "fiber_g": 5.4}],
+    }))
+    reply = client.post("/api/chat", json={"message": "had a guava"}).json()[-1]
+    assert len(provider.calls) == 1
+    assert reply["content"] == "Assumed one medium guava."
+
+
+def test_calories_that_dont_match_macros_are_sent_back(client, user, fake_llm):
+    bad_chicken = {**CHICKEN, "quantity": 150, "calories": 248}   # protein not scaled
+    provider = fake_llm(
+        tool_reply("propose_entry", {"summary": "x", "eaten_at": None, "meal_type": None, "items": [bad_chicken]}),
+        tool_reply("propose_entry", {"summary": "x", "eaten_at": None, "meal_type": None, "items": [CHICKEN_150]},
+                   call_id="t2"),
+    )
+    reply = client.post("/api/chat", json={"message": "150g chicken"}).json()[-1]
+    first_result = provider.calls[1]["messages"][-2]["content"][0]   # [-1] is the 2nd assistant turn
+    assert first_result["is_error"] is True
+    assert "don't agree" in first_result["content"]
+    assert reply["actions"][0]["payload"]["totals"]["protein_g"] == 46.5

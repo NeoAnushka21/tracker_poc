@@ -17,11 +17,18 @@ SECRET_KEY = os.getenv("SECRET_KEY", "dev-only-insecure-secret-change-me-in-back
 SESSION_DAYS = int(os.getenv("SESSION_DAYS", "14"))
 COOKIE_SECURE = os.getenv("COOKIE_SECURE", "false").lower() == "true"
 
-LLM_MODEL = os.getenv("LLM_MODEL", "claude-sonnet-5")
-LLM_EFFORT = os.getenv("LLM_EFFORT", "medium")  # low | medium | high | xhigh | max
-LLM_MAX_TOKENS = int(os.getenv("LLM_MAX_TOKENS", "16000"))
+# "anthropic" (Claude) or "openai_compatible" (Groq, Gemini, OpenRouter, Ollama, ...)
+LLM_PROVIDER = os.getenv("LLM_PROVIDER", "anthropic")
+_IS_ANTHROPIC = LLM_PROVIDER == "anthropic"
+
+LLM_MODEL = os.getenv("LLM_MODEL", "claude-sonnet-5" if _IS_ANTHROPIC else "openai/gpt-oss-120b")
+LLM_BASE_URL = os.getenv("LLM_BASE_URL", "https://api.groq.com/openai/v1")  # openai_compatible only
+LLM_API_KEY = os.getenv("LLM_API_KEY", "")                                  # openai_compatible only
+LLM_EFFORT = os.getenv("LLM_EFFORT", "medium" if _IS_ANTHROPIC else "low")  # reasoning effort
+LLM_MAX_TOKENS = int(os.getenv("LLM_MAX_TOKENS", "16000" if _IS_ANTHROPIC else "4096"))
 LLM_MAX_TOOL_ROUNDS = 8          # safety cap on the tool loop per user message
-CHAT_HISTORY_MESSAGES = 30       # past chat messages sent to the LLM as context
+# Past chat messages sent as context. Kept smaller for free tiers with tight token/minute limits.
+CHAT_HISTORY_MESSAGES = int(os.getenv("CHAT_HISTORY_MESSAGES", "30" if _IS_ANTHROPIC else "12"))
 
 # --- Meal-type inference (user's local time, [start, end) hours) ----------
 MEAL_WINDOWS = [

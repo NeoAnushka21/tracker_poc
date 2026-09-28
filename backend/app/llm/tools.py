@@ -46,6 +46,15 @@ _ITEM_SCHEMA = {
 
 _MEAL_TYPE = {"type": "string", "enum": MEAL_TYPES}
 
+_NOTE = {
+    "type": "string",
+    "description": (
+        "Your reply to the user, shown above the card: 1-2 plain-text sentences mentioning any "
+        "assumptions, e.g. 'Here's your guava. I assumed one medium one, about 150 g.' It is "
+        "not saved yet, so never say 'logged', 'saved' or 'added'. Your turn ends after proposing."
+    ),
+}
+
 TOOLS = [
     {
         "name": "propose_entry",
@@ -67,8 +76,9 @@ TOOLS = [
                     "Only set if the user explicitly said which meal it was; otherwise null and the app infers it from the time.",
                 ),
                 "items": {"type": "array", "items": _ITEM_SCHEMA},
+                "note": _NOTE,
             },
-            "required": ["summary", "eaten_at", "meal_type", "items"],
+            "required": ["summary", "eaten_at", "meal_type", "items", "note"],
             "additionalProperties": False,
         },
     },
@@ -87,8 +97,9 @@ TOOLS = [
                 "eaten_at": _nullable({"type": "string"}, "New local time 'YYYY-MM-DDTHH:MM', or null to keep"),
                 "meal_type": _nullable(_MEAL_TYPE, "New meal type, or null to keep"),
                 "items": {"type": "array", "items": _ITEM_SCHEMA},
+                "note": _NOTE,
             },
-            "required": ["entry_id", "summary", "eaten_at", "meal_type", "items"],
+            "required": ["entry_id", "summary", "eaten_at", "meal_type", "items", "note"],
             "additionalProperties": False,
         },
     },
@@ -101,8 +112,9 @@ TOOLS = [
             "properties": {
                 "entry_id": {"type": "integer"},
                 "summary": {"type": "string", "description": "What is being deleted"},
+                "note": _NOTE,
             },
-            "required": ["entry_id", "summary"],
+            "required": ["entry_id", "summary", "note"],
             "additionalProperties": False,
         },
     },
@@ -147,6 +159,7 @@ class ToolContext:
     user: User
     raw_user_message: str
     created_actions: list[PendingAction] = field(default_factory=list)
+    notes: list[str] = field(default_factory=list)   # user-facing text from propose_* calls
 
 
 def run_tool(ctx: ToolContext, name: str, args: dict) -> str:
@@ -154,7 +167,15 @@ def run_tool(ctx: ToolContext, name: str, args: dict) -> str:
     handler = _HANDLERS.get(name)
     if handler is None:
         raise ToolInputError(f"Unknown tool '{name}'")
-    return json.dumps(handler(ctx, args))
+    if "__invalid_json__" in args:
+        raise ToolInputError("Arguments were not valid JSON; call the tool again with valid JSON")
+    # Non-strict providers can send missing or wrongly-typed fields; report, don't crash.
+    try:
+        return json.dumps(handler(ctx, args))
+    except KeyError as e:
+        raise ToolInputError(f"Missing required argument {e}") from e
+    except (TypeError, AttributeError) as e:
+        raise ToolInputError(f"Argument has the wrong type: {e}") from e
 
 
 # --- helpers ---------------------------------------------------------------
@@ -169,7 +190,34 @@ def _parse_items(raw_items: list) -> list[dict]:
     for it in items:
         for k in ("calories", "protein_g", "carbs_g", "fat_g", "fiber_g"):
             it[k] = round(it[k], 1)
+    _check_energy_balance(items)
     return items
+
+
+_ALCOHOL_WORDS = ("beer", "wine", "vodka", "whisk", "rum", "gin", "tequila", "brandy",
+                  "liquor", "liqueur", "cocktail", "sake", "cider", "alcohol")
+ENERGY_TOLERANCE = 0.25      # allowed gap between stated kcal and 4/4/9 macro kcal
+ENERGY_MIN_KCAL = 40         # below this, rounding noise dominates
+
+
+def _check_energy_balance(items: list[dict]) -> None:
+    """Catch estimates whose calories don't match their macros (e.g. a quantity was
+    scaled for calories but not protein). Alcohol carries its own 7 kcal/g, so skip it."""
+    bad = []
+    for it in items:
+        name = it["ingredient_name"].lower()
+        if it["calories"] < ENERGY_MIN_KCAL or any(w in name for w in _ALCOHOL_WORDS):
+            continue
+        macro_kcal = 4 * it["protein_g"] + 4 * it["carbs_g"] + 9 * it["fat_g"]
+        if abs(macro_kcal - it["calories"]) > ENERGY_TOLERANCE * it["calories"]:
+            bad.append(f"{it['quantity']:g} {it['unit']} {it['ingredient_name']}: "
+                       f"{it['calories']:g} kcal stated but macros give {macro_kcal:.0f} kcal")
+    if bad:
+        raise ToolInputError(
+            "Calories and macros don't agree (protein 4, carbs 4, fat 9 kcal/g) for: "
+            + "; ".join(bad)
+            + ". Recalculate all nutrients for these quantities and call the tool again."
+        )
 
 
 def _parse_local_dt(s: str, tz_name: str) -> datetime:
@@ -194,7 +242,10 @@ def _parse_date(s: str) -> date:
         raise ToolInputError(f"'{s}' is not a YYYY-MM-DD date") from e
 
 
-def _add_action(ctx: ToolContext, action_type: str, payload: dict, target_entry_id: int | None) -> dict:
+def _add_action(ctx: ToolContext, action_type: str, payload: dict, target_entry_id: int | None,
+                note: str | None) -> dict:
+    if note and note.strip():
+        ctx.notes.append(note.strip())
     action = PendingAction(
         user_id=ctx.user.id,
         action_type=action_type,
@@ -207,11 +258,7 @@ def _add_action(ctx: ToolContext, action_type: str, payload: dict, target_entry_
     return {
         "proposal_id": action.id,
         "status": "shown_to_user_awaiting_confirmation",
-        "note": (
-            "The user now sees a card with these details and Confirm / Needs changes / Cancel "
-            "buttons. Nothing is saved until they click Confirm. Don't repeat every number in "
-            "your reply; the card shows them."
-        ),
+        "info": "The user sees a card with Confirm / Needs changes / Cancel. Nothing is saved until they click Confirm.",
     }
 
 
@@ -240,7 +287,7 @@ def _propose_entry(ctx: ToolContext, args: dict) -> dict:
         "totals": sum_items(items),
         "raw_user_message": ctx.raw_user_message,
     }
-    return _add_action(ctx, "create", payload, None)
+    return _add_action(ctx, "create", payload, None, args.get("note"))
 
 
 def _propose_edit(ctx: ToolContext, args: dict) -> dict:
@@ -268,7 +315,7 @@ def _propose_edit(ctx: ToolContext, args: dict) -> dict:
         "totals": sum_items(items),
         "before": entry_to_dict(entry, tz),
     }
-    return _add_action(ctx, "edit", payload, entry.id)
+    return _add_action(ctx, "edit", payload, entry.id, args.get("note"))
 
 
 def _propose_delete(ctx: ToolContext, args: dict) -> dict:
@@ -278,7 +325,7 @@ def _propose_delete(ctx: ToolContext, args: dict) -> dict:
         "entry_id": entry.id,
         "before": entry_to_dict(entry, ctx.user.timezone),
     }
-    return _add_action(ctx, "delete", payload, entry.id)
+    return _add_action(ctx, "delete", payload, entry.id, args.get("note"))
 
 
 def _get_logs(ctx: ToolContext, args: dict) -> dict:
