@@ -3,7 +3,7 @@ import { api } from "../api";
 import type { DailySummary, Entry, Item, MicroSummary, WaterSummary } from "../types";
 import { MEAL_LABEL, MEAL_ORDER, friendlyDate, grams, kcal, litres, shiftDay } from "../format";
 import { StackedBar } from "./charts";
-import { ArrowRightIcon, ChatIcon, CheckIcon, CloseIcon, PencilIcon, TrashIcon } from "./icons";
+import { ArrowRightIcon, ChatIcon, CheckIcon, CloseIcon, PencilIcon, TrashIcon, WaterDrop } from "./icons";
 
 /** A meter: one macro against its target. Identity comes from the label; the fill hue repeats it. */
 export function Bar({ label, value, target, unit, tone }: {
@@ -97,14 +97,6 @@ function Micronutrients({ m }: { m: MicroSummary }) {
         })}
       </div>
     </section>
-  );
-}
-
-function WaterDrop() {
-  return (
-    <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
-      <path d="M12 3c3.5 4.4 6 7.9 6 11a6 6 0 0 1-12 0c0-3.1 2.5-6.6 6-11z" fill="currentColor" />
-    </svg>
   );
 }
 
@@ -346,45 +338,52 @@ export default function Dashboard({ dataVersion, onDataChanged, onAskMacBro }: D
   for (const e of data.entries) (byMeal[e.meal_type] ??= []).push(e);
 
   return (
-    <section className="dashboard card">
-      <div className="day-nav">
-        <button className="ghost" onClick={() => setDay(shiftDay(data.date, -1))} aria-label="Previous day">‹</button>
-        <span className="day-label">{friendlyDate(data.date, today)}</span>
-        <button className="ghost" onClick={() => setDay(shiftDay(data.date, 1))} disabled={data.date >= today} aria-label="Next day">›</button>
-      </div>
+    <div className="dashboard">
+      <section className="card day-card">
+        <div className="day-nav">
+          <button className="ghost" onClick={() => setDay(shiftDay(data.date, -1))} aria-label="Previous day">‹</button>
+          <span className="day-label">{friendlyDate(data.date, today)}</span>
+          <button className="ghost" onClick={() => setDay(shiftDay(data.date, 1))} disabled={data.date >= today} aria-label="Next day">›</button>
+        </div>
+      </section>
 
+      {/* Separate tiles: macros, then micronutrients, then water; meals beside them on laptops
+          (styles.css, "wide screens"), below them on phones. */}
       <div className="dash-cols">
         <div className="dash-summary">
-          {t ? (
-            <>
-              <CalorieRing eaten={c.calories} target={t.calories} />
-              <Bar label="Protein" value={c.protein_g} target={t.protein_g} unit="g" tone="protein" />
-              <Bar label="Fiber" value={c.fiber_g} target={t.fiber_g} unit="g" tone="fiber" />
-              <Bar label="Carbs" value={c.carbs_g} target={t.carbs_g} unit="g" tone="carbs" />
-              <Bar label="Fat" value={c.fat_g} target={t.fat_g} unit="g" tone="fat" />
-              <div className="calorie-split">
-                <h3>Where today's calories came from</h3>
-                <StackedBar
-                  ariaLabel="Share of today's calories from protein, carbs and fat"
-                  segments={[
-                    { key: "p", label: "Protein", value: c.protein_g * 4, color: "var(--protein)", detail: `${Math.round(c.protein_g * 4)} kcal` },
-                    { key: "c", label: "Carbs", value: c.carbs_g * 4, color: "var(--carbs)", detail: `${Math.round(c.carbs_g * 4)} kcal` },
-                    { key: "f", label: "Fat", value: c.fat_g * 9, color: "var(--fat)", detail: `${Math.round(c.fat_g * 9)} kcal` },
-                  ]}
-                />
-              </div>
-            </>
-          ) : (
-            <p className="muted">No targets set.</p>
+          <section className="card dash-macros" aria-label="Calories and macros">
+            {t ? (
+              <>
+                <CalorieRing eaten={c.calories} target={t.calories} />
+                <Bar label="Protein" value={c.protein_g} target={t.protein_g} unit="g" tone="protein" />
+                <Bar label="Fiber" value={c.fiber_g} target={t.fiber_g} unit="g" tone="fiber" />
+                <Bar label="Carbs" value={c.carbs_g} target={t.carbs_g} unit="g" tone="carbs" />
+                <Bar label="Fat" value={c.fat_g} target={t.fat_g} unit="g" tone="fat" />
+                <div className="calorie-split">
+                  <h3>Where today's calories came from</h3>
+                  <StackedBar
+                    ariaLabel="Share of today's calories from protein, carbs and fat"
+                    segments={[
+                      { key: "p", label: "Protein", value: c.protein_g * 4, color: "var(--protein)", detail: `${Math.round(c.protein_g * 4)} kcal` },
+                      { key: "c", label: "Carbs", value: c.carbs_g * 4, color: "var(--carbs)", detail: `${Math.round(c.carbs_g * 4)} kcal` },
+                      { key: "f", label: "Fat", value: c.fat_g * 9, color: "var(--fat)", detail: `${Math.round(c.fat_g * 9)} kcal` },
+                    ]}
+                  />
+                </div>
+              </>
+            ) : (
+              <p className="muted">No targets set.</p>
+            )}
+          </section>
+
+          {data.micronutrients && <div className="card"><Micronutrients m={data.micronutrients} /></div>}
+
+          {data.water && (
+            <div className="card"><Water w={data.water} isToday={data.date === today} onChanged={onDataChanged} /></div>
           )}
-
-          {data.water && <Water w={data.water} isToday={data.date === today} onChanged={onDataChanged} />}
-
-          {data.micronutrients && <Micronutrients m={data.micronutrients} />}
         </div>
 
-        {/* Laptop and up: summary on the left, meals on the right (styles.css, "wide screens"). */}
-        <div className="dash-meals">
+        <section className="card dash-meals">
           <div className="meals-head">
             <h3>Meals</h3>
             <button type="button" className="ghost log-day-btn" onClick={() => onAskMacBro("", data.date)}>
@@ -397,8 +396,8 @@ export default function Dashboard({ dataVersion, onDataChanged, onAskMacBro }: D
                            onChanged={onDataChanged} onAskMacBro={onAskMacBro} />
             ))}
           </div>
-        </div>
+        </section>
       </div>
-    </section>
+    </div>
   );
 }

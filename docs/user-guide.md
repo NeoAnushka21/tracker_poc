@@ -4,7 +4,7 @@ OmniAI is a chat-based calorie and macro tracker. In the Chat you talk to **MacB
 
 This guide walks a new user through the app from sign-up to daily use. The same walkthrough appears inside the app as a short tour the first time you log in. You can reopen it any time with the **? Guide** button at the top.
 
-> Last updated: 2026-09-29 (launcher address and the wake screen). Keep this file in step with the UI (see [docs/README.md](README.md)).
+> Last updated: 2026-09-29 (water card after water logs; separate macro and water tiles). Keep this file in step with the UI (see [docs/README.md](README.md)).
 
 ---
 
@@ -88,9 +88,9 @@ The first time you reach the main screen, a small panel opens at the bottom. It 
 
 | Page | On a laptop |
 |---|---|
-| Home | Today's summary on the left, the two streaks stacked on the right |
+| Home | Today's summary (macros) on the left; the Water tile and the two streaks stacked on the right |
 | Chat | Wider conversation; messages keep a comfortable reading width |
-| Dashboard | The day's summary (ring, macros, water, micronutrients) on the left, your **meals** on the right |
+| Dashboard | The macros, micronutrients and water tiles on the left, your **meals** on the right |
 | Analysis | Charts in two columns: calories beside protein, macro trends beside water, the calorie split beside calories by meal |
 | My foods | Food cards in two columns; the food you're editing opens across the full width |
 
@@ -102,7 +102,8 @@ On very wide screens, content stays at a comfortable width (about 1,200 px) in t
 
 - **Greeting:** "Good morning", "Good afternoon" or "Good evening" with your name, today's date, and a one-line status (e.g. "979 kcal in, 681 kcal to go").
 - **Log a meal** takes you straight to the Chat.
-- **Today's summary:** the calorie ring (**eaten / target**, with **Balance** and **Progress**), then protein, fiber, carbs and fat bars, then **Water** with +250 ml / +500 ml / Undo. **Open dashboard →** shows the full day, including meals and micronutrients.
+- **Today's summary** tile: the calorie ring (**eaten / target**, with **Balance** and **Progress**), then protein, fiber, carbs and fat bars. **Open dashboard →** shows the full day, including meals and micronutrients.
+- **Water** tile, separate from the macros: litres against your goal with +250 ml / +500 ml / Undo.
 - **Streaks:**
 
 | Streak | Counts |
@@ -147,7 +148,7 @@ If something is ambiguous, for example "a bowl of pasta", MacBro asks a short qu
 
 **Log or change food for another day:** above the message box, **📅 Logging for Today** has a date picker. Pick any past date and everything you type is about that day: new food is logged on it, and edits, moves and deletes look at that day's meals first. Your message shows a small **"for Yesterday"** / **"for Fri, 25 Sep"** tag. Press **Back to today** when you're done. You can also just say the day in your message ("add 2 eggs to Monday's breakfast").
 
-Today's totals are on the **Home** tab (and in the **Day so far** card after each confirmed meal).
+Today's totals are on the **Home** tab (and in the summary card after each confirmed log: macros after food, water after water).
 
 ## 6. Confirm, correct or cancel
 
@@ -159,7 +160,10 @@ Every change MacBro suggests arrives as a **card** marked **Not saved yet**. It 
 | **Needs changes** | Tell MacBro what to fix, e.g. "the rice was 200g", "it was lunch, not dinner". A new card replaces the old one, which is marked superseded. |
 | **Cancel** | Throws the suggestion away. Nothing is saved. |
 
-After you confirm a meal, a **Day so far** card shows how much of each target you've used and what's left, with a short encouraging message.
+After you confirm, a summary card appears for **the day you logged for** (today, or the day picked under **Logging for**):
+
+- **After food** (or a move, copy, change or delete): **Day so far** (or e.g. **Yesterday total**) shows calories and how much of each macro target you've used and what's left, with a short encouraging message.
+- **After water:** **Water today** (or e.g. **Water · Yesterday**) shows litres against your goal, the percentage, what's left (or "goal met ✓"), and a hydration message. It doesn't repeat the macros.
 
 Cards you leave unanswered expire after 24 hours. Unconfirmed cards never count toward your totals.
 
@@ -219,14 +223,16 @@ MacBro answers from your **confirmed** data only:
 
 ## 11. The Dashboard
 
-| Section | What you see |
+Each part is its own tile, in this order: day navigation, **macros**, **additional micronutrients**, **water**, then **meals** (on a laptop the meals sit beside the other tiles).
+
+| Tile | What you see |
 |---|---|
 | **Day navigation** | **‹ ›** to move between days (not into the future). |
-| **Calorie ring** | Calories **eaten / target**. Beside it: **Balance** (calories left) or **Over budget by**, and **Progress %**. |
+| **Macros: calorie ring** | Calories **eaten / target**. Beside it: **Balance** (calories left) or **Over budget by**, and **Progress %**. |
 | **Macro bars** | Thick bars for Protein (green), Fiber (magenta), Carbs (amber) and Fat (cyan), with current / target above each bar. |
 | **Where today's calories came from** | A split bar of protein, carbs and fat calories (hover for numbers). |
-| **Water** | Litres against target, quick-add buttons, undo. |
 | **Additional micronutrients** | Iron, calcium, magnesium, potassium, zinc, vitamin C, vitamin B12 and vitamin D, against daily reference values for your age and sex. Sodium is shown as a limit to stay under. |
+| **Water** | Litres against target, quick-add buttons, undo. |
 | **Meals** | Breakfast, Morning snack, Lunch, Evening snack and Dinner, each with its own calories and macros. Tap a meal to expand it and the **pencil** on an item to move, copy, change or delete it. |
 
 Micronutrients are estimates. Treat them as a guide, not a lab result.

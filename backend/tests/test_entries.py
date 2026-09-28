@@ -167,3 +167,26 @@ def test_stopped_turn_saves_nothing(client, user, fake_llm):
     assert r.status_code == 409 and r.json()["detail"] == "cancelled"
     assert client.get("/api/chat/history").json() == []
     set_provider(None)
+
+
+def test_water_confirm_posts_a_water_card_not_macros(client, user, fake_llm):
+    action = chat_propose(client, fake_llm, "propose_water", {"amount_ml": 500, "drank_at": None})
+    progress = client.post(f"/api/actions/{action['id']}/confirm").json()["progress"]
+    d = progress["data"]
+    assert d["focus"] == "water" and d["is_today"] is True
+    assert d["water"]["consumed_ml"] == 500 and d["water"]["target_ml"] > 0
+    assert d["water"]["pct"] == round(500 * 100 / d["water"]["target_ml"])
+    assert "macros" not in d and "calories" not in d
+    assert progress["content"].startswith("Water today: 0.5 L")
+
+
+def test_card_summarises_the_day_the_food_was_logged_for(client, user, fake_llm):
+    from datetime import date, timedelta
+    yesterday = date.fromisoformat(day(client)["date"]) - timedelta(days=1)
+    action = chat_propose(client, fake_llm, "propose_entry", {
+        "summary": "m", "eaten_at": f"{yesterday.isoformat()}T13:00", "meal_type": None, "items": [CHICKEN]})
+    d = client.post(f"/api/actions/{action['id']}/confirm").json()["progress"]
+    assert d["data"]["focus"] == "macros"
+    assert d["data"]["date"] == yesterday.isoformat() and d["data"]["is_today"] is False
+    assert d["data"]["calories"]["consumed"] == 165      # yesterday's total, not today's (0)
+    assert not d["content"].startswith("Day so far")

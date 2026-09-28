@@ -1,7 +1,11 @@
 """'Day so far' summary + a motivational nudge, posted in chat after each confirmed log.
 
+Food logs get the calories-and-macros card; water logs get a water card. Both summarise the day
+the log was for (a past day picked in the chat's date picker, or today).
 Template-based (no LLM call), so it's instant and doesn't use up the model's rate limit.
 """
+from datetime import date
+
 from sqlalchemy.orm import Session
 
 from app.models import User
@@ -34,8 +38,42 @@ def motivation(kcal_pct: int | None, protein_pct: int | None, protein_left: floa
     return "It's just the start of your day, plenty of room to hit your goals. Stay consistent! 👍"
 
 
-def build_progress(db: Session, user: User) -> tuple[str, dict]:
-    today = daily_summary(db, user, local_now(user.timezone).date())
+def water_motivation(pct: int | None, left_ml: float) -> str:
+    if pct is None:
+        return "Logged! Keep sipping through the day. 💧"
+    if pct >= 100:
+        return "Hydration goal reached! 💧 Great job, keep sipping when you're thirsty."
+    if pct >= 75:
+        return f"Almost there! Just {left_ml / 1000:.1f} L to go. 💧"
+    if pct >= 50:
+        return "Halfway there! Keep a bottle nearby. 💧"
+    return "Good start! Sip steadily through the day to reach your goal. 💧"
+
+
+def _day_fields(user: User, day: date | None) -> tuple[date, dict]:
+    today = local_now(user.timezone).date()
+    day = day or today
+    return day, {"date": day.isoformat(), "is_today": day == today}
+
+
+def build_water_progress(db: Session, user: User, day: date | None = None) -> tuple[str, dict]:
+    day, fields = _day_fields(user, day)
+    w = daily_summary(db, user, day)["water"]
+    consumed, target = w["consumed_ml"], w["target_ml"]
+    pct = _pct(consumed, target)
+    left = max(0.0, (target or 0) - consumed)
+    headline = water_motivation(pct, left)
+    data = {"focus": "water", **fields, "water": {"consumed_ml": consumed, "target_ml": target, "pct": pct,
+                                                  "logs": len(w["logs"])},
+            "headline": headline}
+    text = (f"Water {'today' if fields['is_today'] else 'on ' + day.strftime('%a %d %b')}: {consumed / 1000:.1f} L"
+            + (f" of {target / 1000:.1f} L ({pct}%)" if target else "") + f"\n{headline}")
+    return text, data
+
+
+def build_progress(db: Session, user: User, day: date | None = None) -> tuple[str, dict]:
+    day, fields = _day_fields(user, day)
+    today = daily_summary(db, user, day)
     t, c, w = today["targets"], today["consumed"], today["water"]
     kcal_pct = _pct(c["calories"], t["calories"]) if t else None
     macros = [
@@ -47,13 +85,15 @@ def build_progress(db: Session, user: User) -> tuple[str, dict]:
     protein_left = max(0.0, (protein["target"] or 0) - protein["consumed"])
     headline = motivation(kcal_pct, protein["pct"], protein_left)
     data = {
+        "focus": "macros",
+        **fields,
         "calories": {"consumed": round(c["calories"]), "target": t["calories"] if t else None, "pct": kcal_pct},
         "macros": macros,
         "water": {"consumed_ml": w["consumed_ml"], "target_ml": w["target_ml"]},
         "meals_logged": len(today["entries"]),
         "headline": headline,
     }
-    lines = [f"Day so far: {round(c['calories'])} kcal"
+    lines = [f"{'Day so far' if fields['is_today'] else day.strftime('%a %d %b')}: {round(c['calories'])} kcal"
              + (f" of {t['calories']} ({kcal_pct}% of your daily budget)" if t else "")]
     lines += [f"- {m['label']}: {m['consumed']:g} g" + (f" of {m['target']} g ({m['pct']}%)" if m["target"] else "")
               for m in macros]

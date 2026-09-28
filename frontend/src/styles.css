@@ -703,6 +703,9 @@ button.danger { color: var(--error); }
 .progress-macro .bar { height: 6px; }
 .tiny { font-size: 0.72rem; margin-top: 3px; }
 .progress-headline { margin: 10px 0 0; font-weight: 600; }
+.progress-card.water { border-left-color: var(--water); }
+.progress-card.water .progress-title { display: inline-flex; align-items: center; gap: 6px; }
+.progress-card.water .water-bar { margin-top: 2px; }
 .move-route { display: flex; align-items: center; gap: 8px; margin: 6px 0; flex-wrap: wrap; }
 .meal-pill { padding: 2px 10px; border-radius: 999px; background: var(--surface-2); font-size: 0.85rem; font-weight: 600; }
 .meal-pill.to { background: var(--accent-soft); }
@@ -881,14 +884,19 @@ button.danger { color: var(--error); }
    wider elements. Below 1024px everything keeps the single-column phone/tablet layout. */
 .analysis-charts { display: grid; gap: 18px; margin-top: 18px; }
 .analysis-charts .chart-card { margin-top: 0; }
-.dash-cols { display: grid; }
+/* Dashboard and Home tiles: macros, micronutrients and water are separate cards. */
+.dashboard { display: grid; gap: 18px; }
+.day-card { padding: 10px 16px; }
+.day-card .day-nav { margin-bottom: 0; }
+.dash-cols, .dash-summary, .home-side { display: grid; gap: 18px; align-content: start; }
+.card > .water:first-child, .card > .micros:first-child { margin-top: 0; padding-top: 0; border-top: none; }
+.card > .water:first-child h3, .card > .micros:first-child h3, .dash-meals .meals-head h3 { margin-top: 0; }
 @media (min-width: 1024px) {
   .home { grid-template-columns: minmax(0, 3fr) minmax(300px, 2fr); align-items: start; }
   .home > .home-hero, .home > .error { grid-column: 1 / -1; }
   .home .streaks { grid-template-columns: 1fr; }
 
-  .dash-cols { grid-template-columns: minmax(0, 1fr) minmax(0, 1.15fr); gap: 36px; align-items: start; }
-  .dash-meals .meals-head { margin-top: 18px; }
+  .dash-cols { grid-template-columns: minmax(0, 1fr) minmax(0, 1.15fr); align-items: start; }
 
   .analysis-charts { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .analysis-charts .chart-water { order: 1; }          /* rows: calories|protein, trends|water, split|meals */

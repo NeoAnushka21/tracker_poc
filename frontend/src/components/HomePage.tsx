@@ -130,15 +130,20 @@ export default function HomePage({ user, dataVersion, onDataChanged, onOpenChat,
             <Bar label="Fat" value={c.fat_g} target={t.fat_g} unit="g" tone="fat" />
           </>
         ) : <p className="muted">No targets set yet. Add them in Settings → Targets.</p>}
-        {day?.water && <Water w={day.water} isToday onChanged={onDataChanged} />}
       </section>
 
-      {streaks && (
-        <div className="streaks">
-          <StreakCard kind="logging" s={streaks.logging} days={streaks.last_7_days} rule={streaks.rule} />
-          <StreakCard kind="target" s={streaks.target} days={streaks.last_7_days} rule={streaks.rule} />
-        </div>
-      )}
+      {/* Water gets its own tile; on laptops it sits above the streaks, beside the summary. */}
+      <div className="home-side">
+        {day?.water && (
+          <section className="card home-water"><Water w={day.water} isToday onChanged={onDataChanged} /></section>
+        )}
+        {streaks && (
+          <div className="streaks">
+            <StreakCard kind="logging" s={streaks.logging} days={streaks.last_7_days} rule={streaks.rule} />
+            <StreakCard kind="target" s={streaks.target} days={streaks.last_7_days} rule={streaks.rule} />
+          </div>
+        )}
+      </div>
     </div>
   );
 }

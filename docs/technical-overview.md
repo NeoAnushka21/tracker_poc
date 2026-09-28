@@ -1,6 +1,6 @@
 # OmniAI technical overview
 
-> Last updated: 2026-09-29 (wake screen and always-on launcher). Update this file in the same change as any code change it describes (see [docs/README.md](README.md)).
+> Last updated: 2026-09-29 (water progress card; macro and water tiles). Update this file in the same change as any code change it describes (see [docs/README.md](README.md)).
 > Architecture diagrams: [hld.md](hld.md). End-user manual: [user-guide.md](user-guide.md).
 
 ## 1. Tech stack
@@ -8,7 +8,7 @@
 | Layer | Choice |
 |---|---|
 | Frontend | React 19, TypeScript, Vite. No UI or chart library: charts are hand-rolled SVG (`charts.tsx`). |
-| Styling | One `styles.css` with CSS custom-property tokens (colours, `--radius` 16px / `--radius-sm` 12px, `--shadow-card`, `--accent-grad`, `--glass`). Light and dark via `prefers-color-scheme` and `data-theme`. **Responsive:** one layout for phones and tablets (a `max-width: 860px` block tightens spacing and grids), and from `min-width: 1024px` a "wide screens" block at the end of `styles.css` adds columns: Home (summary + streaks), Dashboard (`.dash-cols`: `.dash-summary` + `.dash-meals`), Analysis (`.analysis-charts`, 2 columns, CSS `order` pairs the cards), My foods (`.food-list`, 2 columns; `.food-row.editing` spans both). Content is capped by `--content-max` (1200px), and `--edge` gives the top bar, tabs and pages the same outer edge. Chat bubbles cap at 780px for line length. |
+| Styling | One `styles.css` with CSS custom-property tokens (colours, `--radius` 16px / `--radius-sm` 12px, `--shadow-card`, `--accent-grad`, `--glass`). Light and dark via `prefers-color-scheme` and `data-theme`. **Responsive:** one layout for phones and tablets (a `max-width: 860px` block tightens spacing and grids), and from `min-width: 1024px` a "wide screens" block at the end of `styles.css` adds columns: Home (summary tile + `.home-side` with the water tile and streaks), Dashboard (`.dash-cols`: `.dash-summary` with the macro, micronutrient and water tiles + `.dash-meals`), Analysis (`.analysis-charts`, 2 columns, CSS `order` pairs the cards), My foods (`.food-list`, 2 columns; `.food-row.editing` spans both). Content is capped by `--content-max` (1200px), and `--edge` gives the top bar, tabs and pages the same outer edge. Chat bubbles cap at 780px for line length. |
 | Font | Plus Jakarta Sans (variable), self-hosted via `@fontsource-variable/plus-jakarta-sans` (no Google Fonts request) |
 | Voice | Browser Web Speech API (`useSpeechToText.ts`), on-device or browser-vendor; no server audio. |
 | Backend | Python 3.12+ (developed on 3.14), FastAPI, Uvicorn |
@@ -72,7 +72,7 @@ POC_new/
 | `services/entries.py` | Direct item operations: `transfer_items` (move/copy), `set_item_quantity`, `delete_item` (soft-deletes an empty entry), `record_event` (chat note so the model knows) |
 | `services/water.py` | Water target (35 ml/kg + activity extra), add/delete, daily summary |
 | `services/analysis.py` | `range_summary` for 7/14/30 days, `on_target` (±10% kcal, ≥90% protein); `streaks` (365-day window; today only counts once it qualifies, so it never breaks a streak) |
-| `services/progress.py` | "Day so far" card after a confirm: percentages and a template motivational line |
+| `services/progress.py` | Card after a confirm, for the day the change landed on (`routers/actions._action_day`: `drank_at_utc` / `eaten_at_utc` / `to_date`, else today). Water confirms get `build_water_progress` (`focus: "water"`: litres, % of goal, hydration line); food changes get `build_progress` (`focus: "macros"`: calories, macro %, motivational line). Both carry `date` and `is_today`. |
 | `services/micros.py` | Clean, scale and total the micronutrient JSON |
 | `services/cancel.py` | In-memory registry for the Stop button: `start`, `raise_if_cancelled`, `finish_or_cancelled` (atomic check before commit), `cancel` |
 | `services/accounts.py` | `delete_user_and_data`: removes every row the user owns, keeps and unlinks the admin audit trail |
@@ -166,10 +166,10 @@ When `frontend/dist` exists (`FRONTEND_DIST`), `main.mount_frontend` also serves
 | `ConsentGate` | Re-consent when `CONSENT_VERSION` changes |
 | `Onboarding` | Profile form, then editable target preview |
 | `GuideTour` | First-run walkthrough docked at the bottom. It switches tabs per step and calls `POST /auth/guide-seen` when closed. The **? Guide** button reopens it. **Its steps must match `docs/user-guide.md`.** |
-| `Chat` | Today's chat (fresh each day) with **Show earlier chat** loading previous days above a date divider; jumps to the latest message whenever the tab opens (`active` prop); **Logging for** date picker (sends `log_date`, tags the message); example chips, mic, Stop, feedback mode, progress card |
+| `Chat` | Progress cards: `ProgressCard` (macros) or `WaterProgressCard` (`data.focus === "water"`); older cards without `focus` render as macros. Today's chat (fresh each day) with **Show earlier chat** loading previous days above a date divider; jumps to the latest message whenever the tab opens (`active` prop); **Logging for** date picker (sends `log_date`, tags the message); example chips, mic, Stop, feedback mode, progress card |
 | `ProposalCard` | Renders each action type with Looks good / Needs changes / Cancel |
-| `HomePage` | Default tab: time-of-day greeting, today's summary (reuses `CalorieRing`, `Bar`, `Water` from `Dashboard`), and the two streak cards |
-| `Dashboard` | Day navigation, calorie ring, macro bars, calorie split, water, micronutrients, meal sections; each item has a pencil that opens an edit panel (Move/Copy toggle + meal dropdown, quantity, and icon buttons for edit in chat, delete, close). Shared icons live in `components/icons.tsx` |
+| `HomePage` | Default tab: time-of-day greeting, today's summary tile (macros) and a separate water tile (reuses `CalorieRing`, `Bar`, `Water` from `Dashboard`), and the two streak cards |
+| `Dashboard` | Separate tiles (cards): day navigation, then macros (calorie ring, macro bars, calorie split), micronutrients, water, and meals; water, micronutrients, meal sections; each item has a pencil that opens an edit panel (Move/Copy toggle + meal dropdown, quantity, and icon buttons for edit in chat, delete, close). Shared icons live in `components/icons.tsx` |
 | `AnalysisPage` + `charts.tsx` | 7/14/30-day range: stat tiles, line, bar and stacked charts with hover/keyboard tooltips and data tables |
 | `FoodsPage` | Library search, filter, edit and delete |
 | `SettingsDialog` | Account (and appearance), Targets (`TargetsEditor`), Body profile (`BodyProfile`), Password, Delete account |
@@ -237,7 +237,7 @@ Domain constants (meal windows, goal multipliers, activity factors, water, fiber
 
 ```bash
 cd backend
-.venv\Scripts\python -m pytest -q      # 193 tests (1 needs Postgres), fake LLM, no network
+.venv\Scripts\python -m pytest -q      # 195 tests (1 needs Postgres), fake LLM, no network
 cd ../frontend
 npm run build                          # type-check + production build
 ```
@@ -253,7 +253,7 @@ npm run build                          # type-check + production build
 
   Never point `TEST_DATABASE_URL` at real data: tables are dropped per test.
 - `tests/conftest.py` gives each test a fresh database and a scripted `FakeProvider`. It also pins `ADMIN_EMAILS` and blanks `ADMIN_INITIAL_PASSWORD` so the local `.env` can't leak into tests.
-- Coverage by file: `test_flow` (confirm loop, auth, guide flag), `test_foods` (library, recipes), `test_micros`, `test_water_meals`, `test_admin`, `test_analysis`, `test_entries` (move/copy/quantity/delete), `test_body`, `test_openai_provider`, `test_nutrition`, `test_streaks`, `test_chat_days`, `test_deploy` (URL handling, frontend serving, health CORS for the launcher, SQLite → Postgres copy), `test_routing` (router, fast paths, pool failover and cooldowns, licence gate, escalation, usage report).
+- Coverage by file: `test_flow` (confirm loop, auth, guide flag), `test_foods` (library, recipes), `test_micros`, `test_water_meals`, `test_admin`, `test_analysis`, `test_entries` (move/copy/quantity/delete, progress cards: macros vs water, logged day), `test_body`, `test_openai_provider`, `test_nutrition`, `test_streaks`, `test_chat_days`, `test_deploy` (URL handling, frontend serving, health CORS for the launcher, SQLite → Postgres copy), `test_routing` (router, fast paths, pool failover and cooldowns, licence gate, escalation, usage report).
 - **Policy:** development and tests use the fake model. Don't use the real LLM API for routine testing, because the free-tier quota is shared with real users.
 
 ## 11. Known limitations and next steps

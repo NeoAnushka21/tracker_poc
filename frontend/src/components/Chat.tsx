@@ -1,10 +1,11 @@
 import { Fragment, useEffect, useRef, useState, type FormEvent, type KeyboardEvent, type ReactNode } from "react";
 import { api } from "../api";
-import type { Action, ChatMessage, ProgressData, User } from "../types";
-import { dayLabel, localTodayIso } from "../format";
+import type { Action, ChatMessage, ProgressData, User, WaterProgressData } from "../types";
+import { dayLabel, litres, localTodayIso } from "../format";
 import { useSpeechToText } from "../useSpeechToText";
 import { MacBroAvatar, UserAvatar } from "./Avatar";
 import ProposalCard from "./ProposalCard";
+import { WaterDrop } from "./icons";
 
 const EXAMPLES = [
   "had 100g cooked chicken, 10ml olive oil and 50g onion",
@@ -24,13 +25,40 @@ type Props = {
 
 type DayBlock = { day: string; messages: ChatMessage[] };
 
+/** After a water log: the day's water against the goal (no macros). */
+function WaterProgressCard({ d }: { d: WaterProgressData }) {
+  const { consumed_ml: had, target_ml: target, pct } = d.water;
+  return (
+    <div className="progress-card water">
+      <div className="progress-head">
+        <span className="progress-title">
+          <span className="water-icon"><WaterDrop /></span>
+          {d.is_today === false && d.date ? `Water · ${dayLabel(d.date)}` : "Water today"}
+        </span>
+        {pct != null && <span className="progress-pct">{pct}% of goal</span>}
+      </div>
+      <div className="progress-kcal">
+        <b>{litres(had)}</b>
+        {target != null && <span className="muted"> / {litres(target)}</span>}
+        {target != null && (
+          <span className="muted small">{had >= target ? " · goal met ✓" : ` · ${litres(target - had)} to go`}</span>
+        )}
+      </div>
+      <div className="bar water-bar"><div className="bar-fill" style={{ width: `${Math.min(100, pct ?? 0)}%` }} /></div>
+      <p className="progress-headline">{d.headline}</p>
+    </div>
+  );
+}
+
 function ProgressCard({ m }: { m: ChatMessage }) {
-  const d = m.data as ProgressData;
+  const data = m.data as ProgressData;
+  if (data.focus === "water") return <WaterProgressCard d={data} />;
+  const d = data;
   const kcalPct = d.calories.pct ?? 0;
   return (
     <div className="progress-card">
       <div className="progress-head">
-        <span className="progress-title">Day so far</span>
+        <span className="progress-title">{d.is_today === false && d.date ? `${dayLabel(d.date)} total` : "Day so far"}</span>
         <span className="muted small">{d.meals_logged} meal{d.meals_logged === 1 ? "" : "s"} logged</span>
       </div>
       <div className="progress-kcal">

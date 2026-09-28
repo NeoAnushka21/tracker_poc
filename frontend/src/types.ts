@@ -107,13 +107,21 @@ export type ChatMessage = {
 
 export type ChatDay = { day: string; messages: ChatMessage[]; prev_day: string | null };
 
-export type ProgressData = {
+/** The card posted after a confirmed log: macros after food, water after water. `date`/`is_today`
+ *  are missing on cards saved before 2026-09-29 (those were always macros, for today). */
+type ProgressDay = { date?: string; is_today?: boolean; headline: string };
+export type MacroProgressData = ProgressDay & {
+  focus?: "macros";
   calories: { consumed: number; target: number | null; pct: number | null };
   macros: { key: string; label: string; consumed: number; target: number | null; pct: number | null }[];
   water: { consumed_ml: number; target_ml: number | null };
   meals_logged: number;
-  headline: string;
 };
+export type WaterProgressData = ProgressDay & {
+  focus: "water";
+  water: { consumed_ml: number; target_ml: number | null; pct: number | null; logs: number };
+};
+export type ProgressData = MacroProgressData | WaterProgressData;
 
 export type DailySummary = {
   date: string;
