@@ -69,3 +69,11 @@ def test_admin_unknown_user_404(client, user, admin_emails):
     client.post("/api/auth/logout")
     make_user(client, "boss@example.com")
     assert client.get("/api/admin/users/999").status_code == 404
+
+
+def test_default_admin_is_only_the_configured_email(client, user):
+    # conftest's user is me@example.com; with the default config it must not be an admin.
+    assert config.ADMIN_EMAILS == {"mhatre.anushka.work@gmail.com"}
+    assert client.get("/api/auth/me").json()["is_admin"] is False
+    assert client.get("/api/admin/users").status_code == 403
+    assert client.get("/api/admin/audit").status_code == 403

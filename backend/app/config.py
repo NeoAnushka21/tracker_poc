@@ -16,8 +16,11 @@ DATABASE_URL = os.getenv("DATABASE_URL", f"sqlite:///{BACKEND_DIR / 'macro_track
 SECRET_KEY = os.getenv("SECRET_KEY", "dev-only-insecure-secret-change-me-in-backend-env")
 SESSION_DAYS = int(os.getenv("SESSION_DAYS", "14"))
 COOKIE_SECURE = os.getenv("COOKIE_SECURE", "false").lower() == "true"
-# Comma-separated emails that get the admin panel.
-ADMIN_EMAILS = {e.strip().lower() for e in os.getenv("ADMIN_EMAILS", "").split(",") if e.strip()}
+# Comma-separated emails that get the admin panel. Nobody else can see or call it.
+DEFAULT_ADMIN_EMAIL = "mhatre.anushka.work@gmail.com"
+ADMIN_EMAILS = {
+    e.strip().lower() for e in os.getenv("ADMIN_EMAILS", DEFAULT_ADMIN_EMAIL).split(",") if e.strip()
+}
 
 # Shown at sign-up; bump the version when the wording changes so users are asked again.
 CONSENT_VERSION = "2026-09-28"
