@@ -1,6 +1,6 @@
 # OmniAI technical overview
 
-> Last updated: 2026-09-29 (wide-screen layouts). Update this file in the same change as any code change it describes (see [docs/README.md](README.md)).
+> Last updated: 2026-09-29 (wake screen and always-on launcher). Update this file in the same change as any code change it describes (see [docs/README.md](README.md)).
 > Architecture diagrams: [hld.md](hld.md). End-user manual: [user-guide.md](user-guide.md).
 
 ## 1. Tech stack
@@ -95,6 +95,8 @@ All endpoints are JSON under `/api`, authenticated by the session cookie. Every 
 
 FastAPI's interactive docs are at `http://localhost:8000/docs` while the backend is running.
 
+`GET /api/health` returns `{"ok": true}` without touching the database, with `Access-Control-Allow-Origin: *` and `Cache-Control: no-store` so the launcher (another origin) can poll it.
+
 When `frontend/dist` exists (`FRONTEND_DIST`), `main.mount_frontend` also serves the built app: `/assets/*` as static files, and every other non-API path returns `index.html` (no-cache), so the site and the API share one address and one cookie. API routes are registered first and always win; unknown `/api/*` paths return 404.
 
 ## 5. Data model
@@ -173,7 +175,9 @@ When `frontend/dist` exists (`FRONTEND_DIST`), `main.mount_frontend` also serves
 | `SettingsDialog` | Account (and appearance), Targets (`TargetsEditor`), Body profile (`BodyProfile`), Password, Delete account |
 | `AdminPage` | User table, per-user detail, audit log |
 | `MacroChips` | Bold kcal plus colour-coded P / C / F / Fiber chips (chat cards, My foods) |
-| `Avatar`, `ThemeToggle` | `AppLogo` (placeholder "OAI" tile, used everywhere outside the chat), `MacBroAvatar` (chat only), user avatar; theme switch (Settings only) |
+| `Avatar`, `ThemeToggle` | `AppLogo` (placeholder "OAI" tile, used everywhere outside the chat), `MacBroAvatar` (chat and the wake screen), user avatar; theme switch (Settings only) |
+| `WakeScreen` + `wake.ts` | Loader with a **dancing MacBro** (CSS keyframes: bounce + sway, floor shadow, notes; still under "reduce motion") and rotating lines. Used for app start (`DelayedWakeScreen`, only after 600 ms so fast loads don't flash it), as a full-screen overlay mounted in `main.tsx` while the free server wakes, and by the launcher. `api.ts` `request()` treats an HTML response (Render's waking page) or a network error while `/api/health` fails as "asleep": `recoverServer()` shows the overlay, polls `/api/health` every 2 s, then retries the request once. A request slower than 4 s triggers a health probe, so a slow chat reply on an awake server shows nothing. |
+| `launcher.tsx` (`launcher.html`) | Second Vite page (`build.rollupOptions.input`). Published alone by the always-on static site `omniai-app`: shows the `WakeScreen`, polls `VITE_APP_URL/api/health` (CORS-open), then `location.replace`s to the app, keeping the `#tab`. Gives up with **Try again** after 3 minutes. |
 
 **Colour tokens** (checked with the dataviz palette validator for colour-vision deficiency separation and contrast):
 
@@ -193,7 +197,7 @@ Light passes every check (worst colour-blind separation ΔE 9.4). Dark is in the
 
 **Local address:** http://omniai.localhost:5173. Browsers resolve any `*.localhost` name to this machine, so no hosts-file edit is needed. `omniai.com` is deliberately *not* mapped locally: it's a real public domain, and overriding it would hide the real site and confuse cookies. It becomes the address after deployment, if it can be registered. (`http://localhost:5173` still works, but it keeps a separate login cookie.)
 
-The app is **OmniAI**; the chat assistant is **MacBro**. MacBro's name and avatar appear only inside the Chat tab (and in its replies). Everywhere else (header, login, consent, Home, guide tour, favicon, page title) uses the app name and the placeholder **OAI** logo until a real logo is designed. Names live in:
+The app is **OmniAI**; the chat assistant is **MacBro**. MacBro's name and avatar appear only inside the Chat tab (and in its replies), plus the loading screen (`WakeScreen`), where the dancing MacBro was requested explicitly. Everywhere else (header, login, consent, Home, guide tour, favicon, page title) uses the app name and the placeholder **OAI** logo until a real logo is designed. Names live in:
 
 - `frontend/src/brand.ts`: `APP_NAME`, `APP_MARK` (logo text), `BOT_NAME`, `APP_DEV_HOST` (local address, `omniai.localhost`), `APP_DOMAIN` (planned public domain, `omniai.com`, not registered yet)
 - `frontend/index.html` `<title>` is filled from `APP_NAME` by a small Vite plugin; `vite.config.ts` allows `APP_DEV_HOST`
@@ -221,6 +225,7 @@ The environment is set in `backend/.env` (template: `backend/.env.example`):
 | `DATABASE_URL` | Default: local SQLite. Production: the Neon connection string (`postgresql://…?sslmode=require`). On Postgres the app refuses to start with the development `SECRET_KEY`. |
 | `COOKIE_SECURE`, `SESSION_DAYS` | `true` in production (HTTPS); session length |
 | `FRONTEND_DIST` | Built frontend folder served by the backend (default `frontend/dist`) |
+| `VITE_APP_URL` (frontend build) | Only for the launcher build on the static site: the app's address to wait for and open (`render.yaml`). Empty = same origin (dev: `/launcher.html`). |
 | `TARGET_DATABASE_URL`, `SOURCE_DATABASE_URL` | Only for `scripts/copy_to_postgres.py` (target Neon; source defaults to the local SQLite file) |
 | `TEST_DATABASE_URL` | Only for tests: run the suite on a throwaway Postgres |
 
@@ -232,7 +237,7 @@ Domain constants (meal windows, goal multipliers, activity factors, water, fiber
 
 ```bash
 cd backend
-.venv\Scripts\python -m pytest -q      # 192 tests (1 needs Postgres), fake LLM, no network
+.venv\Scripts\python -m pytest -q      # 193 tests (1 needs Postgres), fake LLM, no network
 cd ../frontend
 npm run build                          # type-check + production build
 ```
@@ -248,7 +253,7 @@ npm run build                          # type-check + production build
 
   Never point `TEST_DATABASE_URL` at real data: tables are dropped per test.
 - `tests/conftest.py` gives each test a fresh database and a scripted `FakeProvider`. It also pins `ADMIN_EMAILS` and blanks `ADMIN_INITIAL_PASSWORD` so the local `.env` can't leak into tests.
-- Coverage by file: `test_flow` (confirm loop, auth, guide flag), `test_foods` (library, recipes), `test_micros`, `test_water_meals`, `test_admin`, `test_analysis`, `test_entries` (move/copy/quantity/delete), `test_body`, `test_openai_provider`, `test_nutrition`, `test_streaks`, `test_chat_days`, `test_deploy` (URL handling, frontend serving, SQLite → Postgres copy), `test_routing` (router, fast paths, pool failover and cooldowns, licence gate, escalation, usage report).
+- Coverage by file: `test_flow` (confirm loop, auth, guide flag), `test_foods` (library, recipes), `test_micros`, `test_water_meals`, `test_admin`, `test_analysis`, `test_entries` (move/copy/quantity/delete), `test_body`, `test_openai_provider`, `test_nutrition`, `test_streaks`, `test_chat_days`, `test_deploy` (URL handling, frontend serving, health CORS for the launcher, SQLite → Postgres copy), `test_routing` (router, fast paths, pool failover and cooldowns, licence gate, escalation, usage report).
 - **Policy:** development and tests use the fake model. Don't use the real LLM API for routine testing, because the free-tier quota is shared with real users.
 
 ## 11. Known limitations and next steps

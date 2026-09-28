@@ -4,12 +4,13 @@ OmniAI is a chat-based calorie and macro tracker. In the Chat you talk to **MacB
 
 This guide walks a new user through the app from sign-up to daily use. The same walkthrough appears inside the app as a short tour the first time you log in. You can reopen it any time with the **? Guide** button at the top.
 
-> Last updated: 2026-09-29 (layouts for laptop screens). Keep this file in step with the UI (see [docs/README.md](README.md)).
+> Last updated: 2026-09-29 (launcher address and the wake screen). Keep this file in step with the UI (see [docs/README.md](README.md)).
 
 ---
 
 ## Contents
 
+- [Opening OmniAI](#opening-omniai)
 1. [Create your account](#1-create-your-account)
 2. [Set up your profile](#2-set-up-your-profile)
 3. [The first-run tour](#3-the-first-run-tour)
@@ -27,6 +28,12 @@ This guide walks a new user through the app from sign-up to daily use. The same 
 15. [Troubleshooting and FAQ](#15-troubleshooting-and-faq)
 
 ---
+
+## Opening OmniAI
+
+Open **https://omniai-app.onrender.com** (bookmark it). The app runs on a free server that naps when nobody has used it for about 15 minutes. If it's napping, you'll see **MacBro dancing** with messages like "MacBro is warming up the kitchen…" for up to a minute, then the app opens by itself. If it's awake, the app opens straight away.
+
+The same screen can appear briefly while you're using the app if it was left open long enough for the server to nap. Just wait; your action carries on by itself. If it takes more than about 3 minutes, tap **Try again**.
 
 ## 1. Create your account
 

@@ -1,3 +1,4 @@
+import { fileURLToPath } from "node:url";
 import { defineConfig, type Plugin } from "vite";
 import react from "@vitejs/plugin-react";
 import { APP_DEV_HOST, APP_NAME } from "./src/brand";
@@ -19,4 +20,14 @@ export default defineConfig({
     proxy: { "/api": "http://127.0.0.1:8000" },
   },
   preview: { allowedHosts: [APP_DEV_HOST] },
+  // Two pages: the app (index.html) and the always-on launcher that waits for the free server
+  // to wake (launcher.html, served by the Render static site; see src/launcher.tsx).
+  build: {
+    rollupOptions: {
+      input: {
+        main: fileURLToPath(new URL("index.html", import.meta.url)),
+        launcher: fileURLToPath(new URL("launcher.html", import.meta.url)),
+      },
+    },
+  },
 });

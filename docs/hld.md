@@ -1,6 +1,6 @@
 # OmniAI high-level design (HLD)
 
-> Last updated: 2026-09-29 (responsive layout note; deployment: Render + Neon Postgres). Update the diagrams whenever a component, data flow, table or external service changes (see [docs/README.md](README.md)).
+> Last updated: 2026-09-29 (always-on launcher with wake screen). Update the diagrams whenever a component, data flow, table or external service changes (see [docs/README.md](README.md)).
 > Diagrams are Mermaid. They render on GitHub and in VS Code with a Mermaid preview extension.
 
 ## 1. Purpose and principles
@@ -66,13 +66,15 @@ In development, Vite serves the SPA on `:5173` and proxies `/api` to Uvicorn on 
 
 ```mermaid
 flowchart LR
-    U[Browser] -->|HTTPS| R["Render free web service · Singapore<br/>FastAPI serves the built SPA and /api"]
+    U[Browser] -->|1. open| L["Render static site omniai-app<br/>launcher: dancing MacBro<br/>never sleeps"]
+    L -->|2. poll /api/health until awake| R
+    U -->|3. app + /api over HTTPS| R["Render free web service · Singapore<br/>FastAPI serves the built SPA and /api<br/>sleeps after ~15 min idle"]
     R -->|SSL, pooled connections| N[("Neon Postgres · Singapore<br/>free, scales to zero")]
     R -->|HTTPS| G[(Groq: gpt-oss-20b / 120b)]
     GH[GitHub main] -->|push = build + deploy| R
 ```
 
-One service keeps the site and the API on one address (simple same-site cookie, one cold start). The server and the database share a region because one chat message makes many database round trips. Secrets are set in the Render dashboard. Step-by-step: [deployment.md](deployment.md).
+The free web service sleeps when idle, and Render shows its own page while it wakes. So people open the always-on **launcher** (a free static site). It shows our wake screen until the app answers, then opens it. Inside the app, a request that hits the sleeping server shows the same wake screen as an overlay and is retried once the server is back. The app itself stays one service, keeping the site and the API on one address (simple same-site cookie, one cold start). The server and the database share a region because one chat message makes many database round trips. Secrets are set in the Render dashboard. Step-by-step: [deployment.md](deployment.md).
 
 ## 4. Key flows
 

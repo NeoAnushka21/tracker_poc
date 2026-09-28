@@ -14,6 +14,8 @@ import ConsentGate from "./components/ConsentGate";
 import GuideTour from "./components/GuideTour";
 import { AppLogo, UserAvatar } from "./components/Avatar";
 import { APP_NAME } from "./brand";
+import { DelayedWakeScreen, WakeScreen } from "./components/WakeScreen";
+import { useServerWaking } from "./wake";
 
 const TABS = [
   { id: "home", label: "Home" },
@@ -33,6 +35,7 @@ export default function App() {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const waking = useServerWaking();   // the overlay (main.tsx) is already showing the loader
   // Bumped whenever confirmed data changes, so the dashboard refetches.
   const [dataVersion, setDataVersion] = useState(0);
   const [showSettings, setShowSettings] = useState(false);
@@ -89,8 +92,8 @@ export default function App() {
     return () => window.removeEventListener("resize", measure);
   }, [tab, user?.id, user?.onboarded, user?.consented]);
 
-  if (loading) return <div className="center muted">Loading…</div>;
-  if (error) return <div className="center error">Couldn't reach the server: {error}</div>;
+  if (loading) return waking ? null : <DelayedWakeScreen />;
+  if (error) return <WakeScreen stalled onRetry={() => window.location.reload()} />;
   if (!user) return <AuthScreen onAuthed={setUser} />;
 
   const settingsButton = (

@@ -1,6 +1,6 @@
 # Open points
 
-> Last updated: 2026-09-29. Decisions discussed but **parked**. Until at least 2026-10-06 the app is used by one person (the owner), and the focus is the single-user experience, UI and features. Move an item to the relevant doc once it's decided and built.
+> Last updated: 2026-09-29 (keep-awake pinger detailed). Decisions discussed but **parked**. Until at least 2026-10-06 the app is used by one person (the owner), and the focus is the single-user experience, UI and features. Move an item to the relevant doc once it's decided and built.
 
 ## 1. Scaling to more users (waves of 3–5)
 
@@ -68,4 +68,16 @@ Separate and also free: **"Sign in with Google"** for OmniAI accounts.
 | Embeddings / vector search | Not needed yet. pgvector is available on Neon when saved-food matching needs it. |
 | Custom domain | Paid; wait for the final app name (`brand.ts`, `APP_DOMAIN`) |
 | Alembic migrations | Needed before the first schema change that isn't "add a nullable column" |
-| Keep-awake pinger | Also useful solo, to avoid the 30–60 s first load |
+| Keep-awake pinger ("Option 1") | See 4 below |
+
+## 4. Keep the server awake with a pinger ("Option 1", parked 2026-09-29)
+
+The launcher (live since 2026-09-29) replaces Render's waking page with our dancing-MacBro screen, but the wait is still 30–60 s after ~15 min idle. A pinger would remove most waits.
+
+- **How:** a free uptime service (e.g. UptimeRobot or cron-job.org) requests `https://omniai-hkv2.onrender.com/api/health` every 10 minutes, so the free web service never sleeps.
+- **Why it fits:**
+  - Render's free plan gives 750 instance-hours a month, enough to run all month.
+  - `/api/health` doesn't touch the database, so Neon still sleeps and saves its compute hours.
+- **What's left:** the wake screen only after a restart or redeploy.
+- **Caveat:** Render's docs don't mention whether keep-alive pings are allowed; it's common practice, but the policy could change.
+- **Effort:** about 5 minutes (an account on the pinger site, one monitor), no code.

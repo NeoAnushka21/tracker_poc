@@ -1,6 +1,8 @@
-# Render Blueprint: one free web service that builds the React app and runs the FastAPI
-# backend, which serves both the site and /api. The database is Neon Postgres (external).
-# Guide: docs/deployment.md. Secrets are entered in the Render dashboard, never here.
+# Render Blueprint (guide: docs/deployment.md). Secrets are entered in the Render dashboard, never here.
+# - omniai: free web service; builds the React app and runs FastAPI, which serves the site and /api.
+#   The database is Neon Postgres (external). Free web services sleep after ~15 min idle.
+# - omniai-app: free static site (never sleeps) with only the launcher page: it shows the dancing
+#   MacBro while omniai wakes up, then opens it, so visitors never see Render's own waking page.
 services:
   - type: web
     name: omniai
@@ -35,3 +37,21 @@ services:
         value: openai/gpt-oss-120b
       # Optional NVIDIA backup (backend/llm_pool.json): add LLM_API_KEY_2 in the dashboard to
       # enable it. Its free tier is for prototyping only, so it's off by default here.
+
+  - type: web
+    name: omniai-app
+    runtime: static
+    # The launcher becomes the site's start page; the app's own index.html isn't published here.
+    buildCommand: >-
+      cd frontend && npm ci --include=dev && npm run build &&
+      mv dist/launcher.html dist/index.html
+    staticPublishPath: frontend/dist
+    routes:
+      - type: rewrite            # any path (e.g. an old bookmark) shows the launcher
+        source: /*
+        destination: /index.html
+    envVars:
+      - key: NODE_VERSION
+        value: "24"
+      - key: VITE_APP_URL        # where the launcher sends people once the app is awake
+        value: https://omniai-hkv2.onrender.com

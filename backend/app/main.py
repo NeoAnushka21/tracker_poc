@@ -1,7 +1,7 @@
 from contextlib import asynccontextmanager
 from pathlib import Path
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Response
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
@@ -39,8 +39,12 @@ app.include_router(entries.router)
 
 
 @app.get("/api/health")
-def health():
+def health(response: Response):
     # Deliberately doesn't touch the database, so uptime pings don't keep Neon awake.
+    # Readable from any origin: the always-on launcher page (another address) polls it while
+    # the free server wakes. It carries no user data and needs no cookies.
+    response.headers["Access-Control-Allow-Origin"] = "*"
+    response.headers["Cache-Control"] = "no-store"
     return {"ok": True}
 
 

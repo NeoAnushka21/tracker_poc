@@ -1,8 +1,8 @@
 # Deploying OmniAI (Render + Neon)
 
-> Last updated: 2026-09-29 (live; user and admin pages tested on laptop and phone).
+> Last updated: 2026-09-29 (always-on launcher page).
 
-**Live:** https://omniai-hkv2.onrender.com (Render service `omniai`, Singapore) · Neon project `young-star-73873699` (AWS Singapore). Local data was copied into Neon on 2026-09-29 (159 rows, 13 tables); Neon is now the real database. The NVIDIA backup is off in production, and there's no uptime pinger yet. Update this file whenever the deployment setup changes (see [README.md](README.md)).
+**Open the app from the launcher:** https://omniai-app.onrender.com (static site `omniai-app`, never sleeps; the exact address is shown on its Render page). **App:** https://omniai-hkv2.onrender.com (Render service `omniai`, Singapore) · Neon project `young-star-73873699` (AWS Singapore). Local data was copied into Neon on 2026-09-29 (159 rows, 13 tables); Neon is now the real database. The NVIDIA backup is off in production, and there's no uptime pinger yet. Update this file whenever the deployment setup changes (see [README.md](README.md)).
 
 OmniAI runs as **one free Render web service** that builds the React app and runs the FastAPI backend, which serves both the site and `/api`. The data lives in a **free Neon Postgres** database. Both are in **Singapore**, close to India and to each other. The setup is in [`render.yaml`](../render.yaml) at the repo root (a Render "Blueprint").
 
@@ -87,11 +87,23 @@ Optional: the NVIDIA backup is **off** in production, because its free tier is f
 
 ---
 
+## The launcher: no Render "waking up" page
+
+The free web service sleeps after about 15 minutes idle, and Render shows its own black "waking up" page to browsers while it starts. That page can't be customised. So the Blueprint also creates **`omniai-app`**, a free **static site** that never sleeps and contains only our launcher page:
+
+1. You open the launcher address (bookmark this one, not the app's).
+2. If the app is awake, it opens almost instantly. If not, the **dancing MacBro** screen shows ("MacBro is warming up the kitchen…") while the launcher polls `/api/health`; it opens the app as soon as it answers, usually 30–60 s. It keeps the tab in the link (e.g. `#dashboard`).
+3. If the app falls asleep while it's open in a tab, the next action shows the same screen as an overlay and continues by itself once the server is back.
+
+**Adding it the first time (You):** after this change is pushed, Render → **Blueprints** → the OmniAI Blueprint → it shows the new `omniai-app` service → **Sync** / **Apply**. No secrets are needed. If the app's address ever changes, update `VITE_APP_URL` in `render.yaml`.
+
+Opening the app's own address directly after it has slept still shows Render's page; the launcher is the way in. Keeping the server awake with a pinger is parked in [open-points.md](open-points.md).
+
 ## How it behaves on the free plans
 
 | What | Why | Effect |
 |---|---|---|
-| First visit after about 15 min idle takes **30–60 s** | Render's free service sleeps when idle | Later requests are fast. An uptime pinger can keep it awake (later decision). |
+| First visit after about 15 min idle takes **30–60 s** | Render's free service sleeps when idle | The launcher shows the dancing-MacBro wake screen instead of Render's page. Later requests are fast. An uptime pinger could keep it awake ([open-points.md](open-points.md)). |
 | Database wakes in about a second after 5 min idle | Neon scales to zero | Barely noticeable. `/api/health` doesn't touch the database, so pingers don't keep Neon awake. |
 | Limits | Render: 750 hours and 5 GB bandwidth a month. Neon: 0.5 GB storage, 100 compute hours a month. | Plenty for a beta |
 | Every push to `main` redeploys | `autoDeployTrigger: commit` | Takes about 3–6 min. Tables and new columns are created on startup; data is kept. |

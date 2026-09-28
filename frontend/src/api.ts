@@ -2,6 +2,7 @@ import type {
   Action, AdminUserDetail, AdminUserRow, AuditRow, ChatMessage, DailySummary, Food, RangeSummary, User,
   Streaks, ChatDay, LlmUsageReport,
 } from "./types";
+import { recoverServer, serverAwake, SLOW_REQUEST_MS } from "./wake";
 
 export class ApiError extends Error {
   constructor(public status: number, message: string) {
@@ -9,14 +10,32 @@ export class ApiError extends Error {
   }
 }
 
-async function request<T>(method: string, path: string, body?: unknown, signal?: AbortSignal): Promise<T> {
-  const res = await fetch(path, {
-    method,
-    signal,
-    credentials: "same-origin",
-    headers: body !== undefined ? { "Content-Type": "application/json" } : undefined,
-    body: body !== undefined ? JSON.stringify(body) : undefined,
-  });
+async function request<T>(method: string, path: string, body?: unknown, signal?: AbortSignal, retried = false): Promise<T> {
+  // A slow request may mean the free server is asleep: if /api/health doesn't answer either,
+  // show the WakeScreen until it does (a slow chat reply on an awake server shows nothing).
+  const slow = setTimeout(() => { void serverAwake().then((up) => { if (!up) void recoverServer(); }); }, SLOW_REQUEST_MS);
+  let res: Response;
+  try {
+    res = await fetch(path, {
+      method,
+      signal,
+      credentials: "same-origin",
+      headers: body !== undefined ? { "Content-Type": "application/json" } : undefined,
+      body: body !== undefined ? JSON.stringify(body) : undefined,
+    });
+  } catch (e) {
+    // Retry only when the server really was asleep; otherwise the request may have been processed.
+    if (retried || signal?.aborted || (await serverAwake())) throw e;
+    await recoverServer();
+    return request<T>(method, path, body, signal, true);
+  } finally {
+    clearTimeout(slow);
+  }
+  // Every API response is JSON; HTML is Render's "waking up" page, and the backend never saw the request.
+  if (!retried && !(res.headers.get("content-type") ?? "").includes("application/json")) {
+    await recoverServer();
+    return request<T>(method, path, body, signal, true);
+  }
   if (!res.ok) {
     let message = `Request failed (${res.status})`;
     try {

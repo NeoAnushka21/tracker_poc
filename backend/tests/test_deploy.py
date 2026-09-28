@@ -89,3 +89,10 @@ def test_copy_sqlite_to_postgres(client, tmp_path):
         db.add(new)
         db.commit()
         assert new.id == 4                        # sequence moved past the copied ids
+
+
+def test_health_is_readable_by_the_launcher(client):
+    r = client.get("/api/health", headers={"Origin": "https://omniai-app.onrender.com"})
+    assert r.json() == {"ok": True}
+    assert r.headers["access-control-allow-origin"] == "*"
+    assert r.headers["cache-control"] == "no-store"
