@@ -18,6 +18,9 @@ SESSION_DAYS = int(os.getenv("SESSION_DAYS", "14"))
 COOKIE_SECURE = os.getenv("COOKIE_SECURE", "false").lower() == "true"
 # Comma-separated emails that get the admin panel. Nobody else can see or call it.
 DEFAULT_ADMIN_EMAIL = "mhatre.anushka.work@gmail.com"
+# Used once at startup to create the admin account if it doesn't exist yet. Change the
+# password afterwards in Settings; later edits to this value don't touch an existing account.
+ADMIN_INITIAL_PASSWORD = os.getenv("ADMIN_INITIAL_PASSWORD", "")
 ADMIN_EMAILS = {
     e.strip().lower() for e in os.getenv("ADMIN_EMAILS", DEFAULT_ADMIN_EMAIL).split(",") if e.strip()
 }

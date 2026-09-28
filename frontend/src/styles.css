@@ -561,3 +561,41 @@ button.danger { color: var(--error); }
 .chevron.open { transform: rotate(90deg); }
 .calorie-split { margin-top: 14px; }
 .calorie-split h3 { margin: 0 0 8px; }
+
+/* ---------- admin login, settings ---------- */
+.auth-modes { display: flex; margin: 6px 0 4px; }
+.auth-modes button { flex: 1; }
+.admin-link { font-size: 0.85rem; margin-top: 6px; color: var(--muted); }
+.admin-auth { border-top: 4px solid var(--water); }
+.admin-badge {
+  display: inline-block; margin-left: 8px; padding: 2px 8px; border-radius: 999px; vertical-align: 3px;
+  font-size: 0.72rem; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase;
+  background: color-mix(in srgb, var(--water) 18%, var(--surface)); color: var(--text);
+}
+.settings-btn { display: inline-flex; gap: 6px; align-items: center; }
+.settings-btn span:first-child { font-size: 1.05rem; }
+.settings-dialog { max-width: 760px; }
+.settings-body { display: grid; grid-template-columns: 180px 1fr; gap: 20px; margin-top: 12px; }
+.settings-nav { display: flex; flex-direction: column; gap: 2px; }
+.settings-nav button { text-align: left; background: none; border: none; padding: 8px 10px; color: var(--muted); font-weight: 600; }
+.settings-nav button:hover { background: var(--surface-2); color: var(--text); }
+.settings-nav button.on { background: var(--accent-soft); color: var(--text); }
+.settings-nav button.danger { color: var(--error); }
+.settings-panel { min-width: 0; }
+.settings-panel h3.first { margin-top: 0; }
+.account-card { display: flex; gap: 14px; align-items: center; margin-bottom: 12px; }
+.account-name { font-weight: 650; font-size: 1.05rem; }
+.settings-facts { display: grid; gap: 10px; margin: 0 0 8px; }
+.settings-facts div { display: grid; grid-template-columns: 150px 1fr; gap: 10px; }
+.settings-facts dt { color: var(--muted); font-size: 0.88rem; }
+.settings-facts dd { margin: 0; overflow-wrap: anywhere; }
+.settings-form { max-width: 420px; }
+.settings-form .primary, .settings-form .danger-button { margin-top: 8px; }
+.danger-zone { border: 1px solid color-mix(in srgb, var(--error) 45%, var(--border)); border-radius: 10px; padding: 14px; max-width: none; }
+.danger-button { background: var(--error); border-color: var(--error); color: var(--surface); font-weight: 600; }
+@media (max-width: 860px) {
+  .settings-body { grid-template-columns: 1fr; }
+  .settings-nav { flex-direction: row; flex-wrap: wrap; }
+  .settings-facts div { grid-template-columns: 1fr; gap: 0; }
+  .settings-label { display: none; }
+}

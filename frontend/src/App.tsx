@@ -15,11 +15,10 @@ import ConsentGate from "./components/ConsentGate";
 import { MacBroAvatar, UserAvatar } from "./components/Avatar";
 
 const TABS = [
-  { id: "chat", label: "Chat", admin: false },
-  { id: "dashboard", label: "Dashboard", admin: false },
-  { id: "analysis", label: "Analysis", admin: false },
-  { id: "foods", label: "My foods", admin: false },
-  { id: "admin", label: "Admin", admin: true },
+  { id: "chat", label: "Chat" },
+  { id: "dashboard", label: "Dashboard" },
+  { id: "analysis", label: "Analysis" },
+  { id: "foods", label: "My foods" },
 ] as const;
 type TabId = (typeof TABS)[number]["id"];
 
@@ -70,10 +69,44 @@ export default function App() {
   if (loading) return <div className="center muted">Loading…</div>;
   if (error) return <div className="center error">Couldn't reach the server: {error}</div>;
   if (!user) return <AuthScreen onAuthed={setUser} />;
+
+  const settingsButton = (
+    <button className="ghost settings-btn" onClick={() => setShowSettings(true)} aria-label="Settings" title="Settings">
+      <span aria-hidden="true">⚙</span><span className="settings-label">Settings</span>
+    </button>
+  );
+  const settings = showSettings && (
+    <SettingsDialog
+      user={user}
+      onClose={() => setShowSettings(false)}
+      onSaved={(u) => { setUser(u); setDataVersion((v) => v + 1); }}
+      onDeleted={() => { setShowSettings(false); setUser(null); window.location.hash = ""; }}
+    />
+  );
+
+  // The admin account gets only the admin console: no onboarding or food tracking.
+  if (user.is_admin) {
+    return (
+      <div className="app">
+        <header className="topbar">
+          <span className="brand"><MacBroAvatar size={34} />MacBro<span className="admin-badge">Admin</span></span>
+          <div className="topbar-actions">
+            <ThemeToggle />
+            {settingsButton}
+            <button className="ghost" onClick={logout}>Log out</button>
+            <span className="topbar-user"><UserAvatar name={user.preferred_name} email={user.email} size={34} /></span>
+          </div>
+        </header>
+        <main className="page page-wide"><AdminPage /></main>
+        {settings}
+      </div>
+    );
+  }
+
   if (!user.consented) return <ConsentGate onAccepted={setUser} onLogout={logout} />;
   if (!user.onboarded) return <Onboarding onDone={setUser} />;
 
-  const tabs = TABS.filter((t) => !t.admin || user.is_admin);
+  const tabs = TABS;
   const current = tabs.some((t) => t.id === tab) ? tab : "chat";
 
   return (
@@ -82,7 +115,7 @@ export default function App() {
         <span className="brand"><MacBroAvatar size={34} />MacBro</span>
         <div className="topbar-actions">
           <ThemeToggle />
-          <button className="ghost" onClick={() => setShowSettings(true)}>Targets &amp; weight</button>
+          {settingsButton}
           <button className="ghost" onClick={logout}>Log out</button>
           <span className="topbar-user">
             <span className="greeting">{greeting()}{user.preferred_name ? `, ${user.preferred_name}` : ""}</span>
@@ -122,21 +155,7 @@ export default function App() {
       <main className="page" id="panel-foods" role="tabpanel" aria-labelledby="tab-foods" hidden={current !== "foods"}>
         <FoodsPage dataVersion={dataVersion} />
       </main>
-      {current === "admin" && user.is_admin && (
-        <main className="page page-wide" id="panel-admin" role="tabpanel" aria-labelledby="tab-admin">
-          <AdminPage />
-        </main>
-      )}
-      {showSettings && (
-        <SettingsDialog
-          user={user}
-          onClose={() => setShowSettings(false)}
-          onSaved={(u) => {
-            setUser(u);
-            setDataVersion((v) => v + 1);
-          }}
-        />
-      )}
+      {settings}
     </div>
   );
 }

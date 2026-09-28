@@ -68,6 +68,10 @@ export const api = {
   me: () => request<User>("GET", "/api/auth/me"),
   register: (email: string, password: string, consent: boolean) =>
     request<User>("POST", "/api/auth/register", { email, password, consent }),
+  adminLogin: (email: string, password: string) => request<User>("POST", "/api/auth/admin-login", { email, password }),
+  changePassword: (current_password: string, new_password: string) =>
+    request<{ ok: boolean }>("POST", "/api/auth/change-password", { current_password, new_password }),
+  deleteAccount: (password: string) => request<{ ok: boolean }>("POST", "/api/auth/delete-account", { password }),
   consentText: () => request<{ version: string; text: string }>("GET", "/api/auth/consent-text"),
   giveConsent: () => request<User>("POST", "/api/auth/consent"),
   login: (email: string, password: string) => request<User>("POST", "/api/auth/login", { email, password }),

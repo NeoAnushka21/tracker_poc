@@ -80,7 +80,8 @@ user message ─► FastAPI /api/chat ─► LLM (Groq gpt-oss-120b or Claude) w
 - **Dashboard:** today's calorie ring; protein, fiber, carbs and fat meters; calorie split; water tracker; micronutrients; five meal sections with per-meal macros.
 - **Analysis:** 7, 14 or 30-day trends: calories and protein vs target, macro lines, calorie split, calories by meal, water, days on target, and a data table. All charts have hover and keyboard tooltips.
 - **My foods:** your saved foods and recipes.
-- **Admin** (only for `ADMIN_EMAILS`): users, logins and activity, with read-only access to each user's logs, foods and chat. Every view is written to an audit log.
+- **Admin console:** reached through **Admin login** on the login page, and only for `ADMIN_EMAILS`. Admin emails can't sign up or use the normal login. The admin account is created at startup from `ADMIN_INITIAL_PASSWORD` if it doesn't exist yet. The console shows users, logins and activity, with read-only access to each user's logs, foods and chat, and every view is written to an audit log.
+- **Settings (⚙):** account details (email, registration date, last login, consent), targets and weight, change password, and **delete account**, which requires your password and permanently removes all of your data.
 - Light, dark or system theme (toggle in the header), with text contrast checked against WCAG AA in both.
 - Sign-up requires accepting a data-use consent notice. Existing accounts are asked once, and again if the wording (`CONSENT_VERSION`) changes.
 

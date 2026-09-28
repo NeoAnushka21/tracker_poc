@@ -31,6 +31,9 @@ def user_to_dict(db: Session, user: User) -> dict:
         "targets": targets_to_dict(current_targets(db, user.id)),
         "consented": user.consent_version == CONSENT_VERSION,
         "is_admin": is_admin(user),
+        "created_at": user.created_at.isoformat() + "Z" if user.created_at else None,
+        "last_login_at": user.last_login_at.isoformat() + "Z" if user.last_login_at else None,
+        "consented_at": user.consent_at.isoformat() + "Z" if user.consent_at else None,
     }
 
 

@@ -32,6 +32,9 @@ export type User = {
   targets: Targets | null;
   consented: boolean;
   is_admin: boolean;
+  created_at: string | null;
+  last_login_at: string | null;
+  consented_at: string | null;
 };
 
 export type Item = Nutrients & {
