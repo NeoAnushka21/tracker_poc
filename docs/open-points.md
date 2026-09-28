@@ -1,6 +1,8 @@
 # Open points
 
-> Last updated: 2026-09-29 (keep-awake pinger detailed). Decisions discussed but **parked**. Until at least 2026-10-06 the app is used by one person (the owner), and the focus is the single-user experience, UI and features. Move an item to the relevant doc once it's decided and built.
+> Last updated: 2026-09-29 (standing rule; follow-ups, decisions and done log added). Until at least 2026-10-06 the app is used by one person (the owner), and the focus is the single-user experience, UI and features.
+
+**How this doc works (standing rule, 2026-09-29):** every idea, option or follow-up that comes up in a discussion but isn't built goes here, in the same change as the discussion's work, so nothing gets lost. Each item is either **open** (may be built later), **on hold**, or **decided against** (kept with the reason, so it isn't re-discussed from scratch). When an item is built, it moves to **Done** at the bottom with the date, and the feature itself is documented in the relevant doc.
 
 ## 1. Scaling to more users (waves of 3–5)
 
@@ -81,3 +83,35 @@ The launcher (live since 2026-09-29) replaces Render's waking page with our danc
 - **What's left:** the wake screen only after a restart or redeploy.
 - **Caveat:** Render's docs don't mention whether keep-alive pings are allowed; it's common practice, but the policy could change.
 - **Effort:** about 5 minutes (an account on the pinger site, one monitor), no code.
+
+## 5. Feature follow-ups (discussed, not built)
+
+| Item | Raised | Status | Notes |
+|---|---|---|---|
+| Mixed messages use the saved-foods shortcut for the foods it knows | 2026-09-29 | Open | Today "40g guava and 1 new food" goes wholly to the AI (the shortcut is all-or-nothing). Split it: known items from My foods, only the new ones to the AI. Saves quota. |
+| Learn a food's grams per piece automatically | 2026-09-29 | Open | "1 apple" can't use the shortcut when the food is saved per 100 g without **g per piece**. Save the weight when the AI estimates a count (e.g. "a medium apple ≈ 180 g"). Workaround today: add **g per piece** in My foods → Edit. |
+| Dancing MacBro while MacBro is replying in Chat | 2026-09-29 | Open | Reuse the wake-screen animation (small) instead of the "thinking" dots. |
+| Chat side panel with today's totals on laptops | 2026-09-29 | On hold | Owner: keep Chat as it is for now. |
+| Embedding-based food matching ("roti" = "chapati", typos) | 2026-09-28 | On hold | See section 3; pgvector on Neon when needed. |
+
+## 6. Decided against (kept for the record)
+
+| Idea | Decided | Why |
+|---|---|---|
+| Left sidebar navigation on laptops | 2026-09-29 | Owner: keep the same top tabs on phone and laptop. |
+| Creating an AI key for each user automatically at sign-in | 2026-09-29 | Not possible: providers have no API to create accounts or keys for someone, and automating sign-ups breaks their terms (section 2 has the workable options). |
+| Forwarding all `/api` traffic through the static launcher site | 2026-09-29 | A reported ~15 s limit on Render's forwarded requests would cut off chat replies (up to ~90 s). The launcher only checks `/api/health` and then opens the app directly. |
+| Customising Render's own "waking up" page | 2026-09-29 | Render doesn't allow it; solved with the launcher instead. |
+| Other free hosts (Fly.io, Koyeb, Railway, Hugging Face Spaces, Vercel for the backend) | 2026-09-29 | No longer free or unsuitable (card holds, trial credits, time limits); Render + Neon chosen. Google Cloud Run is the fallback if a card on file is acceptable. |
+| Vector database now | 2026-09-29 | Deferred, not rejected: Postgres (Neon) was chosen so pgvector can be added later without a migration. |
+
+## 7. Done (moved out of this list)
+
+| Item | Done | Where it's documented |
+|---|---|---|
+| Deploy on Render with Neon Postgres, data copied from SQLite | 2026-09-29 | [deployment.md](deployment.md) |
+| Layouts that use laptop screens (1200 px cap, multi-column pages) | 2026-09-29 | user guide "Phone or laptop", technical overview §1 |
+| Own loading screen instead of Render's ("Option 2"): dancing MacBro, always-on launcher | 2026-09-29 | [deployment.md](deployment.md), user guide "Opening OmniAI" |
+| Water summary card after water logs; separate macro and water tiles; Dashboard order | 2026-09-29 | user guide §6, §4, §11 |
+| Micronutrients visible and editable in My foods | 2026-09-29 | user guide §9 |
+| Open-source-only models, NVIDIA backup, consent wording | 2026-09-28 | [llm-routing-strategy.md](llm-routing-strategy.md) |

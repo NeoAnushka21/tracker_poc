@@ -19,4 +19,5 @@ Follow the checklist in `docs/README.md` and bump each touched file's "Last upda
 - Stay open-source and free-tier. Don't add paid services or credits without asking.
 - The admin email is fixed to `mhatre.anushka.work@gmail.com` for now. Admins are hidden from the user list.
 - Production runs on **Postgres** (Neon); local dev and tests use SQLite. Before database-heavy changes, also run the tests with `TEST_DATABASE_URL` on a throwaway Postgres (see `docs/technical-overview.md` §10). Deployment steps: `docs/deployment.md`.
+- **Open points:** anything discussed but not built (ideas, options offered, follow-ups, decisions against) goes into `docs/open-points.md` in the same change, with a date and status. Built items move to its **Done** section.
 - Before committing: `backend: .venv\Scripts\python -m pytest -q` and `frontend: npm run build` must both pass.

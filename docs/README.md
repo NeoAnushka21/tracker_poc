@@ -7,7 +7,7 @@
 | [technical-overview.md](technical-overview.md) | Developers | Stack, repo layout, services, API, tables, LLM layer, frontend components, config, testing |
 | [llm-routing-strategy.md](llm-routing-strategy.md) | Developers, product | Plan for routing across several free open-source models |
 | [deployment.md](deployment.md) | Whoever deploys | Render + Neon step by step, data copy, free-plan behaviour, troubleshooting |
-| [open-points.md](open-points.md) | Product owner, developers | Parked decisions: scaling to more users, users' own AI keys, other deferred items |
+| [open-points.md](open-points.md) | Product owner, developers | Everything discussed but not built (open, on hold, decided against, with reasons) and a Done log: scaling, users' own AI keys, feature follow-ups |
 
 The in-app **first-run guide** (`frontend/src/components/GuideTour.tsx`) is the short version of `user-guide.md`.
 
