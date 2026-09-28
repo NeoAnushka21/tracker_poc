@@ -119,6 +119,23 @@ class AdminAudit(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
 
 
+class BodyMeasurement(Base):
+    """One dated set of optional body measurements (cm). Any subset may be filled."""
+    __tablename__ = "body_measurements"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), index=True)
+    measured_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow, index=True)
+    neck_cm: Mapped[float | None] = mapped_column(Float)
+    chest_cm: Mapped[float | None] = mapped_column(Float)
+    waist_cm: Mapped[float | None] = mapped_column(Float)
+    hips_cm: Mapped[float | None] = mapped_column(Float)
+    biceps_cm: Mapped[float | None] = mapped_column(Float)
+    forearm_cm: Mapped[float | None] = mapped_column(Float)
+    thigh_cm: Mapped[float | None] = mapped_column(Float)
+    calf_cm: Mapped[float | None] = mapped_column(Float)
+
+
 class WaterLog(Base):
     """Plain drinking water, tracked separately from food."""
     __tablename__ = "water_logs"

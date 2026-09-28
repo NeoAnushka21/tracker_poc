@@ -64,6 +64,13 @@ MEAL_TYPES = ["breakfast", "morning_snack", "lunch", "evening_snack", "dinner"]
 SNACK_TYPES = ("morning_snack", "evening_snack")
 LEGACY_SNACK = "snack"           # older entries; relabelled at startup
 
+# --- Body profile (optional measurements, stored in cm) --------------------
+BODY_PARTS = [
+    ("neck_cm", "Neck"), ("chest_cm", "Chest"), ("waist_cm", "Waist"), ("hips_cm", "Hips"),
+    ("biceps_cm", "Biceps"), ("forearm_cm", "Forearm"), ("thigh_cm", "Thigh"), ("calf_cm", "Calf"),
+]
+BODY_PART_KEYS = [k for k, _ in BODY_PARTS]
+
 # --- Water ---------------------------------------------------------------
 WATER_ML_PER_KG = 35             # common hydration guideline for drinking water
 WATER_ACTIVITY_EXTRA_ML = {"sedentary": 0, "light": 250, "moderate": 500, "active": 750, "very_active": 1000}

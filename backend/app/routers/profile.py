@@ -1,12 +1,14 @@
 from fastapi import APIRouter, Depends, HTTPException, status
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.db import get_db
 from app.config import CONSENT_VERSION
 from app.deps import current_user, is_admin, onboarded_user
-from app.models import User, UserTarget, WeightLog
+from app.config import BODY_PARTS, BODY_PART_KEYS
+from app.models import BodyMeasurement, User, UserTarget, WeightLog
 from app.nutrition import age_on, calculate_targets
-from app.schemas import OnboardingIn, TargetsIn, WeightIn
+from app.schemas import HeightIn, MeasurementsIn, OnboardingIn, TargetsIn, WeightIn
 from app.services.logs import current_targets, current_weight, targets_to_dict
 from app.timeutil import is_valid_timezone, local_today
 
@@ -107,3 +109,77 @@ def preview_targets(user: User = Depends(onboarded_user), db: Session = Depends(
     weight = current_weight(db, user.id)
     t = _calculated_targets(user, weight.weight_kg)
     return t.__dict__
+
+
+# --- Body profile --------------------------------------------------------------
+
+def _iso(dt) -> str:
+    return dt.isoformat() + "Z"
+
+
+def body_profile(db: Session, user: User) -> dict:
+    weights = list(db.scalars(
+        select(WeightLog).where(WeightLog.user_id == user.id).order_by(WeightLog.logged_at.desc(), WeightLog.id.desc())
+    ))
+    sets = list(db.scalars(
+        select(BodyMeasurement).where(BodyMeasurement.user_id == user.id)
+        .order_by(BodyMeasurement.measured_at.desc(), BodyMeasurement.id.desc())
+    ))
+    latest = []
+    for key, label in BODY_PARTS:
+        values = [(m.measured_at, getattr(m, key)) for m in sets if getattr(m, key) is not None]
+        current = values[0] if values else None
+        previous = values[1] if len(values) > 1 else None
+        latest.append({
+            "key": key, "label": label,
+            "value_cm": current[1] if current else None,
+            "measured_at": _iso(current[0]) if current else None,
+            "change_cm": round(current[1] - previous[1], 1) if current and previous else None,
+        })
+    return {
+        "height_cm": user.height_cm,
+        "weight_kg": weights[0].weight_kg if weights else None,
+        "weight_history": [{"weight_kg": w.weight_kg, "logged_at": _iso(w.logged_at)} for w in weights[:10]],
+        "latest": latest,
+        "history": [
+            {"id": m.id, "measured_at": _iso(m.measured_at),
+             **{k: getattr(m, k) for k in BODY_PART_KEYS}}
+            for m in sets[:20]
+        ],
+    }
+
+
+@router.get("/body")
+def get_body(user: User = Depends(onboarded_user), db: Session = Depends(get_db)):
+    return body_profile(db, user)
+
+
+@router.post("/height")
+def update_height(body: HeightIn, user: User = Depends(onboarded_user), db: Session = Depends(get_db)):
+    user.height_cm = body.height_cm
+    if body.recalculate_targets:
+        weight = current_weight(db, user.id)
+        if weight:
+            _save_calculated_targets(db, user, weight.weight_kg)
+    db.commit()
+    return user_to_dict(db, user)
+
+
+@router.post("/measurements", status_code=status.HTTP_201_CREATED)
+def add_measurements(body: MeasurementsIn, user: User = Depends(onboarded_user), db: Session = Depends(get_db)):
+    values = {k: round(v, 1) for k, v in body.model_dump().items() if v is not None}
+    if not values:
+        raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT, "Enter at least one measurement")
+    db.add(BodyMeasurement(user_id=user.id, **values))
+    db.commit()
+    return body_profile(db, user)
+
+
+@router.delete("/measurements/{measurement_id}")
+def delete_measurement(measurement_id: int, user: User = Depends(onboarded_user), db: Session = Depends(get_db)):
+    m = db.get(BodyMeasurement, measurement_id)
+    if m is None or m.user_id != user.id:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Measurement not found")
+    db.delete(m)
+    db.commit()
+    return body_profile(db, user)

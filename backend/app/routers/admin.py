@@ -13,7 +13,7 @@ from app.db import get_db
 from app.deps import admin_user, is_admin
 from app.llm.chat import message_to_dict, recent_messages
 from app.models import AdminAudit, ChatMessage, LogEntry, User, UserFood, WaterLog, WeightLog
-from app.routers.profile import user_to_dict
+from app.routers.profile import body_profile, user_to_dict
 from app.services.foods import food_to_dict, list_foods
 from app.services.logs import logs_by_day
 from app.timeutil import local_today
@@ -94,6 +94,7 @@ def user_detail(user_id: int, days: int = 14, admin: User = Depends(admin_user),
         "weights": [{"weight_kg": w.weight_kg, "logged_at": _iso(w.logged_at)} for w in weights],
         "days": [d for d in logs_by_day(db, user, end - timedelta(days=days - 1), end) if d["entries"]],
         "foods": [food_to_dict(f, with_ingredients=True) for f in list_foods(db, user.id)],
+        "body": body_profile(db, user),
     }
 
 

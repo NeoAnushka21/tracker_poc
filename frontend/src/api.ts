@@ -51,6 +51,14 @@ export type TargetsInput = {
 
 type ActionResult = { action: Action; event: ChatMessage; progress: ChatMessage | null };
 
+export type BodyProfileData = {
+  height_cm: number | null;
+  weight_kg: number | null;
+  weight_history: { weight_kg: number; logged_at: string }[];
+  latest: { key: string; label: string; value_cm: number | null; measured_at: string | null; change_cm: number | null }[];
+  history: ({ id: number; measured_at: string } & Record<string, number | string | null>)[];
+};
+
 export type FoodInput = {
   name: string;
   brand_name: string | null;
@@ -83,6 +91,12 @@ export const api = {
   updateTargets: (data: TargetsInput) => request<User>("PUT", "/api/profile/targets", data),
   logWeight: (weight_kg: number, recalculate_targets: boolean) =>
     request<User>("POST", "/api/profile/weight", { weight_kg, recalculate_targets }),
+
+  getBody: () => request<BodyProfileData>("GET", "/api/profile/body"),
+  updateHeight: (height_cm: number, recalculate_targets: boolean) =>
+    request<User>("POST", "/api/profile/height", { height_cm, recalculate_targets }),
+  addMeasurements: (values: Record<string, number>) => request<BodyProfileData>("POST", "/api/profile/measurements", values),
+  deleteMeasurement: (id: number) => request<BodyProfileData>("DELETE", `/api/profile/measurements/${id}`),
 
   history: () => request<ChatMessage[]>("GET", "/api/chat/history"),
   send: (message: string, feedback_on_action_id: number | null, client_request_id: string, signal?: AbortSignal) =>

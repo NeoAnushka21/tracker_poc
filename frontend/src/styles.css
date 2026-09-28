@@ -633,3 +633,25 @@ button.danger { color: var(--error); }
 .ia-row .chip { font-size: 0.8rem; padding: 4px 10px; }
 .ia-qty { width: 90px; padding: 5px 8px; }
 .ia-row .primary { padding: 5px 12px; font-size: 0.85rem; }
+
+/* ---------- body profile ---------- */
+.settings-dialog { max-width: 820px; }
+.body-stats { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; margin-bottom: 12px; }
+.body-forms { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.inline-form { display: flex; gap: 8px; align-items: flex-end; }
+.inline-form label { margin: 0; }
+.inline-form .primary { white-space: nowrap; }
+.measure-table { border-collapse: collapse; width: 100%; font-size: 0.88rem; }
+.measure-table th, .measure-table td { text-align: left; padding: 6px 10px; border-bottom: 1px solid var(--border); }
+.measure-table th { color: var(--muted); font-weight: 600; font-size: 0.78rem; }
+.measure-table td.num { font-variant-numeric: tabular-nums; }
+.measure-form { margin-top: 12px; }
+.measure-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 0 10px; }
+.measure-grid label { margin: 6px 0; }
+.measure-history { list-style: none; padding: 0; margin: 8px 0 0; display: grid; gap: 6px; }
+.measure-history li { display: grid; grid-template-columns: 110px 1fr auto; gap: 10px; align-items: center; font-size: 0.85rem; }
+@media (max-width: 860px) {
+  .body-forms { grid-template-columns: 1fr; }
+  .measure-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .measure-history li { grid-template-columns: 1fr auto; }
+}

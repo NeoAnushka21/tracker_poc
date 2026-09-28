@@ -3,12 +3,11 @@ import { api } from "../api";
 import type { User } from "../types";
 import { GOALS } from "../format";
 import TargetsEditor from "./TargetsEditor";
+import BodyProfile from "./BodyProfile";
 import ThemeToggle from "./ThemeToggle";
 import { UserAvatar } from "./Avatar";
 
-const LB_PER_KG = 2.20462;
-
-type Section = "account" | "targets" | "security" | "delete";
+type Section = "account" | "targets" | "body" | "security" | "delete";
 
 type Props = {
   user: User;
@@ -51,49 +50,19 @@ function AccountSection({ user }: { user: User }) {
 }
 
 function TargetsSection({ user, onSaved }: { user: User; onSaved: (u: User) => void }) {
-  const imperial = user.unit_system === "imperial";
-  const [weight, setWeight] = useState("");
-  const [recalc, setRecalc] = useState(true);
-  const [error, setError] = useState<string | null>(null);
   const [msg, setMsg] = useState<string | null>(null);
-  const shownWeight = user.weight_kg == null ? "–"
-    : imperial ? `${Math.round(user.weight_kg * LB_PER_KG * 10) / 10} lb` : `${user.weight_kg} kg`;
-
-  async function saveWeight(e: FormEvent) {
-    e.preventDefault();
-    setError(null);
-    try {
-      const kg = imperial ? Number(weight) / LB_PER_KG : Number(weight);
-      onSaved(await api.logWeight(Math.round(kg * 10) / 10, recalc));
-      setWeight("");
-      setMsg(recalc ? "Weight saved and targets recalculated." : "Weight saved.");
-    } catch (err) {
-      setError((err as Error).message);
-    }
-  }
-
   return (
     <>
-      <h3 className="first">Daily targets</h3>
+      <h3 className="first">Daily calorie &amp; macro targets</h3>
+      <p className="muted small">Calculated from your profile; adjust any number. Changing weight or height under
+        Body profile can recalculate these.</p>
       <TargetsEditor
         key={`${user.targets?.effective_date}-${user.targets?.calories}-${user.targets?.protein_g}`}
         user={user}
         saveLabel="Save targets"
         onSaved={(u) => { onSaved(u); setMsg("Targets saved."); }}
       />
-      <h3>Update weight</h3>
-      <p className="muted small">Current: {shownWeight}</p>
-      <form onSubmit={saveWeight} className="weight-form">
-        <input type="number" step="0.1" min={20} max={900} value={weight} onChange={(e) => setWeight(e.target.value)}
-               placeholder={imperial ? "lb" : "kg"} required />
-        <label className="check">
-          <input type="checkbox" checked={recalc} onChange={(e) => setRecalc(e.target.checked)} />
-          Recalculate targets from new weight
-        </label>
-        <button className="primary">Save weight</button>
-      </form>
       {msg && <p className="ok small">{msg}</p>}
-      {error && <p className="error">{error}</p>}
     </>
   );
 }
@@ -176,7 +145,10 @@ function DeleteSection({ user, onDeleted }: { user: User; onDeleted: () => void 
 export default function SettingsDialog({ user, onClose, onSaved, onDeleted }: Props) {
   const sections: { id: Section; label: string }[] = [
     { id: "account", label: "Account" },
-    ...(!user.is_admin ? [{ id: "targets" as const, label: "Targets & weight" }] : []),
+    ...(!user.is_admin ? [
+      { id: "targets" as const, label: "Targets" },
+      { id: "body" as const, label: "Body profile" },
+    ] : []),
     { id: "security", label: "Password" },
     ...(!user.is_admin ? [{ id: "delete" as const, label: "Delete account" }] : []),
   ];
@@ -202,6 +174,7 @@ export default function SettingsDialog({ user, onClose, onSaved, onDeleted }: Pr
           <div className="settings-panel" role="tabpanel">
             {section === "account" && <AccountSection user={user} />}
             {section === "targets" && <TargetsSection user={user} onSaved={onSaved} />}
+            {section === "body" && <BodyProfile user={user} onUserChanged={onSaved} />}
             {section === "security" && <SecuritySection />}
             {section === "delete" && <DeleteSection user={user} onDeleted={onDeleted} />}
           </div>

@@ -73,6 +73,23 @@ class WeightIn(BaseModel):
     recalculate_targets: bool = True
 
 
+class HeightIn(BaseModel):
+    height_cm: float = Field(gt=50, lt=280)
+    recalculate_targets: bool = True
+
+
+class MeasurementsIn(BaseModel):
+    """All optional; at least one required. Values in cm."""
+    neck_cm: float | None = Field(default=None, ge=10, le=250)
+    chest_cm: float | None = Field(default=None, ge=10, le=250)
+    waist_cm: float | None = Field(default=None, ge=10, le=250)
+    hips_cm: float | None = Field(default=None, ge=10, le=250)
+    biceps_cm: float | None = Field(default=None, ge=10, le=250)
+    forearm_cm: float | None = Field(default=None, ge=10, le=250)
+    thigh_cm: float | None = Field(default=None, ge=10, le=250)
+    calf_cm: float | None = Field(default=None, ge=10, le=250)
+
+
 class ChatIn(BaseModel):
     message: str = Field(min_length=1, max_length=4000)
     # Set when the user clicked "Needs changes" on a proposal and is now typing feedback.

@@ -3,7 +3,7 @@ from sqlalchemy import delete, select, update
 from sqlalchemy.orm import Session
 
 from app.models import (
-    AdminAudit, ChatMessage, LogEntry, LogEntryItem, PendingAction, RecipeIngredient, User, UserFood,
+    AdminAudit, BodyMeasurement, ChatMessage, LogEntry, LogEntryItem, PendingAction, RecipeIngredient, User, UserFood,
     UserTarget, WaterLog, WeightLog,
 )
 
@@ -22,6 +22,7 @@ def delete_user_and_data(db: Session, user: User) -> None:
     db.execute(delete(UserFood).where(UserFood.user_id == uid))
     db.execute(delete(WaterLog).where(WaterLog.user_id == uid))
     db.execute(delete(WeightLog).where(WeightLog.user_id == uid))
+    db.execute(delete(BodyMeasurement).where(BodyMeasurement.user_id == uid))
     db.execute(delete(UserTarget).where(UserTarget.user_id == uid))
     # Keep the admin audit trail, but unlink it from the deleted account.
     db.execute(update(AdminAudit).where(AdminAudit.target_user_id == uid).values(target_user_id=None))
