@@ -17,7 +17,21 @@ def current_user(
     return user
 
 
+def is_admin(user: User) -> bool:
+    from app.config import ADMIN_EMAILS
+    return user.email.lower() in ADMIN_EMAILS
+
+
+def admin_user(user: User = Depends(current_user)) -> User:
+    if not is_admin(user):
+        raise HTTPException(status.HTTP_403_FORBIDDEN, "Admins only")
+    return user
+
+
 def onboarded_user(user: User = Depends(current_user)) -> User:
+    from app.config import CONSENT_VERSION
+    if user.consent_version != CONSENT_VERSION:
+        raise HTTPException(status.HTTP_403_FORBIDDEN, "Please accept the data consent first")
     if not user.onboarded:
         raise HTTPException(status.HTTP_409_CONFLICT, "Finish onboarding first")
     return user

@@ -72,7 +72,7 @@ ONBOARDING = {
 
 
 def make_user(client: TestClient, email: str = "me@example.com") -> dict:
-    r = client.post("/api/auth/register", json={"email": email, "password": "password123"})
+    r = client.post("/api/auth/register", json={"email": email, "password": "password123", "consent": True})
     assert r.status_code == 201, r.text
     r = client.post("/api/profile/onboarding", json=ONBOARDING)
     assert r.status_code == 200, r.text

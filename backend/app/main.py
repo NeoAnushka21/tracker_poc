@@ -5,7 +5,7 @@ from fastapi import FastAPI
 from app import models  # noqa: F401  (registers tables)
 from app.data_migrations import run_all as run_data_migrations
 from app.db import Base, SessionLocal, add_missing_columns, engine
-from app.routers import actions, auth, chat, dashboard, foods, profile, water
+from app.routers import actions, admin, auth, chat, dashboard, foods, profile, water
 
 
 @asynccontextmanager
@@ -27,6 +27,7 @@ app.include_router(actions.router)
 app.include_router(dashboard.router)
 app.include_router(foods.router)
 app.include_router(water.router)
+app.include_router(admin.router)
 
 
 @app.get("/api/health")

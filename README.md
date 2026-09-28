@@ -1,6 +1,6 @@
-# Macro Tracker
+# MacBro
 
-A chat-based calorie and macro tracker. You describe what you ate in plain language. Claude estimates the nutrition and proposes a log entry, and **nothing is saved until you click Confirm**.
+MacBro (macro + bro) is a chat-based calorie and macro tracker. You describe what you ate in plain language. Claude estimates the nutrition and proposes a log entry, and **nothing is saved until you click Confirm**.
 
 Spec: [macro_tracker_build_spec (1).md](macro_tracker_build_spec%20(1).md). This is the **base version** (see "Scope" below).
 
@@ -73,6 +73,16 @@ user message ─► FastAPI /api/chat ─► LLM (Groq gpt-oss-120b or Claude) w
 - **Guard against false claims:** if the model says it logged or saved something without creating a card, the app sends it back once to either create the proposal or correct itself.
 - Meal type is inferred from your local time (breakfast 05–11, lunch 11–15, snack 15–19, dinner 19–23, otherwise snack). It's overridden when you say "for breakfast".
 - Targets use Mifflin-St Jeor for BMR, multiplied by an activity factor for TDEE, then adjusted for your goal. Protein is set in g/kg, fat is 25% of calories, and carbs fill the rest. All the tunable numbers are in `backend/app/config.py`.
+
+## Screens
+
+- **Chat:** talk to MacBro (typing or voice). Proposals appear as cards you confirm.
+- **Dashboard:** today's calorie ring; protein, fiber, carbs and fat meters; calorie split; water tracker; micronutrients; five meal sections with per-meal macros.
+- **Analysis:** 7, 14 or 30-day trends: calories and protein vs target, macro lines, calorie split, calories by meal, water, days on target, and a data table. All charts have hover and keyboard tooltips.
+- **My foods:** your saved foods and recipes.
+- **Admin** (only for `ADMIN_EMAILS`): users, logins and activity, with read-only access to each user's logs, foods and chat. Every view is written to an audit log.
+- Light, dark or system theme (toggle in the header), with text contrast checked against WCAG AA in both.
+- Sign-up requires accepting a data-use consent notice. Existing accounts are asked once, and again if the wording (`CONSENT_VERSION`) changes.
 
 ## Code map
 

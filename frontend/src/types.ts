@@ -30,6 +30,8 @@ export type User = {
   goal_type: string | null;
   activity_level: string | null;
   targets: Targets | null;
+  consented: boolean;
+  is_admin: boolean;
 };
 
 export type Item = Nutrients & {
@@ -146,3 +148,53 @@ export type Food = Nutrients & {
   last_used_at: string;
   ingredients?: RecipeIngredient[];
 };
+
+export type RangeDay = Nutrients & {
+  date: string;
+  logged: boolean;
+  water_ml: number;
+  targets: Targets | null;
+  on_target: boolean | null;
+};
+
+export type RangeSummary = {
+  start: string;
+  end: string;
+  days: RangeDay[];
+  water_target_ml: number | null;
+  summary: {
+    days_in_range: number;
+    days_logged: number;
+    days_on_target: number;
+    avg: Record<keyof Nutrients | "water_ml", number | null>;
+    macro_split_pct: { protein: number | null; carbs: number | null; fat: number | null };
+    kcal_by_meal: Record<string, number>;
+    adherence_rule: { calorie_tolerance_pct: number; min_protein_pct: number };
+  };
+};
+
+export type AdminUserRow = {
+  id: number;
+  email: string;
+  preferred_name: string | null;
+  created_at: string | null;
+  last_login_at: string | null;
+  login_count: number;
+  consented_at: string | null;
+  onboarded: boolean;
+  goal_type: string | null;
+  entries: number;
+  foods: number;
+  water_logs: number;
+  chat_messages: number;
+  last_logged_at: string | null;
+};
+
+export type AdminUserDetail = {
+  profile: User & { created_at: string | null; last_login_at: string | null; consented_at: string | null };
+  weights: { weight_kg: number; logged_at: string }[];
+  days: { date: string; entries: Entry[]; totals: Nutrients }[];
+  foods: Food[];
+};
+
+export type AuditRow = { at: string; admin: string | null; action: string; user: string | null };

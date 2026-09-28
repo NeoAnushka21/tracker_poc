@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { api } from "../api";
 import type { DailySummary, Entry, Item, MicroSummary, WaterSummary } from "../types";
 import { MEAL_LABEL, MEAL_ORDER, friendlyDate, grams, kcal, litres, shiftDay } from "../format";
+import { StackedBar } from "./charts";
 
 /** A meter: one macro against its target. Identity comes from the label; the fill hue repeats it. */
 function Bar({ label, value, target, unit, tone }: {
@@ -172,12 +173,20 @@ function sumItems(items: Item[]) {
 function MealSection({ meal, entries }: { meal: string; entries: Entry[] }) {
   const items = entries.flatMap((e) => e.items);
   const t = sumItems(items);
+  const [open, setOpen] = useState(true);
   return (
     <div className={`meal-card ${items.length ? "" : "empty"}`}>
-      <div className="meal-head">
-        <span className="meal-name">{MEAL_LABEL[meal] ?? meal}</span>
+      <button
+        type="button" className="meal-head meal-toggle" onClick={() => setOpen(!open)}
+        aria-expanded={open} disabled={!items.length}
+      >
+        <span className="meal-name">
+          {items.length > 0 && <span className={`chevron ${open ? "open" : ""}`} aria-hidden="true">›</span>}
+          {MEAL_LABEL[meal] ?? meal}
+          {items.length > 0 && <span className="muted meal-count"> · {items.length} item{items.length === 1 ? "" : "s"}</span>}
+        </span>
         <span className="num">{items.length ? kcal(t.calories) : "–"}</span>
-      </div>
+      </button>
       {items.length > 0 ? (
         <>
           <div className="meal-macros">
@@ -186,7 +195,7 @@ function MealSection({ meal, entries }: { meal: string; entries: Entry[] }) {
             <span className="macro-chip carbs"><i />C {grams(t.carbs_g)}</span>
             <span className="macro-chip fat"><i />F {grams(t.fat_g)}</span>
           </div>
-          <ul className="meal-items">
+          {open && <ul className="meal-items">
             {items.map((it, idx) => (
               <li key={idx}>
                 <span className="meal-item-name">
@@ -197,7 +206,7 @@ function MealSection({ meal, entries }: { meal: string; entries: Entry[] }) {
                 <span className="num">{Math.round(it.calories)}</span>
               </li>
             ))}
-          </ul>
+          </ul>}
         </>
       ) : (
         <p className="muted small">Nothing logged</p>
@@ -247,6 +256,17 @@ export default function Dashboard({ dataVersion, onDataChanged }: DashboardProps
           <Bar label="Fiber" value={c.fiber_g} target={t.fiber_g} unit="g" tone="fiber" />
           <Bar label="Carbs" value={c.carbs_g} target={t.carbs_g} unit="g" tone="carbs" />
           <Bar label="Fat" value={c.fat_g} target={t.fat_g} unit="g" tone="fat" />
+          <div className="calorie-split">
+            <h3>Where today's calories came from</h3>
+            <StackedBar
+              ariaLabel="Share of today's calories from protein, carbs and fat"
+              segments={[
+                { key: "p", label: "Protein", value: c.protein_g * 4, color: "var(--protein)", detail: `${Math.round(c.protein_g * 4)} kcal` },
+                { key: "c", label: "Carbs", value: c.carbs_g * 4, color: "var(--carbs)", detail: `${Math.round(c.carbs_g * 4)} kcal` },
+                { key: "f", label: "Fat", value: c.fat_g * 9, color: "var(--fat)", detail: `${Math.round(c.fat_g * 9)} kcal` },
+              ]}
+            />
+          </div>
         </>
       ) : (
         <p className="muted">No targets set.</p>

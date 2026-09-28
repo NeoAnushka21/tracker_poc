@@ -22,6 +22,10 @@ class Credentials(BaseModel):
         return v
 
 
+class RegisterIn(Credentials):
+    consent: bool = False
+
+
 class OnboardingIn(BaseModel):
     preferred_name: str | None = Field(default=None, max_length=80)
     date_of_birth: date

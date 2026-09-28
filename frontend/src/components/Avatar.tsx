@@ -1,14 +1,34 @@
-/** The assistant's avatar: a bowl with a leaf, drawn inline so it follows the theme. */
-export function AssistantAvatar({ size = 32 }: { size?: number }) {
+import { useId } from "react";
+
+/** MacBro: a cartoon boy in an "MB" t-shirt. Drawn inline so it scales cleanly. */
+export function MacBroAvatar({ size = 32 }: { size?: number }) {
+  const clipId = `mb-clip-${useId().replace(/[^a-zA-Z0-9_-]/g, "")}`;
   return (
-    <span className="avatar assistant-avatar" style={{ width: size, height: size }} aria-hidden="true">
-      <svg viewBox="0 0 32 32" width={size * 0.62} height={size * 0.62}>
-        {/* leaf */}
-        <path d="M17 4c5 0 8 3 8 7-4 1-8-1-8-7z" fill="currentColor" opacity="0.9" />
-        <path d="M16.5 12c0-3 .5-5 1.5-7" stroke="currentColor" strokeWidth="1.4" fill="none" strokeLinecap="round" />
-        {/* bowl */}
-        <path d="M4 15h24c0 6.6-5.4 12-12 12S4 21.6 4 15z" fill="currentColor" />
-        <path d="M10 19.5c1.5 2.5 4 3.5 6 3.5" stroke="var(--avatar-bg)" strokeWidth="1.6" fill="none" strokeLinecap="round" />
+    <span className="avatar macbro-avatar" style={{ width: size, height: size }} aria-hidden="true">
+      <svg viewBox="0 0 64 64" width={size} height={size}>
+        <defs>
+          <clipPath id={clipId}><circle cx="32" cy="32" r="32" /></clipPath>
+        </defs>
+        <g clipPath={`url(#${clipId})`}>
+          <circle cx="32" cy="32" r="32" className="mb-bg" />
+          {/* t-shirt */}
+          <path d="M6 64c0-11 7-18 15-20l5-2h12l5 2c8 2 15 9 15 20z" className="mb-shirt" />
+          <path d="M26 42c1.5 3 3.5 4.5 6 4.5s4.5-1.5 6-4.5" className="mb-collar" />
+          <text x="32" y="59" textAnchor="middle" className="mb-letters">MB</text>
+          {/* neck, ears, head */}
+          <rect x="28" y="36" width="8" height="8" rx="3" className="mb-skin" />
+          <circle cx="18.5" cy="27" r="3.2" className="mb-skin" />
+          <circle cx="45.5" cy="27" r="3.2" className="mb-skin" />
+          <circle cx="32" cy="26" r="13.5" className="mb-skin" />
+          {/* hair with a little front flick */}
+          <path d="M18.5 25c-.5-8.5 5.5-14 13.5-14 8.5 0 14 5.5 13.5 13.5-2.5-4-6-6-10.5-6.3 1 1.3 1.3 2.8.8 4-3-2.8-7.8-4-12.3-2.6-2.6.8-4 2.6-5 5.4z" className="mb-hair" />
+          {/* face */}
+          <circle cx="26.8" cy="27.5" r="1.7" className="mb-ink" />
+          <circle cx="37.2" cy="27.5" r="1.7" className="mb-ink" />
+          <path d="M27 32.5c2.8 3 7.2 3 10 0" className="mb-smile" />
+          <circle cx="23.5" cy="31.5" r="1.8" className="mb-cheek" />
+          <circle cx="40.5" cy="31.5" r="1.8" className="mb-cheek" />
+        </g>
       </svg>
     </span>
   );

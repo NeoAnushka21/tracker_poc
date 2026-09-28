@@ -42,7 +42,7 @@ def test_onboarding_sets_targets(client, user):
 
 
 def test_chat_requires_onboarding(client):
-    client.post("/api/auth/register", json={"email": "new@example.com", "password": "password123"})
+    client.post("/api/auth/register", json={"email": "new@example.com", "password": "password123", "consent": True})
     assert client.post("/api/chat", json={"message": "hi"}).status_code == 409
 
 

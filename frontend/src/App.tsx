@@ -7,13 +7,19 @@ import Chat from "./components/Chat";
 import Dashboard from "./components/Dashboard";
 import SettingsDialog from "./components/SettingsDialog";
 import SummaryStrip from "./components/SummaryStrip";
+import ThemeToggle from "./components/ThemeToggle";
 import FoodsPage from "./components/FoodsPage";
-import { AssistantAvatar, UserAvatar } from "./components/Avatar";
+import AnalysisPage from "./components/AnalysisPage";
+import AdminPage from "./components/AdminPage";
+import ConsentGate from "./components/ConsentGate";
+import { MacBroAvatar, UserAvatar } from "./components/Avatar";
 
 const TABS = [
-  { id: "chat", label: "Chat" },
-  { id: "dashboard", label: "Dashboard" },
-  { id: "foods", label: "My foods" },
+  { id: "chat", label: "Chat", admin: false },
+  { id: "dashboard", label: "Dashboard", admin: false },
+  { id: "analysis", label: "Analysis", admin: false },
+  { id: "foods", label: "My foods", admin: false },
+  { id: "admin", label: "Admin", admin: true },
 ] as const;
 type TabId = (typeof TABS)[number]["id"];
 
@@ -64,13 +70,18 @@ export default function App() {
   if (loading) return <div className="center muted">Loading…</div>;
   if (error) return <div className="center error">Couldn't reach the server: {error}</div>;
   if (!user) return <AuthScreen onAuthed={setUser} />;
+  if (!user.consented) return <ConsentGate onAccepted={setUser} onLogout={logout} />;
   if (!user.onboarded) return <Onboarding onDone={setUser} />;
+
+  const tabs = TABS.filter((t) => !t.admin || user.is_admin);
+  const current = tabs.some((t) => t.id === tab) ? tab : "chat";
 
   return (
     <div className="app">
       <header className="topbar">
-        <span className="brand"><AssistantAvatar size={30} />Macro Tracker</span>
+        <span className="brand"><MacBroAvatar size={34} />MacBro</span>
         <div className="topbar-actions">
+          <ThemeToggle />
           <button className="ghost" onClick={() => setShowSettings(true)}>Targets &amp; weight</button>
           <button className="ghost" onClick={logout}>Log out</button>
           <span className="topbar-user">
@@ -80,14 +91,14 @@ export default function App() {
         </div>
       </header>
       <nav className="tabs" role="tablist" aria-label="Sections">
-        {TABS.map((t) => (
+        {tabs.map((t) => (
           <button
             key={t.id}
             role="tab"
             id={`tab-${t.id}`}
-            aria-selected={tab === t.id}
+            aria-selected={current === t.id}
             aria-controls={`panel-${t.id}`}
-            className={tab === t.id ? "on" : ""}
+            className={current === t.id ? "on" : ""}
             onClick={() => openTab(t.id)}
           >
             {t.label}
@@ -95,16 +106,27 @@ export default function App() {
         ))}
       </nav>
       {/* Panels stay mounted so the chat keeps its scroll position and draft text. */}
-      <main className="page page-chat" id="panel-chat" role="tabpanel" aria-labelledby="tab-chat" hidden={tab !== "chat"}>
+      <main className="page page-chat" id="panel-chat" role="tabpanel" aria-labelledby="tab-chat" hidden={current !== "chat"}>
         <SummaryStrip dataVersion={dataVersion} onOpen={() => openTab("dashboard")} />
         <Chat user={user} onDataChanged={() => setDataVersion((v) => v + 1)} />
       </main>
-      <main className="page" id="panel-dashboard" role="tabpanel" aria-labelledby="tab-dashboard" hidden={tab !== "dashboard"}>
+      <main className="page" id="panel-dashboard" role="tabpanel" aria-labelledby="tab-dashboard" hidden={current !== "dashboard"}>
         <Dashboard dataVersion={dataVersion} onDataChanged={() => setDataVersion((v) => v + 1)} />
       </main>
-      <main className="page" id="panel-foods" role="tabpanel" aria-labelledby="tab-foods" hidden={tab !== "foods"}>
+      {/* Analysis and Admin load only when opened (admin views are audited). */}
+      {current === "analysis" && (
+        <main className="page" id="panel-analysis" role="tabpanel" aria-labelledby="tab-analysis">
+          <AnalysisPage dataVersion={dataVersion} />
+        </main>
+      )}
+      <main className="page" id="panel-foods" role="tabpanel" aria-labelledby="tab-foods" hidden={current !== "foods"}>
         <FoodsPage dataVersion={dataVersion} />
       </main>
+      {current === "admin" && user.is_admin && (
+        <main className="page page-wide" id="panel-admin" role="tabpanel" aria-labelledby="tab-admin">
+          <AdminPage />
+        </main>
+      )}
       {showSettings && (
         <SettingsDialog
           user={user}

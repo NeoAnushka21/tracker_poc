@@ -7,10 +7,18 @@ from sqlalchemy.orm import Session
 from app.db import get_db
 from app.deps import onboarded_user
 from app.models import User
+from app.services.analysis import range_summary
 from app.services.logs import daily_summary
 from app.timeutil import local_today
 
 router = APIRouter(prefix="/api/dashboard", tags=["dashboard"])
+
+
+@router.get("/range")
+def date_range(days: int = 7, user: User = Depends(onboarded_user), db: Session = Depends(get_db)):
+    """Per-day totals and trend stats for the last `days` days (ending today)."""
+    days = max(1, min(days, 90))
+    return range_summary(db, user, local_today(user.timezone), days)
 
 
 @router.get("/daily")

@@ -1,4 +1,6 @@
-import type { Action, ChatMessage, DailySummary, Food, User } from "./types";
+import type {
+  Action, AdminUserDetail, AdminUserRow, AuditRow, ChatMessage, DailySummary, Food, RangeSummary, User,
+} from "./types";
 
 export class ApiError extends Error {
   constructor(public status: number, message: string) {
@@ -64,7 +66,10 @@ export type FoodInput = {
 
 export const api = {
   me: () => request<User>("GET", "/api/auth/me"),
-  register: (email: string, password: string) => request<User>("POST", "/api/auth/register", { email, password }),
+  register: (email: string, password: string, consent: boolean) =>
+    request<User>("POST", "/api/auth/register", { email, password, consent }),
+  consentText: () => request<{ version: string; text: string }>("GET", "/api/auth/consent-text"),
+  giveConsent: () => request<User>("POST", "/api/auth/consent"),
   login: (email: string, password: string) => request<User>("POST", "/api/auth/login", { email, password }),
   logout: () => request<{ ok: boolean }>("POST", "/api/auth/logout"),
 
@@ -86,6 +91,13 @@ export const api = {
 
   addWater: (amount_ml: number) => request<{ id: number; amount_ml: number }>("POST", "/api/water", { amount_ml }),
   deleteWater: (id: number) => request<{ ok: boolean }>("DELETE", `/api/water/${id}`),
+
+  range: (days: number) => request<RangeSummary>("GET", `/api/dashboard/range?days=${days}`),
+
+  adminUsers: () => request<AdminUserRow[]>("GET", "/api/admin/users"),
+  adminUser: (id: number, days = 14) => request<AdminUserDetail>("GET", `/api/admin/users/${id}?days=${days}`),
+  adminChat: (id: number) => request<ChatMessage[]>("GET", `/api/admin/users/${id}/chat`),
+  adminAudit: () => request<AuditRow[]>("GET", "/api/admin/audit"),
 
   daily: (day?: string) => request<DailySummary>("GET", `/api/dashboard/daily${day ? `?day=${day}` : ""}`),
 };

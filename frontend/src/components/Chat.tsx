@@ -2,7 +2,7 @@ import { Fragment, useEffect, useRef, useState, type FormEvent, type KeyboardEve
 import { api } from "../api";
 import type { Action, ChatMessage, User } from "../types";
 import { useSpeechToText } from "../useSpeechToText";
-import { AssistantAvatar, UserAvatar } from "./Avatar";
+import { MacBroAvatar, UserAvatar } from "./Avatar";
 import ProposalCard from "./ProposalCard";
 
 const EXAMPLES = [
@@ -150,18 +150,19 @@ export default function Chat({ user, onDataChanged }: Props) {
   return (
     <section className="chat card">
       <div className="chat-head">
-        <AssistantAvatar size={36} />
+        <MacBroAvatar size={36} />
         <div>
-          <div className="chat-title">Macro assistant</div>
-          <div className="muted small">Tell me what you ate; I'll do the maths.</div>
+          <div className="chat-title">MacBro</div>
+          <div className="muted small">Your macro bro. Tell me what you ate; I'll do the maths.</div>
         </div>
       </div>
 
       <div className="messages">
         {visible.length === 0 && (
           <div className="empty">
-            <AssistantAvatar size={64} />
-            <p>Hi{user.preferred_name ? ` ${user.preferred_name}` : ""}! Tell me what you ate and I'll work out the macros.</p>
+            <MacBroAvatar size={64} />
+            <p className="empty-title">Hey{user.preferred_name ? ` ${user.preferred_name}` : ""}, I'm MacBro!</p>
+            <p className="muted">Tell me what you ate, type or tap the mic, and I'll work out the macros.</p>
             <div className="examples">
               {EXAMPLES.map((ex) => (
                 <button key={ex} className="chip" onClick={() => { setInput(ex); inputRef.current?.focus(); }}>
@@ -174,7 +175,7 @@ export default function Chat({ user, onDataChanged }: Props) {
         {visible.map((m) => (
           <div key={m.id} className={`msg-row ${m.role}`}>
             {m.role === "assistant"
-              ? <AssistantAvatar />
+              ? <MacBroAvatar />
               : <UserAvatar name={user.preferred_name} email={user.email} />}
             <div className="msg">
               <div className="bubble">{renderText(m.content)}</div>
@@ -195,7 +196,7 @@ export default function Chat({ user, onDataChanged }: Props) {
         ))}
         {sending && (
           <div className="msg-row assistant">
-            <AssistantAvatar />
+            <MacBroAvatar />
             <div className="msg">
               <div className="bubble typing" aria-label="Assistant is typing">
                 <span /><span /><span />

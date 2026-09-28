@@ -39,6 +39,10 @@ class User(Base):
     goal_type: Mapped[str | None] = mapped_column(String(32))
     activity_level: Mapped[str | None] = mapped_column(String(32))
     created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
+    consent_at: Mapped[datetime | None] = mapped_column(DateTime)
+    consent_version: Mapped[str | None] = mapped_column(String(32))
+    last_login_at: Mapped[datetime | None] = mapped_column(DateTime)
+    login_count: Mapped[int | None] = mapped_column(Integer, default=0)
 
     @property
     def onboarded(self) -> bool:
@@ -102,6 +106,17 @@ class LogEntryItem(Base):
     micronutrients: Mapped[dict | None] = mapped_column(JSON)   # {iron_mg: 1.2, ...}; keys in config
 
     entry: Mapped[LogEntry] = relationship(back_populates="items")
+
+
+class AdminAudit(Base):
+    """Every time an admin opens a user's data."""
+    __tablename__ = "admin_audit"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    admin_user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), index=True)
+    target_user_id: Mapped[int | None] = mapped_column(ForeignKey("users.id"), index=True)
+    action: Mapped[str] = mapped_column(String(64))
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
 
 
 class WaterLog(Base):

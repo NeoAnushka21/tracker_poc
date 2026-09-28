@@ -24,8 +24,9 @@ def add_water(db: Session, user: User, amount_ml: float, drank_at: datetime | No
     return log
 
 
-def water_between(db: Session, user: User, day: date) -> list[WaterLog]:
-    start, end = local_day_bounds_utc(day, user.timezone)
+def water_between_range(db: Session, user: User, start_day: date, end_day: date) -> list[WaterLog]:
+    start, _ = local_day_bounds_utc(start_day, user.timezone)
+    _, end = local_day_bounds_utc(end_day, user.timezone)
     stmt = (
         select(WaterLog)
         .where(WaterLog.user_id == user.id, WaterLog.drank_at >= start, WaterLog.drank_at < end)
@@ -35,7 +36,7 @@ def water_between(db: Session, user: User, day: date) -> list[WaterLog]:
 
 
 def water_summary(db: Session, user: User, day: date, weight_kg: float | None) -> dict:
-    logs = water_between(db, user, day)
+    logs = water_between_range(db, user, day, day)
     return {
         "target_ml": water_target_ml(weight_kg, user.activity_level),
         "consumed_ml": round(sum(w.amount_ml for w in logs)),

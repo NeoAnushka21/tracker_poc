@@ -2,7 +2,8 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
 from app.db import get_db
-from app.deps import current_user, onboarded_user
+from app.config import CONSENT_VERSION
+from app.deps import current_user, is_admin, onboarded_user
 from app.models import User, UserTarget, WeightLog
 from app.nutrition import age_on, calculate_targets
 from app.schemas import OnboardingIn, TargetsIn, WeightIn
@@ -28,6 +29,8 @@ def user_to_dict(db: Session, user: User) -> dict:
         "goal_type": user.goal_type,
         "activity_level": user.activity_level,
         "targets": targets_to_dict(current_targets(db, user.id)),
+        "consented": user.consent_version == CONSENT_VERSION,
+        "is_admin": is_admin(user),
     }
 
 
@@ -58,7 +61,7 @@ def _save_calculated_targets(db: Session, user: User, weight_kg: float) -> dict:
 @router.post("/onboarding")
 def onboarding(body: OnboardingIn, user: User = Depends(current_user), db: Session = Depends(get_db)):
     if not is_valid_timezone(body.timezone):
-        raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, f"Unknown time zone '{body.timezone}'")
+        raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT, f"Unknown time zone '{body.timezone}'")
     for field in ("preferred_name", "date_of_birth", "sex", "height_cm", "unit_system",
                   "timezone", "goal_type", "activity_level"):
         setattr(user, field, getattr(body, field))
