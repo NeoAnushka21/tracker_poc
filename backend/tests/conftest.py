@@ -5,6 +5,9 @@ import tempfile
 _tmpdir = tempfile.mkdtemp()
 os.environ["DATABASE_URL"] = f"sqlite:///{_tmpdir}/test.db"
 os.environ["SECRET_KEY"] = "test-secret-key-that-is-long-enough-for-hs256"
+# Keep tests independent of the developer's backend/.env (load_dotenv won't override these).
+os.environ["ADMIN_EMAILS"] = "mhatre.anushka.work@gmail.com"
+os.environ["ADMIN_INITIAL_PASSWORD"] = ""
 
 import pytest  # noqa: E402
 from fastapi.testclient import TestClient  # noqa: E402
