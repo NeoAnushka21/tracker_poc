@@ -1,0 +1,70 @@
+import type { Action, ChatMessage, DailySummary, User } from "./types";
+
+export class ApiError extends Error {
+  constructor(public status: number, message: string) {
+    super(message);
+  }
+}
+
+async function request<T>(method: string, path: string, body?: unknown): Promise<T> {
+  const res = await fetch(path, {
+    method,
+    credentials: "same-origin",
+    headers: body !== undefined ? { "Content-Type": "application/json" } : undefined,
+    body: body !== undefined ? JSON.stringify(body) : undefined,
+  });
+  if (!res.ok) {
+    let message = `Request failed (${res.status})`;
+    try {
+      const data = await res.json();
+      if (typeof data.detail === "string") message = data.detail;
+      else if (Array.isArray(data.detail) && data.detail[0]?.msg) message = data.detail[0].msg.replace(/^Value error, /, "");
+    } catch {
+      /* non-JSON error body */
+    }
+    throw new ApiError(res.status, message);
+  }
+  return res.json() as Promise<T>;
+}
+
+export type OnboardingInput = {
+  preferred_name: string | null;
+  date_of_birth: string;
+  sex: "male" | "female";
+  height_cm: number;
+  weight_kg: number;
+  unit_system: "metric" | "imperial";
+  timezone: string;
+  goal_type: string;
+  activity_level: string;
+};
+
+export type TargetsInput = {
+  daily_calorie_target: number;
+  protein_target_g: number;
+  carbs_target_g: number;
+  fat_target_g: number;
+};
+
+type ActionResult = { action: Action; event: ChatMessage };
+
+export const api = {
+  me: () => request<User>("GET", "/api/auth/me"),
+  register: (email: string, password: string) => request<User>("POST", "/api/auth/register", { email, password }),
+  login: (email: string, password: string) => request<User>("POST", "/api/auth/login", { email, password }),
+  logout: () => request<{ ok: boolean }>("POST", "/api/auth/logout"),
+
+  onboarding: (data: OnboardingInput) =>
+    request<User & { calculation: { bmr: number; tdee: number } }>("POST", "/api/profile/onboarding", data),
+  updateTargets: (data: TargetsInput) => request<User>("PUT", "/api/profile/targets", data),
+  logWeight: (weight_kg: number, recalculate_targets: boolean) =>
+    request<User>("POST", "/api/profile/weight", { weight_kg, recalculate_targets }),
+
+  history: () => request<ChatMessage[]>("GET", "/api/chat/history"),
+  send: (message: string, feedback_on_action_id: number | null) =>
+    request<ChatMessage[]>("POST", "/api/chat", { message, feedback_on_action_id }),
+  confirm: (id: number) => request<ActionResult>("POST", `/api/actions/${id}/confirm`),
+  reject: (id: number) => request<ActionResult>("POST", `/api/actions/${id}/reject`),
+
+  daily: (day?: string) => request<DailySummary>("GET", `/api/dashboard/daily${day ? `?day=${day}` : ""}`),
+};
