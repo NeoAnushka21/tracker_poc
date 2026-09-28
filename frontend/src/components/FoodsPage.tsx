@@ -111,7 +111,7 @@ function FoodRow({ food, onChanged, onDeleted }: { food: Food; onChanged: (f: Fo
   }
 
   return (
-    <li className={`food-row ${food.kind}`}>
+    <li className={`food-row ${food.kind}${editing ? " editing" : ""}`}>
       <div className="food-main">
         <div className="food-title">
           <span className="food-name">{food.name}</span>

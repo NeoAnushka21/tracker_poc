@@ -353,44 +353,51 @@ export default function Dashboard({ dataVersion, onDataChanged, onAskMacBro }: D
         <button className="ghost" onClick={() => setDay(shiftDay(data.date, 1))} disabled={data.date >= today} aria-label="Next day">›</button>
       </div>
 
-      {t ? (
-        <>
-          <CalorieRing eaten={c.calories} target={t.calories} />
-          <Bar label="Protein" value={c.protein_g} target={t.protein_g} unit="g" tone="protein" />
-          <Bar label="Fiber" value={c.fiber_g} target={t.fiber_g} unit="g" tone="fiber" />
-          <Bar label="Carbs" value={c.carbs_g} target={t.carbs_g} unit="g" tone="carbs" />
-          <Bar label="Fat" value={c.fat_g} target={t.fat_g} unit="g" tone="fat" />
-          <div className="calorie-split">
-            <h3>Where today's calories came from</h3>
-            <StackedBar
-              ariaLabel="Share of today's calories from protein, carbs and fat"
-              segments={[
-                { key: "p", label: "Protein", value: c.protein_g * 4, color: "var(--protein)", detail: `${Math.round(c.protein_g * 4)} kcal` },
-                { key: "c", label: "Carbs", value: c.carbs_g * 4, color: "var(--carbs)", detail: `${Math.round(c.carbs_g * 4)} kcal` },
-                { key: "f", label: "Fat", value: c.fat_g * 9, color: "var(--fat)", detail: `${Math.round(c.fat_g * 9)} kcal` },
-              ]}
-            />
+      <div className="dash-cols">
+        <div className="dash-summary">
+          {t ? (
+            <>
+              <CalorieRing eaten={c.calories} target={t.calories} />
+              <Bar label="Protein" value={c.protein_g} target={t.protein_g} unit="g" tone="protein" />
+              <Bar label="Fiber" value={c.fiber_g} target={t.fiber_g} unit="g" tone="fiber" />
+              <Bar label="Carbs" value={c.carbs_g} target={t.carbs_g} unit="g" tone="carbs" />
+              <Bar label="Fat" value={c.fat_g} target={t.fat_g} unit="g" tone="fat" />
+              <div className="calorie-split">
+                <h3>Where today's calories came from</h3>
+                <StackedBar
+                  ariaLabel="Share of today's calories from protein, carbs and fat"
+                  segments={[
+                    { key: "p", label: "Protein", value: c.protein_g * 4, color: "var(--protein)", detail: `${Math.round(c.protein_g * 4)} kcal` },
+                    { key: "c", label: "Carbs", value: c.carbs_g * 4, color: "var(--carbs)", detail: `${Math.round(c.carbs_g * 4)} kcal` },
+                    { key: "f", label: "Fat", value: c.fat_g * 9, color: "var(--fat)", detail: `${Math.round(c.fat_g * 9)} kcal` },
+                  ]}
+                />
+              </div>
+            </>
+          ) : (
+            <p className="muted">No targets set.</p>
+          )}
+
+          {data.water && <Water w={data.water} isToday={data.date === today} onChanged={onDataChanged} />}
+
+          {data.micronutrients && <Micronutrients m={data.micronutrients} />}
+        </div>
+
+        {/* Laptop and up: summary on the left, meals on the right (styles.css, "wide screens"). */}
+        <div className="dash-meals">
+          <div className="meals-head">
+            <h3>Meals</h3>
+            <button type="button" className="ghost log-day-btn" onClick={() => onAskMacBro("", data.date)}>
+              + Log food{data.date === today ? "" : ` for ${friendlyDate(data.date, today)}`}
+            </button>
           </div>
-        </>
-      ) : (
-        <p className="muted">No targets set.</p>
-      )}
-
-      {data.water && <Water w={data.water} isToday={data.date === today} onChanged={onDataChanged} />}
-
-      {data.micronutrients && <Micronutrients m={data.micronutrients} />}
-
-      <div className="meals-head">
-        <h3>Meals</h3>
-        <button type="button" className="ghost log-day-btn" onClick={() => onAskMacBro("", data.date)}>
-          + Log food{data.date === today ? "" : ` for ${friendlyDate(data.date, today)}`}
-        </button>
-      </div>
-      <div className="meals">
-        {[...MEAL_ORDER, ...Object.keys(byMeal).filter((m) => !MEAL_ORDER.includes(m))].map((meal) => (
-          <MealSection key={meal} day={data.date} meal={meal} entries={byMeal[meal] ?? []} isToday={data.date === today}
-                       onChanged={onDataChanged} onAskMacBro={onAskMacBro} />
-        ))}
+          <div className="meals">
+            {[...MEAL_ORDER, ...Object.keys(byMeal).filter((m) => !MEAL_ORDER.includes(m))].map((meal) => (
+              <MealSection key={meal} day={data.date} meal={meal} entries={byMeal[meal] ?? []} isToday={data.date === today}
+                           onChanged={onDataChanged} onAskMacBro={onAskMacBro} />
+            ))}
+          </div>
+        </div>
       </div>
     </section>
   );

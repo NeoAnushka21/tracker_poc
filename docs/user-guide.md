@@ -4,7 +4,7 @@ OmniAI is a chat-based calorie and macro tracker. In the Chat you talk to **MacB
 
 This guide walks a new user through the app from sign-up to daily use. The same walkthrough appears inside the app as a short tour the first time you log in. You can reopen it any time with the **? Guide** button at the top.
 
-> Last updated: 2026-09-28 (NVIDIA backup, strict licences, consent update). Keep this file in step with the UI (see [docs/README.md](README.md)).
+> Last updated: 2026-09-29 (layouts for laptop screens). Keep this file in step with the UI (see [docs/README.md](README.md)).
 
 ---
 
@@ -76,6 +76,18 @@ The first time you reach the main screen, a small panel opens at the bottom. It 
 - Use **Next** and **Back** (or the ← → keys) to move between steps.
 - **Skip**, **✕** or **Esc** closes the tour.
 - Reopen it any time from **? Guide** in the top bar.
+
+**Phone or laptop:** the app works on both, with the same tabs at the top. On a phone, each page is one column you scroll through. On a laptop or any window at least 1024 px wide, the pages use the extra space:
+
+| Page | On a laptop |
+|---|---|
+| Home | Today's summary on the left, the two streaks stacked on the right |
+| Chat | Wider conversation; messages keep a comfortable reading width |
+| Dashboard | The day's summary (ring, macros, water, micronutrients) on the left, your **meals** on the right |
+| Analysis | Charts in two columns: calories beside protein, macro trends beside water, the calorie split beside calories by meal |
+| My foods | Food cards in two columns; the food you're editing opens across the full width |
+
+On very wide screens, content stays at a comfortable width (about 1,200 px) in the middle, lined up with the top bar.
 
 ## 4. Your Home page
 

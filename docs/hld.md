@@ -1,6 +1,6 @@
 # OmniAI high-level design (HLD)
 
-> Last updated: 2026-09-28 (deployment: Render + Neon Postgres). Update the diagrams whenever a component, data flow, table or external service changes (see [docs/README.md](README.md)).
+> Last updated: 2026-09-29 (responsive layout note; deployment: Render + Neon Postgres). Update the diagrams whenever a component, data flow, table or external service changes (see [docs/README.md](README.md)).
 > Diagrams are Mermaid. They render on GitHub and in VS Code with a Mermaid preview extension.
 
 ## 1. Purpose and principles
@@ -203,4 +203,5 @@ Column-level detail is in [technical-overview.md](technical-overview.md#5-data-m
 | **Scale** | Single process; Postgres on Neon (SQLite locally) | Stateless app instances (move in-memory state to the database or Redis) |
 | **LLM capacity** | Groq free tier, per model (~200K tokens/day each for gpt-oss-20b and 120b); fast paths and slimmer calls stretch it | Second free provider for failover, see [llm-routing-strategy.md](llm-routing-strategy.md) |
 | **Accessibility** | WCAG AA contrast in light and dark, keyboard tooltips, ARIA tabs and dialogs | – |
+| **Responsive layout** | Phone/tablet: one column. Laptop (≥1024px): multi-column pages capped at 1200px, same top tabs. CSS only, no separate mobile app. | – |
 | **Deployment** | Live at `omniai-hkv2.onrender.com`: Render free web service + Neon free Postgres, Singapore; the free service sleeps after ~15 min idle (30–60 s first load) | Uptime pinger, custom domain, Alembic migrations |

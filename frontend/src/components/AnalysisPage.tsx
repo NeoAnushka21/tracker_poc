@@ -80,34 +80,35 @@ export default function AnalysisPage({ dataVersion }: { dataVersion: number }) {
       </div>
       <p className="muted small">Averages are over the {s.days_logged} day{s.days_logged === 1 ? "" : "s"} with logs, out of {days}.</p>
 
-      <div className="chart-card">
-        <h3>Calories per day</h3>
-        <BarChart points={pts("calories", (d) => d.targets?.calories ?? null)} color="var(--accent)" unit="kcal"
-                  valueLabel="Eaten" ariaLabel="Calories eaten per day compared with the daily target" />
-      </div>
-
-      <div className="chart-card">
-        <h3>Protein per day</h3>
-        <BarChart points={pts("protein_g", (d) => d.targets?.protein_g ?? null)} color="var(--protein)" unit="g"
-                  valueLabel="Protein" ariaLabel="Protein per day compared with the daily target" />
-      </div>
-
-      <div className="chart-card">
-        <h3>Macro trends</h3>
-        <LineChart
-          labels={labels.map((l) => l.label)} titles={labels.map((l) => l.title)} unit="g"
-          ariaLabel="Protein, fiber, carbs and fat in grams per day"
-          series={[
-            { key: "p", label: "Protein", color: "var(--protein)", values: data.days.map((d) => (d.logged ? d.protein_g : null)) },
-            { key: "fi", label: "Fiber", color: "var(--fiber)", values: data.days.map((d) => (d.logged ? d.fiber_g : null)) },
-            { key: "c", label: "Carbs", color: "var(--carbs)", values: data.days.map((d) => (d.logged ? d.carbs_g : null)) },
-            { key: "f", label: "Fat", color: "var(--fat)", values: data.days.map((d) => (d.logged ? d.fat_g : null)) },
-          ]}
-        />
-      </div>
-
-      <div className="chart-grid-2">
+      {/* One grid: one column on phones, two on laptops (styles.css, "wide screens"). */}
+      <div className="analysis-charts">
         <div className="chart-card">
+          <h3>Calories per day</h3>
+          <BarChart points={pts("calories", (d) => d.targets?.calories ?? null)} color="var(--accent)" unit="kcal"
+                    valueLabel="Eaten" ariaLabel="Calories eaten per day compared with the daily target" />
+        </div>
+
+        <div className="chart-card">
+          <h3>Protein per day</h3>
+          <BarChart points={pts("protein_g", (d) => d.targets?.protein_g ?? null)} color="var(--protein)" unit="g"
+                    valueLabel="Protein" ariaLabel="Protein per day compared with the daily target" />
+        </div>
+
+        <div className="chart-card">
+          <h3>Macro trends</h3>
+          <LineChart
+            labels={labels.map((l) => l.label)} titles={labels.map((l) => l.title)} unit="g"
+            ariaLabel="Protein, fiber, carbs and fat in grams per day"
+            series={[
+              { key: "p", label: "Protein", color: "var(--protein)", values: data.days.map((d) => (d.logged ? d.protein_g : null)) },
+              { key: "fi", label: "Fiber", color: "var(--fiber)", values: data.days.map((d) => (d.logged ? d.fiber_g : null)) },
+              { key: "c", label: "Carbs", color: "var(--carbs)", values: data.days.map((d) => (d.logged ? d.carbs_g : null)) },
+              { key: "f", label: "Fat", color: "var(--fat)", values: data.days.map((d) => (d.logged ? d.fat_g : null)) },
+            ]}
+          />
+        </div>
+
+        <div className="chart-card chart-split">
           <h3>Where your calories came from</h3>
           <StackedBar
             ariaLabel="Share of calories from protein, carbs and fat"
@@ -118,7 +119,7 @@ export default function AnalysisPage({ dataVersion }: { dataVersion: number }) {
             ]}
           />
         </div>
-        <div className="chart-card">
+        <div className="chart-card chart-meals">
           <h3>Calories by meal</h3>
           <div className="hbars">
             {(() => {
@@ -134,14 +135,14 @@ export default function AnalysisPage({ dataVersion }: { dataVersion: number }) {
           </div>
           <p className="muted small">Total kcal per meal over the {days} days.</p>
         </div>
-      </div>
 
-      <div className="chart-card">
-        <h3>Water per day</h3>
-        <BarChart
-          points={data.days.map((d, i) => ({ ...labels[i], value: d.water_ml || null, target: data.water_target_ml }))}
-          color="var(--water)" unit="ml" valueLabel="Water" ariaLabel="Water per day compared with the daily goal"
-        />
+        <div className="chart-card chart-water">
+          <h3>Water per day</h3>
+          <BarChart
+            points={data.days.map((d, i) => ({ ...labels[i], value: d.water_ml || null, target: data.water_target_ml }))}
+            color="var(--water)" unit="ml" valueLabel="Water" ariaLabel="Water per day compared with the daily goal"
+          />
+        </div>
       </div>
 
       <DataTable

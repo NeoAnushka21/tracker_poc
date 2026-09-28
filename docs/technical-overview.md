@@ -1,6 +1,6 @@
 # OmniAI technical overview
 
-> Last updated: 2026-09-28 (deployment: Render + Neon Postgres). Update this file in the same change as any code change it describes (see [docs/README.md](README.md)).
+> Last updated: 2026-09-29 (wide-screen layouts). Update this file in the same change as any code change it describes (see [docs/README.md](README.md)).
 > Architecture diagrams: [hld.md](hld.md). End-user manual: [user-guide.md](user-guide.md).
 
 ## 1. Tech stack
@@ -8,7 +8,7 @@
 | Layer | Choice |
 |---|---|
 | Frontend | React 19, TypeScript, Vite. No UI or chart library: charts are hand-rolled SVG (`charts.tsx`). |
-| Styling | One `styles.css` with CSS custom-property tokens (colours, `--radius` 16px / `--radius-sm` 12px, `--shadow-card`, `--accent-grad`, `--glass`). Light and dark via `prefers-color-scheme` and `data-theme`. |
+| Styling | One `styles.css` with CSS custom-property tokens (colours, `--radius` 16px / `--radius-sm` 12px, `--shadow-card`, `--accent-grad`, `--glass`). Light and dark via `prefers-color-scheme` and `data-theme`. **Responsive:** one layout for phones and tablets (a `max-width: 860px` block tightens spacing and grids), and from `min-width: 1024px` a "wide screens" block at the end of `styles.css` adds columns: Home (summary + streaks), Dashboard (`.dash-cols`: `.dash-summary` + `.dash-meals`), Analysis (`.analysis-charts`, 2 columns, CSS `order` pairs the cards), My foods (`.food-list`, 2 columns; `.food-row.editing` spans both). Content is capped by `--content-max` (1200px), and `--edge` gives the top bar, tabs and pages the same outer edge. Chat bubbles cap at 780px for line length. |
 | Font | Plus Jakarta Sans (variable), self-hosted via `@fontsource-variable/plus-jakarta-sans` (no Google Fonts request) |
 | Voice | Browser Web Speech API (`useSpeechToText.ts`), on-device or browser-vendor; no server audio. |
 | Backend | Python 3.12+ (developed on 3.14), FastAPI, Uvicorn |
