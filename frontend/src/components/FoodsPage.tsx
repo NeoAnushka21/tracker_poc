@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState, type FormEvent } from "react";
 import { api } from "../api";
-import type { Food } from "../types";
+import type { Food, MicroField } from "../types";
 import MacroChips from "./MacroChips";
 import { PencilIcon, TrashIcon } from "./icons";
 
@@ -20,7 +20,31 @@ function yieldText(f: Food): string {
   return parts.join(" · ");
 }
 
-function EditForm({ food, onSaved, onCancel }: { food: Food; onSaved: (f: Food) => void; onCancel: () => void }) {
+/** 0.025 → "0.03", 47.8 → "47.8", 1387.2 → "1387": enough precision for a label. */
+function microValue(v: number): string {
+  return String(v >= 100 ? Math.round(v) : Math.round(v * 100) / 100);
+}
+
+/** The food's saved micronutrients, per its reference amount, folded away by default. */
+function FoodMicros({ food, fields }: { food: Food; fields: MicroField[] }) {
+  const m = food.micronutrients ?? {};
+  const known = fields.filter((f) => m[f.key] != null);
+  if (!known.length) return null;
+  return (
+    <details className="food-micros">
+      <summary>Micronutrients <span className="muted">· {known.length} of {fields.length} known, {food.measures}</span></summary>
+      <ul>
+        {known.map((f) => (
+          <li key={f.key}>{f.label}{f.kind === "limit" ? " (limit)" : ""} <b className="num">{microValue(m[f.key])} {f.unit}</b></li>
+        ))}
+      </ul>
+    </details>
+  );
+}
+
+function EditForm({ food, fields, onSaved, onCancel }: {
+  food: Food; fields: MicroField[]; onSaved: (f: Food) => void; onCancel: () => void;
+}) {
   const isRecipe = food.kind === "recipe";
   const [v, setV] = useState({
     name: food.name,
@@ -35,6 +59,9 @@ function EditForm({ food, onSaved, onCancel }: { food: Food; onSaved: (f: Food) 
     grams_per_piece: food.grams_per_piece == null ? "" : String(food.grams_per_piece),
     grams_per_serving: food.grams_per_serving == null ? "" : String(food.grams_per_serving),
   });
+  // Blank = unknown (not zero), so a missing value never pretends the food has none.
+  const [micros, setMicros] = useState<Record<string, string>>(() =>
+    Object.fromEntries(Object.entries(food.micronutrients ?? {}).map(([k, n]) => [k, String(n)])));
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const set = (k: keyof typeof v) => (e: { target: { value: string } }) => setV({ ...v, [k]: e.target.value });
@@ -57,6 +84,8 @@ function EditForm({ food, onSaved, onCancel }: { food: Food; onSaved: (f: Food) 
         fiber_g: Number(v.fiber_g),
         grams_per_piece: optNum(v.grams_per_piece),
         grams_per_serving: optNum(v.grams_per_serving),
+        micronutrients: Object.fromEntries(
+          Object.entries(micros).filter(([, s]) => s.trim() !== "").map(([k, s]) => [k, Number(s)])),
       }));
     } catch (err) {
       setError((err as Error).message);
@@ -84,6 +113,23 @@ function EditForm({ food, onSaved, onCancel }: { food: Food; onSaved: (f: Food) 
           </>
         )}
       </div>
+      {!isRecipe && fields.length > 0 && (
+        <fieldset className="food-micros-edit">
+          <legend>
+            Additional nutrients{" "}
+            <span className="muted">(optional, per {v.ref_qty || "?"} {v.ref_unit}; leave blank if unknown)</span>
+          </legend>
+          <div className="food-edit-grid">
+            {fields.map((f) => (
+              <label key={f.key}>
+                {f.label} ({f.unit}{f.kind === "limit" ? ", limit" : ""})
+                <input type="number" step="any" min="0" placeholder="–" value={micros[f.key] ?? ""}
+                       onChange={(e) => setMicros({ ...micros, [f.key]: e.target.value })} />
+              </label>
+            ))}
+          </div>
+        </fieldset>
+      )}
       {isRecipe && <p className="muted small">A recipe's numbers come from its ingredients. To change them, tell the chat, e.g. "update my {food.name} recipe: 10 ml oil instead of 5".</p>}
       {error && <p className="error">{error}</p>}
       <div className="food-edit-actions">
@@ -94,7 +140,9 @@ function EditForm({ food, onSaved, onCancel }: { food: Food; onSaved: (f: Food) 
   );
 }
 
-function FoodRow({ food, onChanged, onDeleted }: { food: Food; onChanged: (f: Food) => void; onDeleted: (id: number) => void }) {
+function FoodRow({ food, fields, onChanged, onDeleted }: {
+  food: Food; fields: MicroField[]; onChanged: (f: Food) => void; onDeleted: (id: number) => void;
+}) {
   const [editing, setEditing] = useState(false);
   const [open, setOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -124,6 +172,7 @@ function FoodRow({ food, onChanged, onDeleted }: { food: Food; onChanged: (f: Fo
         <div className="muted small">
           {SOURCE_LABEL[food.source]}{food.kind === "recipe" && yieldText(food) ? ` · ${yieldText(food)}` : ""}
         </div>
+        <FoodMicros food={food} fields={fields} />
       </div>
       <div className="food-actions">
         {food.kind === "recipe" && (
@@ -151,7 +200,7 @@ function FoodRow({ food, onChanged, onDeleted }: { food: Food; onChanged: (f: Fo
         </ul>
       )}
       {editing && (
-        <EditForm food={food} onCancel={() => setEditing(false)} onSaved={(f) => { onChanged(f); setEditing(false); }} />
+        <EditForm food={food} fields={fields} onCancel={() => setEditing(false)} onSaved={(f) => { onChanged(f); setEditing(false); }} />
       )}
     </li>
   );
@@ -162,6 +211,11 @@ export default function FoodsPage({ dataVersion }: { dataVersion: number }) {
   const [error, setError] = useState<string | null>(null);
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState<Filter>("all");
+  const [microFields, setMicroFields] = useState<MicroField[]>([]);
+
+  useEffect(() => {
+    api.micronutrientFields().then(setMicroFields).catch(() => setMicroFields([]));
+  }, []);
 
   useEffect(() => {
     api.foods().then((f) => { setFoods(f); setError(null); }).catch((e) => setError(e.message));
@@ -212,6 +266,7 @@ export default function FoodsPage({ dataVersion }: { dataVersion: number }) {
           <FoodRow
             key={f.id}
             food={f}
+            fields={microFields}
             onChanged={(nf) => setFoods((fs) => fs?.map((x) => (x.id === nf.id ? nf : x)) ?? null)}
             onDeleted={(id) => setFoods((fs) => fs?.filter((x) => x.id !== id) ?? null)}
           />

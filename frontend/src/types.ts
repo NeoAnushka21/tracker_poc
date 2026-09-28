@@ -176,8 +176,13 @@ export type Food = Nutrients & {
   cooked_weight_g: number | null;
   measures: string;
   last_used_at: string;
+  /** Per the reference amount (`measures`), e.g. {"iron_mg": 0.4}; missing keys are unknown. */
+  micronutrients: Record<string, number> | null;
   ingredients?: RecipeIngredient[];
 };
+
+/** A micronutrient a food can carry (GET /api/foods/micronutrients). */
+export type MicroField = { key: string; label: string; unit: string; kind: "target" | "limit" };
 
 export type RangeDay = Nutrients & {
   date: string;

@@ -88,7 +88,7 @@ function steps(name: string | null): Step[] {
     {
       tab: "foods",
       title: "6. My foods remembers for you",
-      body: <p>Every food you confirm is saved here, so the next time you log it the numbers are exactly the same. Recipes you save show up here too. You can search, correct or delete any of them.</p>,
+      body: <p>Every food you confirm is saved here with its macros and micronutrients, so the next time you log it (e.g. "40g pineapple") the numbers are exactly the same, straight from your library. Recipes you save show up here too. You can search, correct (micronutrients too) or delete any of them.</p>,
     },
     {
       tab: "chat",

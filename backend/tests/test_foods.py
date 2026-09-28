@@ -258,3 +258,62 @@ def test_other_users_foods_are_invisible(client, user, fake_llm):
     make_user(client, "other@example.com")
     assert client.get("/api/foods").json() == []
     assert client.get(f"/api/foods/{food_id}").status_code == 404
+
+
+# --- micronutrients in My foods ------------------------------------------------------
+
+PINEAPPLE = {
+    "ingredient_name": "pineapple", "brand_name": None, "quantity": 200, "unit": "g",
+    "calories": 100, "protein_g": 1, "carbs_g": 26, "fat_g": 0.2, "fiber_g": 2.8,
+    "food_id": None, "unit_weight_g": None,
+    "micronutrients": {"vitamin_c_mg": 95.6, "potassium_mg": 218, "magnesium_mg": 24},
+}
+
+
+def test_first_log_learns_micros_and_repeat_uses_the_library_without_the_model(client, user, fake_llm):
+    """The owner's scenario: pineapple is estimated by the model once, saved with its micros
+    per 100 g, and "40g pineapple" days later is logged from My foods with no model call."""
+    log_and_confirm(client, fake_llm, [PINEAPPLE])
+    saved = foods_by_name(client)["pineapple"]
+    assert (saved["ref_qty"], saved["ref_unit"], saved["calories"]) == (100, "g", 50)
+    assert saved["micronutrients"] == {"vitamin_c_mg": 47.8, "potassium_mg": 109.0, "magnesium_mg": 12.0}
+
+    provider = fake_llm()                      # an empty script: any model call would fail
+    reply = client.post("/api/chat", json={"message": "had 40g pineapple"}).json()[-1]
+    assert provider.calls == []
+    item = reply["actions"][0]["payload"]["items"][0]
+    assert (item["quantity"], item["unit"], item["calories"], item["source"]) == (40, "g", 20, "library")
+    assert item["micronutrients"] == {"vitamin_c_mg": 19.12, "potassium_mg": 43.6, "magnesium_mg": 4.8}
+
+
+def test_micros_can_be_edited_cleared_or_left_alone(client, user, fake_llm):
+    log_and_confirm(client, fake_llm, [PINEAPPLE])
+    food = foods_by_name(client)["pineapple"]
+    base = {k: food[k] for k in ("name", "brand_name", "ref_qty", "ref_unit", "calories", "protein_g",
+                                 "carbs_g", "fat_g", "fiber_g", "grams_per_piece", "grams_per_serving")}
+
+    r = client.put(f"/api/foods/{food['id']}", json={**base, "micronutrients": {"vitamin_c_mg": 50, "iron_mg": 0.3, "zinc_mg": None}})
+    assert r.status_code == 200
+    assert r.json()["micronutrients"] == {"iron_mg": 0.3, "vitamin_c_mg": 50.0}     # blank = unknown, dropped
+    assert r.json()["source"] == "user"
+
+    r = client.put(f"/api/foods/{food['id']}", json=base)                            # field left out: kept
+    assert r.json()["micronutrients"] == {"iron_mg": 0.3, "vitamin_c_mg": 50.0}
+
+    r = client.put(f"/api/foods/{food['id']}", json={**base, "micronutrients": {}})  # all cleared
+    assert r.json()["micronutrients"] is None
+
+
+@pytest.mark.parametrize("bad", [{"vitamin_x_mg": 1}, {"iron_mg": -1}])
+def test_micros_must_be_known_and_non_negative(client, user, fake_llm, bad):
+    log_and_confirm(client, fake_llm, [PINEAPPLE])
+    food = foods_by_name(client)["pineapple"]
+    r = client.put(f"/api/foods/{food['id']}", json={**food, "micronutrients": bad})
+    assert r.status_code == 422
+
+
+def test_micronutrient_fields_for_the_edit_form(client, user):
+    fields = client.get("/api/foods/micronutrients").json()
+    assert fields[0] == {"key": "iron_mg", "label": "Iron", "unit": "mg", "kind": "target"}
+    assert {f["key"] for f in fields} == {"iron_mg", "calcium_mg", "magnesium_mg", "potassium_mg", "zinc_mg",
+                                         "vitamin_c_mg", "vitamin_b12_mcg", "vitamin_d_mcg", "sodium_mg"}

@@ -4,7 +4,7 @@ OmniAI is a chat-based calorie and macro tracker. In the Chat you talk to **MacB
 
 This guide walks a new user through the app from sign-up to daily use. The same walkthrough appears inside the app as a short tour the first time you log in. You can reopen it any time with the **? Guide** button at the top.
 
-> Last updated: 2026-09-29 (water card after water logs; separate macro and water tiles). Keep this file in step with the UI (see [docs/README.md](README.md)).
+> Last updated: 2026-09-29 (micronutrients in My foods; how repeat foods skip the AI). Keep this file in step with the UI (see [docs/README.md](README.md)).
 
 ---
 
@@ -196,11 +196,17 @@ Your water target is based on your weight and activity level. The bar shows litr
 
 ## 9. Recipes and My foods
 
-**My foods** is your personal food library. Every food in a meal you confirm is saved there automatically, so the next time you log it MacBro reuses **exactly the same numbers** and scales them to the amount.
+**My foods** is your personal food library. Every food in a meal you confirm is saved there automatically, with its calories, macros **and micronutrients**, so the next time you log it MacBro reuses **exactly the same numbers** and scales them to the amount.
+
+**How a repeat food is logged:**
+
+1. The first time you log a new food (say, pineapple), MacBro's AI estimates it. When you confirm, it's saved to My foods per 100 g (or per piece or serving), micronutrients included.
+2. Later, a simple message like `had 40g pineapple` or `2 eggs for breakfast` is answered **straight from My foods, without the AI**. The saved numbers, micronutrients included, are scaled to your amount. The card says "All from your saved foods".
+3. This shortcut needs **an amount for every item** (`40g`, `2`, `1 serving`) and **every item already saved**. A count like `1 apple` also needs the food's **g per piece** (add it in **Edit** if it's missing). Otherwise the message goes to the AI, which still reuses your saved numbers for the foods it recognises.
 
 - **Search** by name or brand, and filter by **All / Foods / Recipes**.
-- Each food is a card showing its **calories in bold** and coloured chips for **P**rotein, **C**arbs, **F**at and **Fiber**.
-- **Edit** (pencil icon) a food to fix its values (per 100 g/ml, or per piece/serving with the gram weight). Foods you edit by hand are never overwritten by later estimates.
+- Each food is a card showing its **calories in bold** and coloured chips for **P**rotein, **C**arbs, **F**at and **Fiber**. Tap **Micronutrients** on a card to see the saved values (iron, calcium, magnesium, potassium, zinc, vitamins C, B12 and D, and sodium) for the same amount.
+- **Edit** (pencil icon) a food to fix its values (per 100 g/ml, or per piece/serving with the gram weight). **Additional nutrients** lets you add or correct its micronutrients for the same amount; leave a box blank if you don't know it (blank means unknown, not zero). Foods you edit by hand are never overwritten by later estimates.
 - **Delete** (trash icon) a food you no longer want. With a mouse, the icons appear when you hover over a card; on touch screens they're always visible. Past logs keep their numbers.
 
 **Recipes** are for dishes you make at home:

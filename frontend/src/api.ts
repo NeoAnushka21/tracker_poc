@@ -1,6 +1,6 @@
 import type {
   Action, AdminUserDetail, AdminUserRow, AuditRow, ChatMessage, DailySummary, Food, RangeSummary, User,
-  Streaks, ChatDay, LlmUsageReport,
+  Streaks, ChatDay, LlmUsageReport, MicroField,
 } from "./types";
 import { recoverServer, serverAwake, SLOW_REQUEST_MS } from "./wake";
 
@@ -91,6 +91,8 @@ export type FoodInput = {
   fiber_g: number;
   grams_per_piece: number | null;
   grams_per_serving: number | null;
+  /** Per the same reference amount; missing keys are "unknown". */
+  micronutrients: Record<string, number>;
 };
 
 export const api = {
@@ -134,6 +136,7 @@ export const api = {
   reject: (id: number) => request<ActionResult>("POST", `/api/actions/${id}/reject`),
 
   foods: () => request<Food[]>("GET", "/api/foods"),
+  micronutrientFields: () => request<MicroField[]>("GET", "/api/foods/micronutrients"),
   updateFood: (id: number, data: FoodInput) => request<Food>("PUT", `/api/foods/${id}`, data),
   deleteFood: (id: number) => request<{ ok: boolean }>("DELETE", `/api/foods/${id}`),
 

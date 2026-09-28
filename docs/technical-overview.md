@@ -1,6 +1,6 @@
 # OmniAI technical overview
 
-> Last updated: 2026-09-29 (water progress card; macro and water tiles). Update this file in the same change as any code change it describes (see [docs/README.md](README.md)).
+> Last updated: 2026-09-29 (editable micronutrients in My foods). Update this file in the same change as any code change it describes (see [docs/README.md](README.md)).
 > Architecture diagrams: [hld.md](hld.md). End-user manual: [user-guide.md](user-guide.md).
 
 ## 1. Tech stack
@@ -93,7 +93,7 @@ All endpoints are JSON under `/api`, authenticated by the session cookie. Every 
 | `actions` | `POST {id}/confirm` (returns the action + progress card) · `POST {id}/reject` |
 | `dashboard` | `GET daily?date=` · `GET range?days=&end=` · `GET streaks` (logging and target streaks, best, last 7 days) |
 | `entries` | `POST items/{id}/transfer` (move/copy) · `PATCH items/{id}` (quantity) · `DELETE items/{id}` |
-| `foods` | `GET ""` · `GET {id}` · `PUT {id}` · `DELETE {id}` |
+| `foods` | `GET ""` · `GET micronutrients` (keys, labels, units for the edit form, from `config.MICRONUTRIENTS`) · `GET {id}` · `PUT {id}` (optional `micronutrients` per the reference amount: known keys, non-negative; blank/missing = unknown; omitting the field keeps the stored values; recipes ignore it) · `DELETE {id}` |
 | `water` | `POST ""` · `DELETE {id}` |
 | `admin` | `GET users` (admins excluded) · `GET users/{id}` · `GET users/{id}/chat` · `GET audit` · `GET llm-usage?hours=` (model calls, tokens, fast-path share, pool state; aggregate only, not audited). Every read of user data is audited. |
 
@@ -175,7 +175,7 @@ When `frontend/dist` exists (`FRONTEND_DIST`), `main.mount_frontend` also serves
 | `HomePage` | Default tab: time-of-day greeting, today's summary tile (macros) and a separate water tile (reuses `CalorieRing`, `Bar`, `Water` from `Dashboard`), and the two streak cards |
 | `Dashboard` | Separate tiles (cards): day navigation, then macros (calorie ring, macro bars, calorie split), micronutrients, water, and meals; water, micronutrients, meal sections; each item has a pencil that opens an edit panel (Move/Copy toggle + meal dropdown, quantity, and icon buttons for edit in chat, delete, close). Shared icons live in `components/icons.tsx` |
 | `AnalysisPage` + `charts.tsx` | 7/14/30-day range: stat tiles, line, bar and stacked charts with hover/keyboard tooltips and data tables |
-| `FoodsPage` | Library search, filter, edit and delete |
+| `FoodsPage` | Library search, filter, edit and delete. Cards fold out the saved micronutrients (`FoodMicros`); the edit form has an **Additional nutrients** section (blank = unknown). |
 | `SettingsDialog` | Account (and appearance), Targets (`TargetsEditor`), Body profile (`BodyProfile`), Password, Delete account |
 | `AdminPage` | User table, per-user detail, audit log |
 | `MacroChips` | Bold kcal plus colour-coded P / C / F / Fiber chips (chat cards, My foods) |
@@ -241,7 +241,7 @@ Domain constants (meal windows, goal multipliers, activity factors, water, fiber
 
 ```bash
 cd backend
-.venv\Scripts\python -m pytest -q      # 195 tests (1 needs Postgres), fake LLM, no network
+.venv\Scripts\python -m pytest -q      # 200 tests (1 needs Postgres), fake LLM, no network
 cd ../frontend
 npm run build                          # type-check + production build
 ```
@@ -257,7 +257,7 @@ npm run build                          # type-check + production build
 
   Never point `TEST_DATABASE_URL` at real data: tables are dropped per test.
 - `tests/conftest.py` gives each test a fresh database and a scripted `FakeProvider`. It also pins `ADMIN_EMAILS` and blanks `ADMIN_INITIAL_PASSWORD` so the local `.env` can't leak into tests.
-- Coverage by file: `test_flow` (confirm loop, auth, guide flag), `test_foods` (library, recipes), `test_micros`, `test_water_meals`, `test_admin`, `test_analysis`, `test_entries` (move/copy/quantity/delete, progress cards: macros vs water, logged day), `test_body`, `test_openai_provider`, `test_nutrition`, `test_streaks`, `test_chat_days`, `test_deploy` (URL handling, frontend serving, health CORS for the launcher, SQLite → Postgres copy), `test_routing` (router, fast paths, pool failover and cooldowns, licence gate, escalation, usage report).
+- Coverage by file: `test_flow` (confirm loop, auth, guide flag), `test_foods` (library, recipes, micronutrients learned on first log, repeat logs from the library without the model, editing micronutrients), `test_micros`, `test_water_meals`, `test_admin`, `test_analysis`, `test_entries` (move/copy/quantity/delete, progress cards: macros vs water, logged day), `test_body`, `test_openai_provider`, `test_nutrition`, `test_streaks`, `test_chat_days`, `test_deploy` (URL handling, frontend serving, health CORS for the launcher, SQLite → Postgres copy), `test_routing` (router, fast paths, pool failover and cooldowns, licence gate, escalation, usage report).
 - **Policy:** development and tests use the fake model. Don't use the real LLM API for routine testing, because the free-tier quota is shared with real users.
 
 ## 11. Known limitations and next steps

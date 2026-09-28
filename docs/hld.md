@@ -1,6 +1,6 @@
 # OmniAI high-level design (HLD)
 
-> Last updated: 2026-09-29 (water progress card). Update the diagrams whenever a component, data flow, table or external service changes (see [docs/README.md](README.md)).
+> Last updated: 2026-09-29 (food library learns micronutrients). Update the diagrams whenever a component, data flow, table or external service changes (see [docs/README.md](README.md)).
 > Diagrams are Mermaid. They render on GitHub and in VS Code with a Mermaid preview extension.
 
 ## 1. Purpose and principles
@@ -102,7 +102,7 @@ sequenceDiagram
     API-->>UI: reply + card "Not saved yet"
     User->>UI: Looks good
     UI->>API: POST /api/actions/{id}/confirm
-    API->>DB: confirm_action: write log_entries + items,<br/>teach user_foods, mark action confirmed
+    API->>DB: confirm_action: write log_entries + items,<br/>teach user_foods (macros + micronutrients), mark action confirmed
     API-->>UI: action + progress card (macros after food, water after water)
 ```
 

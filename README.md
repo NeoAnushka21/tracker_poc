@@ -1,6 +1,6 @@
 # OmniAI
 
-OmniAI is a chat-based calorie and macro tracker (working name). Its chat assistant is **MacBro** (macro + bro). You describe what you ate in plain language. Claude estimates the nutrition and proposes a log entry, and **nothing is saved until you click Confirm**.
+OmniAI is a chat-based calorie and macro tracker (working name). Its chat assistant is **MacBro** (macro + bro). You describe what you ate in plain language. LLM estimates the nutrition and proposes a log entry, and **nothing is saved until you click Confirm**.
 
 Spec: [macro_tracker_build_spec (1).md](macro_tracker_build_spec%20(1).md).
 
