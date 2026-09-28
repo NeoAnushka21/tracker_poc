@@ -6,7 +6,19 @@ import Onboarding from "./components/Onboarding";
 import Chat from "./components/Chat";
 import Dashboard from "./components/Dashboard";
 import SettingsDialog from "./components/SettingsDialog";
+import SummaryStrip from "./components/SummaryStrip";
 import { AssistantAvatar, UserAvatar } from "./components/Avatar";
+
+const TABS = [
+  { id: "chat", label: "Chat" },
+  { id: "dashboard", label: "Dashboard" },
+] as const;
+type TabId = (typeof TABS)[number]["id"];
+
+function tabFromHash(): TabId {
+  const h = window.location.hash.replace("#", "");
+  return (TABS.find((t) => t.id === h)?.id ?? "chat") as TabId;
+}
 
 function greeting(): string {
   const h = new Date().getHours();
@@ -20,6 +32,18 @@ export default function App() {
   // Bumped whenever confirmed data changes, so the dashboard refetches.
   const [dataVersion, setDataVersion] = useState(0);
   const [showSettings, setShowSettings] = useState(false);
+  const [tab, setTab] = useState<TabId>(tabFromHash);
+
+  useEffect(() => {
+    const onHash = () => setTab(tabFromHash());
+    window.addEventListener("hashchange", onHash);
+    return () => window.removeEventListener("hashchange", onHash);
+  }, []);
+
+  function openTab(id: TabId) {
+    window.location.hash = id;   // remembered across refreshes; hashchange updates state
+    setTab(id);
+  }
 
   useEffect(() => {
     api.me()
@@ -53,8 +77,27 @@ export default function App() {
           </span>
         </div>
       </header>
-      <main className="layout">
+      <nav className="tabs" role="tablist" aria-label="Sections">
+        {TABS.map((t) => (
+          <button
+            key={t.id}
+            role="tab"
+            id={`tab-${t.id}`}
+            aria-selected={tab === t.id}
+            aria-controls={`panel-${t.id}`}
+            className={tab === t.id ? "on" : ""}
+            onClick={() => openTab(t.id)}
+          >
+            {t.label}
+          </button>
+        ))}
+      </nav>
+      {/* Panels stay mounted so the chat keeps its scroll position and draft text. */}
+      <main className="page page-chat" id="panel-chat" role="tabpanel" aria-labelledby="tab-chat" hidden={tab !== "chat"}>
+        <SummaryStrip dataVersion={dataVersion} onOpen={() => openTab("dashboard")} />
         <Chat user={user} onDataChanged={() => setDataVersion((v) => v + 1)} />
+      </main>
+      <main className="page" id="panel-dashboard" role="tabpanel" aria-labelledby="tab-dashboard" hidden={tab !== "dashboard"}>
         <Dashboard dataVersion={dataVersion} />
       </main>
       {showSettings && (
