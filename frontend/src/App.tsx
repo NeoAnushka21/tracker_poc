@@ -7,7 +7,6 @@ import Chat from "./components/Chat";
 import Dashboard from "./components/Dashboard";
 import SettingsDialog from "./components/SettingsDialog";
 import SummaryStrip from "./components/SummaryStrip";
-import ThemeToggle from "./components/ThemeToggle";
 import FoodsPage from "./components/FoodsPage";
 import AnalysisPage from "./components/AnalysisPage";
 import AdminPage from "./components/AdminPage";
@@ -92,7 +91,6 @@ export default function App() {
         <header className="topbar">
           <span className="brand"><MacBroAvatar size={34} />MacBro<span className="admin-badge">Admin</span></span>
           <div className="topbar-actions">
-            <ThemeToggle />
             {settingsButton}
             <button className="ghost" onClick={logout}>Log out</button>
             <span className="topbar-user"><UserAvatar name={user.preferred_name} email={user.email} size={34} /></span>
@@ -115,7 +113,6 @@ export default function App() {
       <header className="topbar">
         <span className="brand"><MacBroAvatar size={34} />MacBro</span>
         <div className="topbar-actions">
-          <ThemeToggle />
           {settingsButton}
           <button className="ghost" onClick={logout}>Log out</button>
           <span className="topbar-user">
