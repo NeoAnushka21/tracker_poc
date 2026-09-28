@@ -1,6 +1,6 @@
-# MacBro technical overview
+# OmniAI technical overview
 
-> Last updated: 2026-09-28 (Home tab and streaks). Update this file in the same change as any code change it describes (see [docs/README.md](README.md)).
+> Last updated: 2026-09-28 (app renamed OmniAI; MacBro is the chat assistant). Update this file in the same change as any code change it describes (see [docs/README.md](README.md)).
 > Architecture diagrams: [hld.md](hld.md). End-user manual: [user-guide.md](user-guide.md).
 
 ## 1. Tech stack
@@ -161,7 +161,7 @@ FastAPI's interactive docs are at `http://localhost:8000/docs` while the backend
 | `SettingsDialog` | Account (and appearance), Targets (`TargetsEditor`), Body profile (`BodyProfile`), Password, Delete account |
 | `AdminPage` | User table, per-user detail, audit log |
 | `MacroChips` | Bold kcal plus colour-coded P / C / F / Fiber chips (chat cards, My foods) |
-| `Avatar`, `ThemeToggle` | MacBro and user avatars; theme switch (Settings only) |
+| `Avatar`, `ThemeToggle` | `AppLogo` (placeholder "OAI" tile, used everywhere outside the chat), `MacBroAvatar` (chat only), user avatar; theme switch (Settings only) |
 
 **Colour tokens** (checked with the dataviz palette validator for colour-vision deficiency separation and contrast):
 
@@ -177,7 +177,19 @@ Light passes every check (worst colour-blind separation ΔE 9.4). Dark is in the
 
 **Visual language:** slate off-white background (`#f8fafc`) with white cards and soft shadows; pill tabs with a sliding gradient underline (`App.tsx` measures the active tab); a pill-shaped chat input with gradient Send and mic buttons; a mint-tinted proposal card with row dividers only; a large glowing calorie ring; 14px macro bars; charts with rounded bar tops, dashed grid lines, no axis lines, and an arrow tooltip; Analysis stat cards with faint background icons; My foods as cards with hover-revealed icon buttons.
 
-## 8. Configuration
+## 8. Naming
+
+**Local address:** http://omniai.localhost:5173. Browsers resolve any `*.localhost` name to this machine, so no hosts-file edit is needed. `omniai.com` is deliberately *not* mapped locally: it's a real public domain, and overriding it would hide the real site and confuse cookies. It becomes the address after deployment, if it can be registered. (`http://localhost:5173` still works, but it keeps a separate login cookie.)
+
+The app is **OmniAI**; the chat assistant is **MacBro**. MacBro's name and avatar appear only inside the Chat tab (and in its replies). Everywhere else (header, login, consent, Home, guide tour, favicon, page title) uses the app name and the placeholder **OAI** logo until a real logo is designed. Names live in:
+
+- `frontend/src/brand.ts`: `APP_NAME`, `APP_MARK` (logo text), `BOT_NAME`, `APP_DEV_HOST` (local address, `omniai.localhost`), `APP_DOMAIN` (planned public domain, `omniai.com`, not registered yet)
+- `frontend/index.html` `<title>` is filled from `APP_NAME` by a small Vite plugin; `vite.config.ts` allows `APP_DEV_HOST`
+- `frontend/public/favicon.svg` (the "OAI" mark)
+- `backend/app/config.py`: `APP_NAME`, `BOT_NAME` (consent text uses `APP_NAME`)
+- `backend/app/llm/prompt.py`: persona line ("MacBro … inside OmniAI")
+
+## 9. Configuration
 
 The environment is set in `backend/.env` (template: `backend/.env.example`):
 
@@ -194,7 +206,7 @@ The environment is set in `backend/.env` (template: `backend/.env.example`):
 
 Domain constants (meal windows, goal multipliers, activity factors, water, fiber, micronutrient reference values, adherence thresholds, consent text and version) are in `backend/app/config.py`.
 
-## 9. Testing
+## 10. Testing
 
 ```bash
 cd backend
@@ -208,7 +220,7 @@ npm run build                          # type-check + production build
 - Coverage by file: `test_flow` (confirm loop, auth, guide flag), `test_foods` (library, recipes), `test_micros`, `test_water_meals`, `test_admin`, `test_analysis`, `test_entries` (move/copy/quantity/delete), `test_body`, `test_openai_provider`, `test_nutrition`, `test_streaks`.
 - **Policy:** development and tests use the fake model. Don't use the real LLM API for routine testing, because the free-tier quota is shared with real users.
 
-## 10. Known limitations and next steps
+## 11. Known limitations and next steps
 
 - SQLite and a single process. The Stop-button registry is in memory, so multiple instances would need Redis or the database.
 - No Alembic yet; `add_missing_columns` only adds nullable columns.

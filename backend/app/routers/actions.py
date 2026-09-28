@@ -1,4 +1,4 @@
-"""Apply or reject MacBro's proposals. The LLM can only propose; these routes run on the
+"""Apply or reject the chat assistant's proposals. The LLM can only propose; these routes run on the
 user's Confirm/Cancel click. (Dashboard edits in routers/entries.py are direct user clicks.)"""
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session

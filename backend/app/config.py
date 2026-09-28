@@ -25,11 +25,15 @@ ADMIN_EMAILS = {
     e.strip().lower() for e in os.getenv("ADMIN_EMAILS", DEFAULT_ADMIN_EMAIL).split(",") if e.strip()
 }
 
+# Product names (not final). The app is OmniAI; MacBro is the chat assistant, named only in the chat.
+APP_NAME = "OmniAI"
+BOT_NAME = "MacBro"
+
 # Shown at sign-up; bump the version when the wording changes so users are asked again.
 CONSENT_VERSION = "2026-09-28"
 CONSENT_TEXT = (
     "By creating an account and logging in, you agree that the information you share with "
-    "MacBro (your email, profile details, food and water logs, and chat messages) is stored "
+    f"{APP_NAME} (your email, profile details, food and water logs, and chat messages) is stored "
     "and used to give you recommendations and to improve and develop the application. "
     "The app's administrators can view this data for those purposes."
 )

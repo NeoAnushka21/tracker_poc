@@ -1,7 +1,8 @@
 import { useEffect, useState, type FormEvent } from "react";
 import { api } from "../api";
 import type { User } from "../types";
-import { MacBroAvatar } from "./Avatar";
+import { AppLogo } from "./Avatar";
+import { APP_NAME } from "../brand";
 import ThemeToggle from "./ThemeToggle";
 
 export default function AuthScreen({ onAuthed }: { onAuthed: (u: User) => void }) {
@@ -42,12 +43,12 @@ export default function AuthScreen({ onAuthed }: { onAuthed: (u: User) => void }
       <div className="auth-theme"><ThemeToggle /></div>
       <form className={`card auth-card ${mode === "admin" ? "admin-auth" : ""}`} onSubmit={submit}>
         <div className="auth-brand">
-          <MacBroAvatar size={72} />
+          <AppLogo size={72} />
           <div>
-            <h1>MacBro{mode === "admin" && <span className="admin-badge">Admin</span>}</h1>
+            <h1>{APP_NAME}{mode === "admin" && <span className="admin-badge">Admin</span>}</h1>
             <p className="muted">
               {mode === "admin" ? "Admin console login. For the app's administrators only."
-                : "Your macro bro. Log food by just telling me what you ate."}
+                : "Track calories and macros just by chatting about what you ate."}
             </p>
           </div>
         </div>
@@ -82,7 +83,7 @@ export default function AuthScreen({ onAuthed }: { onAuthed: (u: User) => void }
           </label>
         ) : mode === "admin" ? null : (
           <p className="consent-note muted small">
-            By logging in, you agree that the data you share with MacBro is used for your recommendations and to
+            By logging in, you agree that the data you share with {APP_NAME} is used for your recommendations and to
             improve the application.
           </p>
         )}

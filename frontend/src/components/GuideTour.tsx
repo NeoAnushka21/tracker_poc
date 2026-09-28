@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, type KeyboardEvent, type ReactNode } from "react";
-import { MacBroAvatar } from "./Avatar";
+import { AppLogo } from "./Avatar";
+import { APP_NAME, BOT_NAME } from "../brand";
 
 // Keep these steps in sync with docs/user-guide.md whenever the UI changes.
 export type GuideTab = "home" | "chat" | "dashboard" | "analysis" | "foods";
@@ -10,8 +11,8 @@ function steps(name: string | null): Step[] {
   return [
     {
       tab: "home",
-      title: `Hey${name ? ` ${name}` : ""}, I'm MacBro!`,
-      body: <p>Your macro bro. This quick tour shows you around in about a minute. You can reopen it any time from the <b>Guide</b> button at the top.</p>,
+      title: `Welcome to ${APP_NAME}${name ? `, ${name}` : ""}!`,
+      body: <p>This quick tour shows you around in about a minute. You can reopen it any time from the <b>Guide</b> button at the top.</p>,
     },
     {
       tab: "home",
@@ -26,16 +27,16 @@ function steps(name: string | null): Step[] {
     },
     {
       tab: "chat",
-      title: "1. Tell me what you ate",
+      title: `1. Tell ${BOT_NAME} what you ate`,
       body: (
         <>
-          <p>Type in the <b>Chat</b> tab, or tap the <b>mic</b> and speak. Plain language is fine:</p>
+          <p><b>{BOT_NAME}</b> is your nutrition assistant in the <b>Chat</b> tab. Type, or tap the <b>mic</b> and speak. Plain language is fine:</p>
           <ul>
             <li>"2 eggs and a slice of toast for breakfast"</li>
             <li>"150g grilled chicken with a cup of rice"</li>
             <li>"two glasses of water"</li>
           </ul>
-          <p className="muted small">Quantities help. If something is unclear, I'll ask before guessing.</p>
+          <p className="muted small">Quantities help. If something is unclear, {BOT_NAME} asks before guessing.</p>
         </>
       ),
     },
@@ -44,7 +45,7 @@ function steps(name: string | null): Step[] {
       title: "2. Nothing is saved until you confirm",
       body: (
         <>
-          <p>I reply with a card showing each item and its calories, protein, carbs and fat. It says <b>Not saved yet</b> until you choose:</p>
+          <p>{BOT_NAME} replies with a card showing each item and its calories, protein, carbs and fat. It says <b>Not saved yet</b> until you choose:</p>
           <ul>
             <li><b>Looks good</b> saves it.</li>
             <li><b>Needs changes</b> lets you type a correction, e.g. "the rice was 200g".</li>
@@ -95,7 +96,7 @@ function steps(name: string | null): Step[] {
       body: (
         <>
           <p>Open <b>⚙ Settings</b> to change your calorie and macro <b>targets</b>, update weight and height or add body measurements under <b>Body profile</b>, switch <b>light or dark</b> theme, change your password, or delete your account.</p>
-          <p>That's it. Tell me what you had today!</p>
+          <p>That's it. Head to <b>Chat</b> and tell {BOT_NAME} what you had today!</p>
         </>
       ),
     },
@@ -125,7 +126,7 @@ export default function GuideTour({ name, onTab, onClose }: Props) {
     <div className="guide card" role="dialog" aria-modal="false" aria-labelledby="guide-title"
          ref={panel} tabIndex={-1} onKeyDown={onKey}>
       <div className="guide-head">
-        <MacBroAvatar size={40} />
+        <AppLogo size={40} />
         <h2 id="guide-title">{step.title}</h2>
         <button className="ghost" onClick={onClose} aria-label="Close the guide">✕</button>
       </div>

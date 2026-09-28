@@ -1,4 +1,4 @@
-# MacBro: multi-model LLM strategy on free, open-weight models
+# OmniAI: multi-model LLM strategy on free, open-weight models
 
 Status: proposal · Date: 2026-09-28
 

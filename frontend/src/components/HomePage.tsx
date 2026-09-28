@@ -3,7 +3,7 @@ import { api } from "../api";
 import type { DailySummary, Streak, Streaks, User } from "../types";
 import { greeting } from "../format";
 import { Bar, CalorieRing, Water } from "./Dashboard";
-import { MacBroAvatar } from "./Avatar";
+import { AppLogo } from "./Avatar";
 
 type Props = {
   user: User;
@@ -21,7 +21,7 @@ function todayLabel(): string {
 function subline(d: DailySummary | null): string {
   if (!d?.targets) return "Here's your day at a glance.";
   const eaten = Math.round(d.consumed.calories);
-  if (eaten === 0) return "Nothing logged yet today. Tell MacBro about your first meal.";
+  if (eaten === 0) return "Nothing logged yet today. Log your first meal in Chat.";
   const left = Math.round(d.targets.calories - d.consumed.calories);
   return left >= 0
     ? `${eaten.toLocaleString()} kcal in, ${left.toLocaleString()} kcal to go. Keep it up!`
@@ -105,7 +105,7 @@ export default function HomePage({ user, dataVersion, onDataChanged, onOpenChat,
   return (
     <div className="home">
       <section className="home-hero card">
-        <MacBroAvatar size={64} />
+        <AppLogo size={64} />
         <div className="home-hero-text">
           <p className="muted small">{todayLabel()}</p>
           <h1>{greeting()}{user.preferred_name ? `, ${user.preferred_name}` : ""}!</h1>

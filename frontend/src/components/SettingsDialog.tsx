@@ -130,7 +130,7 @@ function DeleteSection({ user, onDeleted }: { user: User; onDeleted: () => void 
       <h3 className="first">Delete account</h3>
       <p>
         This permanently deletes your account and everything in it: food logs, saved foods and recipes, water logs,
-        weight history, targets and your chats with MacBro. <b>This can't be undone.</b>
+        weight history, targets and your chat history. <b>This can't be undone.</b>
       </p>
       <label>Type <b>DELETE</b> to confirm<input value={typed} onChange={(e) => setTyped(e.target.value)} autoComplete="off" /></label>
       <label>Your password<input type="password" value={password} onChange={(e) => setPassword(e.target.value)} required autoComplete="current-password" /></label>

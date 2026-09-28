@@ -231,7 +231,7 @@ function ItemActions({ item, meal, isToday, onChanged, onAskMacBro, onClose }: I
       <div className="ia-row">
         <button type="button" className="ghost" disabled={busy}
                 onClick={() => { onClose(); onAskMacBro(`Edit the ${item.ingredient_name} in my ${MEAL_LABEL[meal].toLowerCase()}: `); }}>
-          ✎ Ask MacBro to edit
+          ✎ Edit in chat
         </button>
         <button type="button" className="ghost danger" disabled={busy}
                 onClick={() => window.confirm(`Delete ${name} from ${MEAL_LABEL[meal]}?`) && run(() => api.deleteItem(item.id!))}>

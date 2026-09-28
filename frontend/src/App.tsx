@@ -12,7 +12,8 @@ import AnalysisPage from "./components/AnalysisPage";
 import AdminPage from "./components/AdminPage";
 import ConsentGate from "./components/ConsentGate";
 import GuideTour from "./components/GuideTour";
-import { MacBroAvatar, UserAvatar } from "./components/Avatar";
+import { AppLogo, UserAvatar } from "./components/Avatar";
+import { APP_NAME } from "./brand";
 
 const TABS = [
   { id: "home", label: "Home" },
@@ -111,7 +112,7 @@ export default function App() {
     return (
       <div className="app">
         <header className="topbar">
-          <span className="brand"><MacBroAvatar size={34} />MacBro<span className="admin-badge">Admin</span></span>
+          <span className="brand"><AppLogo size={34} />{APP_NAME}<span className="admin-badge">Admin</span></span>
           <div className="topbar-actions">
             {settingsButton}
             <button className="ghost" onClick={logout}>Log out</button>
@@ -133,9 +134,9 @@ export default function App() {
   return (
     <div className="app">
       <header className="topbar">
-        <span className="brand"><MacBroAvatar size={34} />MacBro</span>
+        <span className="brand"><AppLogo size={34} />{APP_NAME}</span>
         <div className="topbar-actions">
-          <button className="ghost guide-btn" onClick={() => setGuideOpen(true)} aria-label="Guide" title="How to use MacBro">
+          <button className="ghost guide-btn" onClick={() => setGuideOpen(true)} aria-label="Guide" title={`How to use ${APP_NAME}`}>
             <span aria-hidden="true">?</span><span className="settings-label">Guide</span>
           </button>
           {settingsButton}

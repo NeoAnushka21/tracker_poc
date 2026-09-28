@@ -1,10 +1,10 @@
-# MacBro user guide
+# OmniAI user guide
 
-MacBro (macro + bro) is a chat-based calorie and macro tracker. You tell it what you ate in plain words, it works out the calories, protein, carbs, fat, fiber and micronutrients, and **nothing is saved until you confirm it**.
+OmniAI is a chat-based calorie and macro tracker. In the Chat you talk to **MacBro** (macro + bro), its nutrition assistant: you tell it what you ate in plain words, it works out the calories, protein, carbs, fat, fiber and micronutrients, and **nothing is saved until you confirm it**.
 
 This guide walks a new user through the app from sign-up to daily use. The same walkthrough appears inside the app as a short tour the first time you log in. You can reopen it any time with the **? Guide** button at the top.
 
-> Last updated: 2026-09-28 (Home tab and streaks). Keep this file in step with the UI (see [docs/README.md](README.md)).
+> Last updated: 2026-09-28 (app renamed OmniAI; MacBro is the chat assistant). Keep this file in step with the UI (see [docs/README.md](README.md)).
 
 ---
 
@@ -43,11 +43,11 @@ If the consent wording changes later, you'll see a **Before we continue** screen
 
 ## 2. Set up your profile
 
-MacBro needs a few details to work out your daily targets:
+OmniAI needs a few details to work out your daily targets:
 
 | Field | Notes |
 |---|---|
-| What should I call you? | Optional. MacBro uses it in greetings. |
+| What should I call you? | Optional. Used in the Home greeting and by MacBro in the chat. |
 | Date of birth, sex | Used in the calorie formula and for micronutrient reference values. |
 | Units | Metric (kg, cm) or Imperial (lb, ft/in). |
 | Height, weight | Required. |
@@ -55,7 +55,7 @@ MacBro needs a few details to work out your daily targets:
 | Activity level | From *Sedentary* to *Very active*. |
 | Time zone | Detected automatically. It decides where "today" starts and ends. |
 
-After you submit, **Your daily targets** shows the calories, protein, carbs, fat and fiber MacBro suggests. Change any number you like, then continue. You can change them later in **Settings → Targets**.
+After you submit, **Your daily targets** shows the calories, protein, carbs, fat and fiber OmniAI suggests. Change any number you like, then continue. You can change them later in **Settings → Targets**.
 
 <details>
 <summary>How targets are calculated</summary>
@@ -156,7 +156,7 @@ You can do this **in the chat** (with a confirmation card) or **on the Dashboard
 - **Move to**: pick another meal.
 - **Copy to** (or **Copy to today's** when looking at a past day): duplicates the item.
 - **Quantity**: change the amount and press **Save**. Nutrients scale automatically.
-- **✎ Ask MacBro to edit**: opens the chat with the message started for you, e.g. to change ingredients.
+- **✎ Edit in chat**: opens the chat with the message started for you, e.g. to change ingredients.
 - **Delete**: asks you to confirm first.
 
 ## 8. Water

@@ -1,3 +1,4 @@
+import { APP_MARK, APP_NAME } from "../brand";
 import { useId } from "react";
 
 /** MacBro: a cartoon boy in an "MB" t-shirt. Drawn inline so it scales cleanly. */
@@ -45,6 +46,16 @@ export function UserAvatar({ name, email, size = 32 }: { name: string | null; em
   return (
     <span className="avatar user-avatar" style={{ width: size, height: size, fontSize: size * 0.4 }} aria-hidden="true">
       {initialsFor(name, email)}
+    </span>
+  );
+}
+
+/** Placeholder app logo (the name isn't final): the app mark on a gradient tile. */
+export function AppLogo({ size = 32, label = false }: { size?: number; label?: boolean }) {
+  return (
+    <span className="app-logo" style={{ width: size, height: size, fontSize: size * 0.34, borderRadius: size * 0.28 }}
+          role={label ? "img" : undefined} aria-label={label ? APP_NAME : undefined} aria-hidden={label ? undefined : true}>
+      {APP_MARK}
     </span>
   );
 }

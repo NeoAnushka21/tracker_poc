@@ -836,3 +836,11 @@ button.danger { color: var(--error); }
   .home-hero h1 { font-size: 1.5rem; }
   .home-cta { width: 100%; }
 }
+
+/* ---------- app logo (placeholder until the name is final) ---------- */
+.app-logo {
+  display: inline-grid; place-items: center; flex-shrink: 0;
+  background: var(--accent-grad); color: var(--accent-text);
+  font-weight: 800; letter-spacing: 0.02em; line-height: 1;
+  box-shadow: 0 4px 12px var(--accent-glow);
+}

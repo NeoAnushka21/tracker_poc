@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { api } from "../api";
 import type { User } from "../types";
-import { MacBroAvatar } from "./Avatar";
+import { AppLogo } from "./Avatar";
 
 /** Shown once to accounts created before the consent notice (or after its wording changes). */
 export default function ConsentGate({ onAccepted, onLogout }: { onAccepted: (u: User) => void; onLogout: () => void }) {
@@ -30,7 +30,7 @@ export default function ConsentGate({ onAccepted, onLogout }: { onAccepted: (u: 
     <div className="center">
       <div className="card auth-card">
         <div className="auth-brand">
-          <MacBroAvatar size={56} />
+          <AppLogo size={56} />
           <div>
             <h1>Before we continue</h1>
             <p className="muted">We've added a data consent notice.</p>

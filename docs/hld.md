@@ -1,11 +1,11 @@
-# MacBro high-level design (HLD)
+# OmniAI high-level design (HLD)
 
-> Last updated: 2026-09-28 (Home tab and streaks). Update the diagrams whenever a component, data flow, table or external service changes (see [docs/README.md](README.md)).
+> Last updated: 2026-09-28 (app renamed OmniAI; MacBro is the chat assistant). Update the diagrams whenever a component, data flow, table or external service changes (see [docs/README.md](README.md)).
 > Diagrams are Mermaid. They render on GitHub and in VS Code with a Mermaid preview extension.
 
 ## 1. Purpose and principles
 
-MacBro is a chat-first calorie and macro tracker. Users describe food in natural language, an LLM estimates nutrition, and the user confirms before anything is stored.
+OmniAI is a chat-first calorie and macro tracker; its chat assistant is called MacBro. Users describe food in natural language, an LLM estimates nutrition, and the user confirms before anything is stored.
 
 **Design principles**
 
@@ -19,7 +19,7 @@ MacBro is a chat-first calorie and macro tracker. Users describe food in natural
 
 ```mermaid
 flowchart LR
-    U([User<br/>browser]) -->|HTTPS| APP[MacBro web app]
+    U([User<br/>browser]) -->|HTTPS| APP[OmniAI web app]
     A([Admin<br/>browser]) -->|HTTPS · Admin login| APP
     APP -->|OpenAI-compatible API<br/>tool calling| LLM[(LLM provider<br/>Groq · gpt-oss-120b<br/>or Claude / Gemini / Ollama)]
     U -.->|Web Speech API<br/>voice to text, in browser| U

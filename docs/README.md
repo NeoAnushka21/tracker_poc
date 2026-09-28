@@ -1,4 +1,4 @@
-# MacBro documentation
+# OmniAI documentation
 
 | Document | Audience | What it covers |
 |---|---|---|
@@ -20,8 +20,9 @@ The docs are part of the product. **Update them in the same change as the code**
 | An API endpoint | `technical-overview.md` §4 (and `hld.md` if it's a new flow) |
 | A table or column | `technical-overview.md` §5 and the ER diagram in `hld.md` §5 |
 | An LLM tool, guard, prompt rule or provider | `technical-overview.md` §6, `hld.md` §6 |
-| Config / env variables | `technical-overview.md` §8, `backend/.env.example` |
+| Config / env variables | `technical-overview.md` §9, `backend/.env.example` |
 | Target formulas, meal windows, water or micronutrient rules | `user-guide.md` (§2, §5, §11) and `technical-overview.md` |
-| Deployment or infrastructure | `hld.md` §3 and §7, `technical-overview.md` §10, the root `README.md` |
+| App or assistant name, logo, hostname | `frontend/src/brand.ts` (name, logo text, `APP_DEV_HOST`, `APP_DOMAIN`), `public/favicon.svg`, `backend/app/config.py` `APP_NAME`, the persona line in `prompt.py`, all docs titles, and `technical-overview.md` §8 |
+| Deployment or infrastructure | `hld.md` §3 and §7, `technical-overview.md` §11, the root `README.md` |
 
 Also bump the **Last updated** date at the top of each file you touch.
