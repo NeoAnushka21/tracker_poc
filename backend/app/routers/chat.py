@@ -7,6 +7,7 @@ from sqlalchemy.orm import Session
 from app.config import LLM_UNAVAILABLE_MESSAGE, SHOW_LLM_ERRORS
 from app.db import get_db
 from app.deps import onboarded_user
+from app.llm import usage
 from app.llm.chat import handle_user_message, message_to_dict, messages_for_day, recent_messages
 from app.llm.provider import LLMError
 from app.models import User
@@ -39,6 +40,7 @@ def chat_day(day: date | None = None, user: User = Depends(onboarded_user), db: 
 
 @router.post("")
 def send(body: ChatIn, user: User = Depends(onboarded_user), db: Session = Depends(get_db)):
+    usage.begin()
     try:
         return handle_user_message(db, user, body.message.strip(), body.feedback_on_action_id,
                                    body.client_request_id, body.log_date)
@@ -50,6 +52,13 @@ def send(body: ChatIn, user: User = Depends(onboarded_user), db: Session = Depen
         log.warning("LLM call failed for user %s: %s", user.id, e)
         detail = str(e) if SHOW_LLM_ERRORS else LLM_UNAVAILABLE_MESSAGE
         raise HTTPException(status.HTTP_503_SERVICE_UNAVAILABLE, detail) from e
+    finally:
+        # Saved after the turn commits or rolls back: failed calls used quota too.
+        try:
+            usage.save(db, user.id)
+        except Exception:  # never let bookkeeping break the chat
+            log.exception("Couldn't save LLM usage")
+            db.rollback()
 
 
 @router.post("/cancel")

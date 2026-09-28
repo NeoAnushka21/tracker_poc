@@ -4,7 +4,7 @@ OmniAI is a chat-based calorie and macro tracker. In the Chat you talk to **MacB
 
 This guide walks a new user through the app from sign-up to daily use. The same walkthrough appears inside the app as a short tour the first time you log in. You can reopen it any time with the **? Guide** button at the top.
 
-> Last updated: 2026-09-28 (chat per day, date picker). Keep this file in step with the UI (see [docs/README.md](README.md)).
+> Last updated: 2026-09-28 (multi-model routing, phases 1–3). Keep this file in step with the UI (see [docs/README.md](README.md)).
 
 ---
 
@@ -256,6 +256,10 @@ Open **⚙ Settings** from the top bar.
 **I confirmed the wrong thing.** Fix it on the Dashboard with the **pencil** on that item, or ask in the chat, e.g. "delete the pizza from lunch".
 
 **The meal was put in the wrong slot.** Move it with **pencil → Move → pick the meal → →**, or say "move it to lunch".
+
+**Why do some replies arrive instantly?** Common messages, like a water amount, "yes", "what's left today?", foods you've saved in My foods ("had 3 eggs for breakfast") or "same breakfast as yesterday", are handled by the app directly without the AI. They're instant, and they save the free AI quota for harder messages.
+
+**I typed "yes" but nothing was saved.** Tap **Looks good** on the card. Typing isn't enough, so that you always see what's being saved.
 
 **Why didn't MacBro say "logged"?** MacBro never saves anything on its own. Only your button press saves.
 

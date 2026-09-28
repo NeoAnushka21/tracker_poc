@@ -74,7 +74,8 @@ saved per 100 g), ask for grams or pieces, or estimate with food_id null.
 confirmed values replace the saved ones.
 - For items in pieces, cups, slices and so on, fill unit_weight_g with the approximate grams \
 in one unit, so the food can later be logged in grams too.
-- Recipes: when the user asks to save something as a recipe, or agrees when you offer, \
+## Recipes
+- When the user asks to save something as a recipe, or agrees when you offer, \
 call propose_recipe with the raw ingredients for the whole batch (as the user describes \
 them, using food_id for ingredients already in the library) and its yield. Yield is \
 required: how many pieces it makes (chapatis, idlis, laddoos), or for dishes served from a \
@@ -145,6 +146,39 @@ don't give medical advice.
 """
 
 
+# Section keys by heading, so a call can include only what its intent needs (see router.py).
+_SECTION_KEYS = {
+    "Logging food": "logging",
+    "The user's food library and recipes": "library",
+    "Recipes": "recipes",
+    "Confirmation - how writes work": "confirmation",
+    "Date picked in the app": "date",
+    "Editing and deleting": "editing",
+    "Questions about past data": "queries",
+    "Style": "style",
+}
+
+
+def _split_sections(text: str) -> dict[str, str]:
+    parts = text.split("\n## ")
+    out = {"intro": parts[0].strip()}
+    for part in parts[1:]:
+        heading = part.split("\n", 1)[0].strip()
+        out[_SECTION_KEYS[heading]] = "## " + part.strip()
+    return out
+
+
+SECTIONS = _split_sections(SYSTEM_STABLE)
+
+
+def build_system_prompt(sections: list[str] | None) -> str:
+    """The stable prompt with only the given sections (None = all). Intro and style always."""
+    if sections is None:
+        return SYSTEM_STABLE
+    keys = ["intro", *[k for k in SECTIONS if k in sections], "style"]
+    return "\n\n".join(SECTIONS[k] for k in dict.fromkeys(keys)) + "\n"
+
+
 def _entries_for_context(summary: dict) -> list[dict]:
     return [
         {
@@ -161,7 +195,9 @@ def _entries_for_context(summary: dict) -> list[dict]:
     ]
 
 
-def build_dynamic_context(db: Session, user: User, selected_date: date | None = None) -> str:
+def build_dynamic_context(db: Session, user: User, selected_date: date | None = None,
+                          food_text: str | None = None) -> str:
+    """food_text: when given, my_foods lists only saved foods whose names appear in it."""
     now = local_now(user.timezone)
     today = daily_summary(db, user, now.date())
     weight = current_weight(db, user.id)
@@ -181,7 +217,8 @@ def build_dynamic_context(db: Session, user: User, selected_date: date | None = 
         "today_remaining": today["remaining"],
         "today_entries": today_entries,
         "open_proposals": proposals,
-        "my_foods": library_context(db, user) or "(empty - nothing saved yet)",
+        "my_foods": library_context(db, user, food_text) or (
+            "(no saved foods match this message)" if food_text is not None else "(empty - nothing saved yet)"),
     }
     if selected_date is not None and selected_date != now.date():
         picked = daily_summary(db, user, selected_date)

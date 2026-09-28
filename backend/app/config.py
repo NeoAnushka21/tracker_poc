@@ -52,6 +52,38 @@ LLM_MAX_TOKENS = int(os.getenv("LLM_MAX_TOKENS", "16000" if _IS_ANTHROPIC else "
 SHOW_LLM_ERRORS = os.getenv("SHOW_LLM_ERRORS", "false").lower() == "true"
 LLM_UNAVAILABLE_MESSAGE = "MacBro's servers are temporarily down. Please try again in a little while."
 LLM_MAX_TOOL_ROUNDS = 8          # safety cap on the tool loop per user message
+
+# --- Multi-model routing (docs/llm-routing-strategy.md) ----------------------
+# Two tiers on the same provider by default: a small, fast model for simple messages and a
+# large one for complex ones. Each model has its own free quota. Comma-separated lists.
+LLM_SMALL_MODELS = [m.strip() for m in os.getenv(
+    "LLM_SMALL_MODELS", LLM_MODEL if _IS_ANTHROPIC else "openai/gpt-oss-20b").split(",") if m.strip()]
+LLM_LARGE_MODELS = [m.strip() for m in os.getenv("LLM_LARGE_MODELS", LLM_MODEL).split(",") if m.strip()]
+# Extra providers (e.g. a second free host for failover): a JSON file, see llm_pool.example.json.
+LLM_POOL_FILE = os.getenv("LLM_POOL_FILE", str(Path(__file__).resolve().parent.parent / "llm_pool.json"))
+LLM_ROUTING = os.getenv("LLM_ROUTING", "true").lower() == "true"       # false: always the large tier
+LLM_FASTPATH = os.getenv("LLM_FASTPATH", "true").lower() == "true"     # rule-based replies without an LLM
+LLM_SMALL_HISTORY_MESSAGES = 6     # the small tier gets a shorter history
+LLM_ESCALATE_AFTER_ERRORS = 2      # validation errors on the small tier before switching to the large one
+LLM_RATE_LIMIT_COOLDOWN_S = 60     # when a 429 doesn't say how long to wait
+LLM_FAILURE_COOLDOWN_S = 300       # after LLM_FAILURES_BEFORE_COOLDOWN errors in a row
+LLM_FAILURES_BEFORE_COOLDOWN = 3
+
+# Open source only: a model is used only if its licence (matched by name) is in the allowed
+# list. Llama/Gemma have open weights but not OSI licences, so they're off unless allowed.
+MODEL_LICENSES = {
+    "gpt-oss": "Apache-2.0",
+    "qwen": "Apache-2.0",
+    "mistral": "Apache-2.0",
+    "mixtral": "Apache-2.0",
+    "devstral": "Apache-2.0",
+    "deepseek": "MIT",
+    "kimi": "Modified MIT",
+    "llama": "Llama Community License",
+    "gemma": "Gemma Terms of Use",
+}
+ALLOWED_MODEL_LICENSES = {s.strip() for s in os.getenv(
+    "ALLOWED_MODEL_LICENSES", "Apache-2.0,MIT").split(",") if s.strip()}
 # Past chat messages sent as context. Kept smaller for free tiers with tight token/minute limits.
 # The chat starts fresh each local day; messages from the last few hours before midnight are
 # still sent to the model so a conversation that crosses midnight keeps its context.

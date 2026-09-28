@@ -1,6 +1,6 @@
 # OmniAI high-level design (HLD)
 
-> Last updated: 2026-09-28 (chat per day, date picker). Update the diagrams whenever a component, data flow, table or external service changes (see [docs/README.md](README.md)).
+> Last updated: 2026-09-28 (multi-model routing, phases 1–3). Update the diagrams whenever a component, data flow, table or external service changes (see [docs/README.md](README.md)).
 > Diagrams are Mermaid. They render on GitHub and in VS Code with a Mermaid preview extension.
 
 ## 1. Purpose and principles
@@ -99,6 +99,21 @@ sequenceDiagram
 - **Stop:** `POST /api/chat/cancel` marks the request cancelled. The backend checks it atomically before committing the reply (`finish_or_cancelled`). If it's too late, the UI keeps the reply.
 - **Pending actions expire** after 24 hours, lazily on the next request.
 
+### 4.1b Which model answers a message
+
+```mermaid
+flowchart TD
+    M[User message] --> F{Fast path?<br/>water · yes · summary ·<br/>saved foods · same as yesterday}
+    F -->|yes| C[Reply / card, no model call]
+    F -->|no| R{Router rules}
+    R -->|query · edit · simple log| S[Small tier<br/>gpt-oss-20b]
+    R -->|vague dish · 3+ foods · recipe ·<br/>feedback · long| L[Large tier<br/>gpt-oss-120b]
+    S -->|2 validation errors| L
+    S & L --> P[(Model pool<br/>rotation · cooldown on 429 ·<br/>failover · open-source licence gate)]
+    P -->|all unavailable| E[Friendly 'servers are down']
+    P --> U[(llm_usage)]
+```
+
 ### 4.2 Direct dashboard actions (no LLM)
 
 ```mermaid
@@ -157,10 +172,13 @@ Column-level detail is in [technical-overview.md](technical-overview.md#5-data-m
 
 | Aspect | Design |
 |---|---|
-| Provider | `LLM_PROVIDER=openai_compatible` (Groq by default) or `anthropic`, behind one `Provider` interface |
+| Models | **Open-source only** (Apache 2.0 / MIT licences enforced in code). Two tiers on Groq's free tier: `gpt-oss-20b` (small) and `gpt-oss-120b` (large), in a quota-aware pool with cooldowns and failover |
+| Routing | L0 rule-based fast paths (no model) → rules pick intent + tier → small model, escalating to large on repeated validation errors |
 | Tools | Read: `get_food`, `get_logs`, `get_daily_summary`. Propose: `propose_entry`, `propose_edit`, `propose_delete`, `propose_move`, `propose_recipe`, `propose_water` |
 | Prompt | Stable system prompt (MacBro persona and rules, cacheable) plus per-turn dynamic context (date, time, targets, today's totals, my foods, item ids) |
-| History | Last `CHAT_HISTORY_MESSAGES` messages (12 on the free tier) |
+| History | Today's chat only (+3 h grace): last 6 messages on the small tier, 12 on the large |
+| Per-call size | Only the tools and prompt sections the intent needs, and only saved foods named in the message (25–87% fewer instruction tokens per call) |
+| Observability | `llm_usage` table and the admin **AI usage** panel (calls, tokens, fast-path share, cooldowns) |
 | Guards | Energy balance, quantity cleanup, false "Logged" claim nudge, missed-water nudge, move-vs-delete guard |
 | Failure | Any provider error → HTTP 503 with a friendly message (`SHOW_LLM_ERRORS=true` shows details in dev) |
 
@@ -171,6 +189,6 @@ Column-level detail is in [technical-overview.md](technical-overview.md#5-data-m
 | **Security** | scrypt password hashes, JWT in an httpOnly SameSite cookie, per-user scoping on every query, admin audit | HTTPS + `COOKIE_SECURE`, rate limiting, OTP email verification |
 | **Privacy** | Consent at sign-up (versioned), full account deletion | Data export |
 | **Scale** | Single process, SQLite | Postgres (e.g. Neon), stateless app instances |
-| **LLM capacity** | Groq free tier: about 200K tokens/day, 8K tokens/min | Multi-model routing across free providers, see [llm-routing-strategy.md](llm-routing-strategy.md) |
+| **LLM capacity** | Groq free tier, per model (~200K tokens/day each for gpt-oss-20b and 120b); fast paths and slimmer calls stretch it | Second free provider for failover, see [llm-routing-strategy.md](llm-routing-strategy.md) |
 | **Accessibility** | WCAG AA contrast in light and dark, keyboard tooltips, ARIA tabs and dialogs | – |
 | **Deployment** | Local only | Hosted frontend and backend (e.g. Render) with managed Postgres |

@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { api } from "../api";
-import type { AdminUserDetail, AdminUserRow, AuditRow, ChatMessage } from "../types";
+import type { AdminUserDetail, AdminUserRow, AuditRow, ChatMessage, LlmUsageReport } from "../types";
+import { StatTile } from "./charts";
 import { GOALS, MEAL_LABEL, grams, kcal } from "../format";
 import { UserAvatar } from "./Avatar";
 
@@ -178,6 +179,8 @@ export default function AdminPage() {
 
       {selected && <UserDetail user={selected} onClose={() => setSelected(null)} />}
 
+      <LlmUsagePanel />
+
       <details className="card audit" onToggle={(e) => (e.target as HTMLDetailsElement).open && audit === null && api.adminAudit().then(setAudit).catch(() => setAudit([]))}>
         <summary>Audit log</summary>
         {audit === null ? <p className="muted">Loading…</p> : (
@@ -188,6 +191,118 @@ export default function AdminPage() {
           </ul>
         )}
       </details>
+    </section>
+  );
+}
+
+const n = (v: number) => v.toLocaleString();
+
+/** Model calls, tokens and the state of each model in the pool (open-source models only). */
+function LlmUsagePanel() {
+  const [hours, setHours] = useState(24);
+  const [data, setData] = useState<LlmUsageReport | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  function load(h = hours) {
+    setError(null);
+    api.adminLlmUsage(h).then(setData).catch((e) => setError(e.message));
+  }
+  useEffect(() => { load(hours); }, [hours]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const t = data?.totals;
+  return (
+    <section className="card llm-usage" aria-labelledby="llm-usage-title">
+      <div className="analysis-head">
+        <div>
+          <h2 id="llm-usage-title">AI usage</h2>
+          <p className="muted small">Open-source models only. Fast-path replies are answered by rules, with no model call.</p>
+        </div>
+        <div className="row tight">
+          <div className="segmented" role="radiogroup" aria-label="Period">
+            {[24, 24 * 7].map((h) => (
+              <button key={h} type="button" className={hours === h ? "on" : ""} aria-pressed={hours === h}
+                      onClick={() => setHours(h)}>{h === 24 ? "24 h" : "7 days"}</button>
+            ))}
+          </div>
+          <button type="button" className="ghost" onClick={() => load()}>Refresh</button>
+        </div>
+      </div>
+      {error && <p className="error">{error}</p>}
+      {!data && !error && <p className="muted">Loading…</p>}
+      {data && t && (
+        <>
+          <div className="stat-row usage-stats">
+            <StatTile label="User messages" value={n(t.user_messages)} />
+            <StatTile label="Model calls" value={n(t.model_calls)} sub={`${n(t.tokens)} tokens`} />
+            <StatTile label="Answered by rules" value={t.fastpath_share_pct == null ? "–" : `${t.fastpath_share_pct}%`}
+                      sub={`${n(t.fastpath_replies)} fast-path replies`} />
+            <StatTile label="Problems" value={n(t.errors + t.rate_limited)}
+                      sub={`${n(t.rate_limited)} rate-limited · ${n(t.escalations)} escalated`} />
+          </div>
+
+          <h3>Models in the pool</h3>
+          <div className="table-scroll">
+            <table className="admin-table">
+              <thead><tr><th>Model</th><th>Tier</th><th>Licence</th><th>Status</th><th>Last error</th></tr></thead>
+              <tbody>
+                {data.pool.map((p, i) => p.error ? (
+                  <tr key={i}><td colSpan={5} className="error">{p.error}</td></tr>
+                ) : (
+                  <tr key={i}>
+                    <td><b>{p.model}</b><br /><span className="muted small">{p.provider}</span></td>
+                    <td>{p.tier}</td>
+                    <td>{p.license ?? "–"}</td>
+                    <td>{p.available ? <span className="ok">● available</span>
+                      : <span className="warn">● cooling down {Math.ceil((p.cooldown_seconds ?? 0) / 60)} min</span>}</td>
+                    <td className="muted small usage-error">{p.last_error ?? "–"}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+
+          <h3>Calls by model</h3>
+          {data.by_model.length === 0 ? <p className="muted small">No model calls in this period.</p> : (
+            <div className="table-scroll">
+              <table className="admin-table">
+                <thead><tr><th>Model</th><th>Tier</th><th>Calls</th><th>OK</th><th>Rate-limited</th><th>Errors</th>
+                  <th>Tokens in</th><th>Tokens out</th><th>Avg time</th></tr></thead>
+                <tbody>
+                  {data.by_model.map((m) => (
+                    <tr key={`${m.provider}-${m.model}-${m.tier}`}>
+                      <td><b>{m.model}</b><br /><span className="muted small">{m.provider}</span></td>
+                      <td>{m.tier}</td>
+                      <td className="num">{n(m.calls)}</td><td className="num">{n(m.ok)}</td>
+                      <td className="num">{n(m.rate_limited)}</td><td className="num">{n(m.errors)}</td>
+                      <td className="num">{n(m.prompt_tokens)}</td><td className="num">{n(m.completion_tokens)}</td>
+                      <td className="num">{m.avg_latency_ms == null ? "–" : `${(m.avg_latency_ms / 1000).toFixed(1)} s`}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+
+          <div className="chart-grid-2">
+            <div>
+              <h3>Calls by message type</h3>
+              {data.by_intent.length === 0 ? <p className="muted small">–</p> : (
+                <ul className="usage-list">
+                  {data.by_intent.map((i) => <li key={i.intent}><span>{i.intent}</span><span className="num">{n(i.calls)} calls · {n(i.tokens)} tokens</span></li>)}
+                </ul>
+              )}
+            </div>
+            <div>
+              <h3>Answered by rules</h3>
+              {Object.keys(data.fastpath).length === 0 ? <p className="muted small">–</p> : (
+                <ul className="usage-list">
+                  {Object.entries(data.fastpath).map(([k, v]) => <li key={k}><span>{k.replace("_", " ")}</span><span className="num">{n(v)}</span></li>)}
+                </ul>
+              )}
+            </div>
+          </div>
+        </>
+      )}
     </section>
   );
 }

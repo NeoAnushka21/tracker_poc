@@ -1,6 +1,6 @@
 import type {
   Action, AdminUserDetail, AdminUserRow, AuditRow, ChatMessage, DailySummary, Food, RangeSummary, User,
-  Streaks, ChatDay,
+  Streaks, ChatDay, LlmUsageReport,
 } from "./types";
 
 export class ApiError extends Error {
@@ -127,6 +127,7 @@ export const api = {
   adminUser: (id: number, days = 14) => request<AdminUserDetail>("GET", `/api/admin/users/${id}?days=${days}`),
   adminChat: (id: number) => request<ChatMessage[]>("GET", `/api/admin/users/${id}/chat`),
   adminAudit: () => request<AuditRow[]>("GET", "/api/admin/audit"),
+  adminLlmUsage: (hours = 24) => request<LlmUsageReport>("GET", `/api/admin/llm-usage?hours=${hours}`),
 
   streaks: () => request<Streaks>("GET", "/api/dashboard/streaks"),
   daily: (day?: string) => request<DailySummary>("GET", `/api/dashboard/daily${day ? `?day=${day}` : ""}`),

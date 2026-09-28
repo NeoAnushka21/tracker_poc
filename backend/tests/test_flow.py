@@ -217,7 +217,7 @@ def test_false_save_claim_is_sent_back_once(client, user, fake_llm):
 
 def test_normal_answers_mentioning_logs_are_not_nudged(client, user, fake_llm):
     provider = fake_llm(text_reply("Today you've logged 2 meals, 900 kcal."))
-    client.post("/api/chat", json={"message": "how am I doing?"})
+    client.post("/api/chat", json={"message": "what did I eat yesterday?"})
     assert len(provider.calls) == 1
 
 

@@ -1,6 +1,6 @@
 # OmniAI technical overview
 
-> Last updated: 2026-09-28 (chat per day, date picker). Update this file in the same change as any code change it describes (see [docs/README.md](README.md)).
+> Last updated: 2026-09-28 (multi-model routing, phases 1–3). Update this file in the same change as any code change it describes (see [docs/README.md](README.md)).
 > Architecture diagrams: [hld.md](hld.md). End-user manual: [user-guide.md](user-guide.md).
 
 ## 1. Tech stack
@@ -86,7 +86,7 @@ All endpoints are JSON under `/api`, authenticated by the session cookie. Every 
 | `entries` | `POST items/{id}/transfer` (move/copy) · `PATCH items/{id}` (quantity) · `DELETE items/{id}` |
 | `foods` | `GET ""` · `GET {id}` · `PUT {id}` · `DELETE {id}` |
 | `water` | `POST ""` · `DELETE {id}` |
-| `admin` | `GET users` (admins excluded) · `GET users/{id}` · `GET users/{id}/chat` · `GET audit`. Every read of user data is audited. |
+| `admin` | `GET users` (admins excluded) · `GET users/{id}` · `GET users/{id}/chat` · `GET audit` · `GET llm-usage?hours=` (model calls, tokens, fast-path share, pool state; aggregate only, not audited). Every read of user data is audited. |
 
 FastAPI's interactive docs are at `http://localhost:8000/docs` while the backend is running.
 
@@ -106,6 +106,7 @@ FastAPI's interactive docs are at `http://localhost:8000/docs` while the backend
 | `pending_actions` | action_type, target_entry_id, payload (JSON), status, chat_message_id, result_entry_id, resolved_at | Status: pending → confirmed / rejected / superseded / expired |
 | `chat_messages` | role (user/assistant/event), content, kind (e.g. `progress`), data (JSON), related_log_entry_id | `event` rows are context for the model and hidden in the UI |
 | `admin_audit` | admin_user_id, target_user_id, action | Kept after account deletion (unlinked) |
+| `llm_usage` | created_at, user_id, provider, model, tier, intent, prompt/completion tokens, latency_ms, outcome (ok / error / rate_limited / fastpath), escalated | One row per model call or rule-based reply. Kept (anonymised) after account deletion |
 
 **Migrations.** Tables are created at startup, and `db.add_missing_columns()` adds new *nullable* columns to existing tables. `data_migrations.run_all()` handles one-off data fixes and creates the admin account from `ADMIN_INITIAL_PASSWORD` if it's missing. Adopt Alembic before non-additive schema changes or a move to Postgres.
 
@@ -113,10 +114,14 @@ FastAPI's interactive docs are at `http://localhost:8000/docs` while the backend
 
 | File | Role |
 |---|---|
+| `router.py` | Rule-based **routing**: intent (`query`, `edit`, `log`, `full`) and tier (`small` / `large`), plus the tools and prompt sections each intent gets. Leans towards `large` when unsure (vague dishes, 3+ foods, several meals, no amounts, recipes, feedback on a card, long messages). |
+| `pool.py` | **Model pool**: models per tier from config (+ optional `llm_pool.json` providers). Rotates within a tier, fails over on errors, puts a model on **cooldown** on a 429 (using the host's "try again in 14m16s") or after 3 errors in a row, then falls back to the other tier before the friendly error. **Open source only:** a model is used only if its licence (by name: gpt-oss, Qwen, Mistral = Apache 2.0, DeepSeek = MIT) is in `ALLOWED_MODEL_LICENSES`; Llama and Gemma are skipped. |
+| `fastpath.py` | **No-LLM replies** for common messages, creating the same cards through the same tool handlers: water amounts, "yes"/"ok" while a card is pending (points to the button), today's summary / "how much protein is left", foods that are all in My foods ("had 3 eggs for breakfast"), and "same breakfast as yesterday". Strict: anything unusual goes to the model. |
+| `usage.py` | Collects one record per call during a turn; the chat router saves them after commit/rollback, so failed calls are counted. |
 | `provider.py` | `AnthropicProvider` and `OpenAICompatibleProvider` behind `LLMProvider`. `to_openai_tools` uses `_relax` so optional fields aren't strictly required on OpenAI-compatible hosts. Retries once on a tool-validation error. Maps errors to a friendly message. `set_provider` injects the fake one in tests. |
 | `prompt.py` | `SYSTEM_STABLE`: the MacBro persona and all logging rules (stable, so it can be cached). `build_dynamic_context`: local date and time, the picked day (`selected_date` with that day's entries and item ids) when set, meal window, targets, today's totals, recent entries with item ids, and the user's library foods. |
 | `tools.py` | Tool schemas and handlers (below). Proposal handlers validate, scale library foods, run the energy check, then insert a `PendingAction`. |
-| `chat.py` | `handle_user_message`: saves the user message (with `data.log_date` when a past day is picked), builds history from **today's chat only** plus a `CHAT_DAY_GRACE_HOURS` (3 h) window before midnight (capped at `CHAT_HISTORY_MESSAGES`), runs the tool loop, applies the nudges, saves the reply, and checks for a cancel before committing. |
+| `chat.py` | `handle_user_message`: saves the user message (with `data.log_date` when a past day is picked), tries the **fast paths**, otherwise **routes** the message and runs the tool loop on that tier with only the routed tools and prompt sections, and `my_foods` limited to saved foods named in the message (or on a pending card). After `LLM_ESCALATE_AFTER_ERRORS` (2) validation errors on the small tier it **escalates** to the large tier with every tool. It builds history from **today's chat only** plus a `CHAT_DAY_GRACE_HOURS` (3 h) window before midnight (capped at `CHAT_HISTORY_MESSAGES`), runs the tool loop, applies the nudges, saves the reply, and checks for a cancel before committing. |
 
 **Tools**
 
@@ -200,6 +205,10 @@ The environment is set in `backend/.env` (template: `backend/.env.example`):
 | `LLM_BASE_URL`, `LLM_MODEL`, `LLM_API_KEY` | OpenAI-compatible endpoint (Groq, Gemini, OpenRouter, Ollama…) |
 | `ANTHROPIC_API_KEY` | When using Claude |
 | `LLM_EFFORT`, `LLM_MAX_TOKENS`, `CHAT_HISTORY_MESSAGES` | Cost and quality tuning |
+| `LLM_SMALL_MODELS`, `LLM_LARGE_MODELS` | Models per tier (default `openai/gpt-oss-20b` / `openai/gpt-oss-120b` on Groq) |
+| `LLM_POOL_FILE` (`llm_pool.json`) + provider keys | Extra providers for failover; template `backend/llm_pool.example.json` |
+| `ALLOWED_MODEL_LICENSES` | Default `Apache-2.0,MIT` (open source only) |
+| `LLM_ROUTING`, `LLM_FASTPATH` | Turn routing / rule-based replies off (both on by default) |
 | `ADMIN_EMAILS`, `ADMIN_INITIAL_PASSWORD` | Admin accounts (default admin: `mhatre.anushka.work@gmail.com`) |
 | `SHOW_LLM_ERRORS` | Development only |
 | `DATABASE_URL`, `COOKIE_SECURE`, `SESSION_DAYS` | Deployment |
@@ -210,19 +219,19 @@ Domain constants (meal windows, goal multipliers, activity factors, water, fiber
 
 ```bash
 cd backend
-.venv\Scripts\python -m pytest -q      # 134 tests, fake LLM, no network
+.venv\Scripts\python -m pytest -q      # 175 tests, fake LLM, no network
 cd ../frontend
 npm run build                          # type-check + production build
 ```
 
 - The Vite dev server uses a polling file watcher (`vite.config.ts`), and the backend should be started with `WATCHFILES_FORCE_POLLING=true`, because native file events were missed on Windows and served stale code.
 - `tests/conftest.py` gives each test a fresh database and a scripted `FakeProvider`. It also pins `ADMIN_EMAILS` and blanks `ADMIN_INITIAL_PASSWORD` so the local `.env` can't leak into tests.
-- Coverage by file: `test_flow` (confirm loop, auth, guide flag), `test_foods` (library, recipes), `test_micros`, `test_water_meals`, `test_admin`, `test_analysis`, `test_entries` (move/copy/quantity/delete), `test_body`, `test_openai_provider`, `test_nutrition`, `test_streaks`, `test_chat_days`.
+- Coverage by file: `test_flow` (confirm loop, auth, guide flag), `test_foods` (library, recipes), `test_micros`, `test_water_meals`, `test_admin`, `test_analysis`, `test_entries` (move/copy/quantity/delete), `test_body`, `test_openai_provider`, `test_nutrition`, `test_streaks`, `test_chat_days`, `test_routing` (router, fast paths, pool failover and cooldowns, licence gate, escalation, usage report).
 - **Policy:** development and tests use the fake model. Don't use the real LLM API for routine testing, because the free-tier quota is shared with real users.
 
 ## 11. Known limitations and next steps
 
 - SQLite and a single process. The Stop-button registry is in memory, so multiple instances would need Redis or the database.
 - No Alembic yet; `add_missing_columns` only adds nullable columns.
-- The free-tier LLM quota caps daily usage. Plan: [llm-routing-strategy.md](llm-routing-strategy.md).
+- The free-tier LLM quota caps daily usage. Phases 1–3 of [llm-routing-strategy.md](llm-routing-strategy.md) are in (fast paths, routing, pool); a second provider (phase 4) and the evaluation run (phase 5) need decisions and accounts.
 - Deferred: OTP email verification, branded-product web search, data export, a scheduled cleanup of stale proposals, and deployment (planned: hosted backend, e.g. Render, with Postgres, e.g. Neon).

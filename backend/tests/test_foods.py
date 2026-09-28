@@ -240,11 +240,14 @@ def test_ingredient_in_use_cannot_be_deleted_until_recipe_is(client, user, fake_
 
 
 def test_library_is_listed_in_llm_context(client, user, fake_llm):
+    """Only saved foods named in the message are sent, which keeps prompts small."""
     log_and_confirm(client, fake_llm, [CHICKEN])
     from tests.conftest import text_reply
-    provider = fake_llm(text_reply("Hi!"))
+    provider = fake_llm(text_reply("Hi!"), text_reply("Which part?"))
     client.post("/api/chat", json={"message": "hi"})
-    assert "chicken breast, cooked | per 100 g" in provider.calls[0]["system_dynamic"]
+    assert "chicken breast" not in provider.calls[0]["system_dynamic"].split('"my_foods"')[1]
+    client.post("/api/chat", json={"message": "had some chicken with rice"})
+    assert "chicken breast, cooked | per 100 g" in provider.calls[1]["system_dynamic"]
 
 
 def test_other_users_foods_are_invisible(client, user, fake_llm):

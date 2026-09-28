@@ -1,15 +1,15 @@
 # OmniAI: multi-model LLM strategy on free, open-weight models
 
-Status: proposal · Date: 2026-09-28
+Status: **phases 1–3 implemented** (2026-09-28); phases 4–5 need decisions, see section 12 · Date: 2026-09-28
 
 ## 1. Constraints
 
-- **Open-weight models only.** No closed models (Gemini, GPT, Claude) in the default path.
+- **Open-source models only.** Enforced in code: a model is used only if its licence is in `ALLOWED_MODEL_LICENSES` (default Apache-2.0 and MIT). Closed models (Gemini, GPT, Claude) and open-weight models under restrictive licences (Llama, Gemma) are excluded.
 - **$0: no credits purchased, no card on file.** Only standing free tiers and our own hardware.
 - **Development and tests never call real APIs.** The automated tests use a fake model. Real calls are reserved for users and for one budgeted evaluation run (section 8).
 - **When every model is unavailable,** users see *"MacBro's servers are temporarily down. Please try again in a little while."* The real reason goes to the server log. (Implemented.)
 
-A note on terms: gpt-oss (Apache 2.0), Qwen (Apache 2.0) and Mistral Small (Apache 2.0) are open source. Llama uses Meta's community licence: the weights are open, but it isn't OSI open source. All of them fit "no paid closed models". If strict open-source licensing matters later, prefer the Apache-licensed ones.
+A note on terms: gpt-oss, Qwen and Mistral (Apache 2.0) and DeepSeek (MIT) are open source. Llama (Meta's community licence) and Gemma (Google's terms) publish their weights but aren't OSI open source, so they're off by default. The hosting services (Groq and similar) are free services, not open-source software; only self-hosting (e.g. Ollama or vLLM) would make the whole stack open source.
 
 ## 2. Why we hit the limit today
 
@@ -97,15 +97,15 @@ Expected effect: 1.5k–2.5k tokens for most calls instead of ~4.4k. That's an e
 
 ## 4. Model pool (all open-weight, all free, no card)
 
-| Tier | Model | Where (free) | Notes |
-|---|---|---|---|
-| L1 | `llama-3.1-8b-instant` | Groq | Very fast; largest free daily quota. Good for classification, queries and simple logs. |
-| L1 | `gpt-oss-20b` | Groq | Better tool calling than 8B; separate 200k/day quota. |
-| L2 | `gpt-oss-120b` | Groq (current default) | Best free quality so far in our tests. |
-| L2 | `llama-3.3-70b` | Groq, OpenRouter `:free`, SambaNova | Backup large model. |
-| L2 | `gpt-oss-120b`, Qwen, Llama 4 Scout | Cloudflare Workers AI (10k "neurons"/day free) | Second provider for failover. |
-| Backup | Various | OpenRouter free models (≈20/min, 50/day without credits) | Small, but a useful last resort. |
-| Dev only | Small Qwen/Llama | Ollama on a laptop | Works offline; too slow on CPU for real users. |
+| Tier | Model | Licence | Where (free) | Status |
+|---|---|---|---|---|
+| L1 (small) | `openai/gpt-oss-20b` | Apache 2.0 | Groq | **In use** |
+| L2 (large) | `openai/gpt-oss-120b` | Apache 2.0 | Groq | **In use** (was the only model before) |
+| L1/L2 backup | Qwen3 (e.g. 32B) | Apache 2.0 | Groq, OpenRouter `:free` | Candidate; check availability |
+| L2 backup | DeepSeek V3 / R1 | MIT | OpenRouter `:free` | Candidate |
+| L1 backup | Mistral Small | Apache 2.0 | OpenRouter `:free` | Candidate |
+| Dev only | Small Qwen | Apache 2.0 | Ollama on a laptop | Works offline; too slow on CPU for real users |
+| Excluded | Llama 3.x/4, Gemma | Not OSI | – | Blocked by the licence gate |
 
 Provider accounts should belong to the project, and **one account per provider**. Creating extra accounts to multiply free quotas breaks the providers' terms, so we don't do it.
 
@@ -161,17 +161,39 @@ That's comfortably enough for you plus a small group of test users, at $0.
 
 ## 10. Implementation plan
 
-| Phase | Work | Main files |
-|---|---|---|
-| **1. Cut tokens (no new providers)** | Tool subsetting per intent, slimmer prompts, library filtered to foods named in the message, `llm_usage` logging | `llm/chat.py`, `llm/prompt.py`, `llm/tools.py`, new `models.LlmUsage` |
-| **2. L0 fast paths** | Water, "yes" nudge, today-summary query, library-only logging, "same as yesterday" | new `llm/fastpath.py` (before the tool loop) |
-| **3. Router + multi-model on Groq** | Rules-based intent/tier, `ModelPool` with quota tracking and cooldowns, escalation on validation failure | new `llm/router.py`, `llm/pool.py`, config registry |
-| **4. Second provider + failover** | Add Cloudflare Workers AI or SambaNova to the pool | config + env keys only |
-| **5. Evaluation + admin usage panel** | Labelled set, one budgeted run, cassettes, AI-usage tab | `evals/`, `routers/admin.py`, `AdminPage.tsx` |
+| Phase | Work | Main files | Status |
+|---|---|---|---|
+| **1. Cut tokens (no new providers)** | Tool subsetting per intent, slimmer prompts, library filtered to foods named in the message, `llm_usage` logging | `llm/chat.py`, `llm/prompt.py`, `llm/tools.py`, new `models.LlmUsage` | ✅ Done |
+| **2. L0 fast paths** | Water, "yes" nudge, today-summary query, library-only logging, "same as yesterday" | new `llm/fastpath.py` (before the tool loop) | ✅ Done |
+| **3. Router + multi-model on Groq** | Rules-based intent/tier, `ModelPool` with quota tracking and cooldowns, escalation on validation failure | new `llm/router.py`, `llm/pool.py`, config registry | ✅ Done (licence gate added) |
+| **4. Second provider + failover** | Add a second free host of open-source models to the pool | `llm_pool.json` + env keys only (supported now) | ⏳ Needs an account |
+| **5. Evaluation + admin usage panel** | Labelled set, one budgeted run, cassettes, AI-usage tab | `evals/`, `routers/admin.py`, `AdminPage.tsx` | Usage panel ✅; evaluation ⏳ needs approval |
 
 Phases 1 and 2 alone should roughly double or triple daily capacity with no new providers. Every phase is testable with the fake model; only the phase-5 evaluation spends real quota, once.
 
-## 11. Risks
+## 11. What was measured (offline, no API calls)
+
+Instruction + tool-definition size per call, before and after routing (≈ characters / 4):
+
+| Message | Route | Before | After |
+|---|---|---|---|
+| "what did I eat yesterday?" | query · small | ~5,500 tokens | ~750 (−87%) |
+| "had 2 eggs" | log · small | ~5,500 | ~2,700 (−51%) |
+| "move the banana to breakfast" | edit · small | ~5,500 | ~4,100 (−25%) |
+| "had a sandwich for lunch" | log · large | ~5,500 | ~3,800 (−32%) |
+| "save my chapati as a recipe" | full · large | ~5,500 | ~5,500 |
+
+On top of that: `my_foods` now lists only foods named in the message (it was up to 150 foods), the small tier gets 6 history messages instead of 12, and fast-path messages use no tokens at all. Real numbers will show in the admin **AI usage** panel once people use it.
+
+## 12. Open items (need a decision or an account)
+
+1. **Strict licences:** confirm Apache/MIT only (current default) or allow Llama/Gemma (`ALLOWED_MODEL_LICENSES`).
+2. **Second provider (phase 4):** one free, no-card account on a host of open-source models, with its key in `backend/.env` and an entry in `llm_pool.json`.
+3. **Consent wording:** mention that messages are processed by third-party AI providers (bumps `CONSENT_VERSION`).
+4. **Evaluation run (phase 5):** approval for one budgeted real-model run (~60 messages per model), recorded for replay.
+5. **Live check of the small model:** routing to `gpt-oss-20b` is covered by tests with fake models only; a few real messages would confirm its quality.
+
+## 13. Risks
 
 - **Free tiers change without notice** (see Mistral). The pool makes this survivable: drop a model from the registry and the rest carry on.
 - **Data use on free tiers:** some free tiers may log prompts or use them for training. Check each provider's terms, and consider adding "processed by third-party AI providers" to the consent text.

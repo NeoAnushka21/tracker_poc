@@ -5,13 +5,20 @@ from datetime import date, timedelta
 from sqlalchemy import select
 from sqlalchemy.orm import Session, selectinload
 
-from app.config import CHAT_DAY_GRACE_HOURS, CHAT_HISTORY_MESSAGES, LLM_MAX_TOOL_ROUNDS
-from app.llm.prompt import SYSTEM_STABLE, build_dynamic_context
-from app.llm.provider import LLMError, get_provider
+from app.config import (
+    CHAT_DAY_GRACE_HOURS, CHAT_HISTORY_MESSAGES, LLM_ESCALATE_AFTER_ERRORS, LLM_FASTPATH, LLM_MAX_TOOL_ROUNDS,
+    LLM_ROUTING, LLM_SMALL_HISTORY_MESSAGES,
+)
+from app.llm import usage
+from app.llm.fastpath import try_fastpath
+from app.llm.pool import get_pool
+from app.llm.prompt import build_dynamic_context, build_system_prompt
+from app.llm.provider import LLMError
+from app.llm.router import ALL_TOOLS, SECTIONS, Route, escalate, route
 from app.llm.tools import TOOLS, ToolContext, ToolInputError, run_tool
 from app.models import ChatMessage, PendingAction, User, utcnow
 from app.services import cancel
-from app.services.actions import action_to_dict, expire_stale, supersede_older
+from app.services.actions import action_to_dict, expire_stale, open_actions, supersede_older
 from app.timeutil import local_day_bounds_utc, local_today, utc_to_local
 
 PROPOSE_TOOLS = {"propose_entry", "propose_edit", "propose_delete", "propose_recipe", "propose_water", "propose_move"}
@@ -159,9 +166,21 @@ def handle_user_message(
     db.flush()
     new_messages.append(user_msg)
 
-    history = _history_for_llm(_todays_messages(db, user, CHAT_HISTORY_MESSAGES))
     ctx = ToolContext(db=db, user=user, raw_user_message=text)
-    reply_text = _run_tool_loop(db, user, history, ctx, request_id, log_date)
+    fast = None
+    if LLM_FASTPATH and feedback_on_action_id is None and log_date is None:
+        fast = try_fastpath(db, user, text, ctx)
+    if fast is not None:
+        handler, reply_text = fast
+        usage.record(provider="fastpath", model=handler, tier="none", intent=handler, prompt_tokens=0,
+                     completion_tokens=0, latency_ms=0, outcome="fastpath", escalated=False)
+    else:
+        r = (route(text, feedback=feedback_on_action_id is not None) if LLM_ROUTING
+             else Route("full", "large", ALL_TOOLS, SECTIONS["full"], "routing off"))
+        todays = _todays_messages(db, user, LLM_SMALL_HISTORY_MESSAGES if r.tier == "small" else CHAT_HISTORY_MESSAGES)
+        food_text = " ".join([text] + [m.content for m in todays if m.role == "user"][-3:]
+                             + _open_proposal_food_names(db, user))
+        reply_text = _run_tool_loop(db, user, _history_for_llm(todays), ctx, request_id, log_date, r, food_text)
 
     if not reply_text.strip():
         reply_text = FALLBACK_PROPOSAL_TEXT if ctx.created_actions else "Sorry, I didn't catch that. Could you rephrase?"
@@ -180,20 +199,38 @@ def handle_user_message(
     return [message_to_dict(m) for m in new_messages] + [message_to_dict(reply)]
 
 
+def _open_proposal_food_names(db: Session, user: User) -> list[str]:
+    """Food names on pending cards, so feedback like "make it 3" still sees those saved foods."""
+    names = []
+    for a in open_actions(db, user.id):
+        names += [i.get("ingredient_name", "") for i in (a.payload.get("items") or [])]
+    return names
+
+
+def _tools_for(r: Route) -> list[dict]:
+    return TOOLS if r.tools is ALL_TOOLS else [t for t in TOOLS if t["name"] in r.tools]
+
+
 def _run_tool_loop(db: Session, user: User, messages: list[dict], ctx: ToolContext,
-                   request_id: str | None = None, log_date: date | None = None) -> str:
-    provider = get_provider()
-    system_dynamic = build_dynamic_context(db, user, log_date)
+                   request_id: str | None = None, log_date: date | None = None,
+                   r: Route | None = None, food_text: str | None = None) -> str:
+    pool = get_pool()
+    r = r or Route("full", "large", ALL_TOOLS, SECTIONS["full"], "default")
+    # Data questions don't need the food library at all.
+    system_dynamic = build_dynamic_context(db, user, log_date, "" if r.intent == "query" else food_text)
     texts: list[str] = []
     nudged = False
     water_checked = False
+    validation_errors = 0
+    escalated = False
 
     for _ in range(LLM_MAX_TOOL_ROUNDS):
-        resp = provider.complete(
-            system_stable=SYSTEM_STABLE,
+        resp = pool.complete(
+            r.tier, intent=r.intent, escalated=escalated,
+            system_stable=build_system_prompt(r.sections),
             system_dynamic=system_dynamic,
             messages=messages,
-            tools=TOOLS,
+            tools=_tools_for(r),
         )
         cancel.raise_if_cancelled(user.id, request_id)
         if resp.text.strip():
@@ -226,6 +263,10 @@ def _run_tool_loop(db: Session, user: User, messages: list[dict], ctx: ToolConte
                 "type": "tool_result", "tool_use_id": call.id,
                 "content": content, "is_error": is_error,
             })
+        validation_errors += sum(1 for x in results if x["is_error"])
+        if r.tier == "small" and validation_errors >= LLM_ESCALATE_AFTER_ERRORS:
+            # The small model keeps producing invalid calls: let the large one finish the turn.
+            r, escalated = escalate(r), True
         # A round of only successful proposals ends the turn: the card plus the tool's
         # `note` is the reply, which saves a model call per logged meal.
         if all(c.name in PROPOSE_TOOLS for c in resp.tool_calls) and not any(r["is_error"] for r in results):

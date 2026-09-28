@@ -12,7 +12,7 @@ from sqlalchemy.orm import Session
 from app.db import get_db
 from app.deps import admin_user, is_admin
 from app.llm.chat import message_to_dict, recent_messages
-from app.models import AdminAudit, ChatMessage, LogEntry, User, UserFood, WaterLog, WeightLog
+from app.models import AdminAudit, ChatMessage, LlmUsage, LogEntry, User, UserFood, WaterLog, WeightLog, utcnow
 from app.routers.profile import body_profile, user_to_dict
 from app.services.foods import food_to_dict, list_foods
 from app.services.logs import logs_by_day
@@ -114,3 +114,59 @@ def audit_log(limit: int = 100, admin: User = Depends(admin_user), db: Session =
          "user": emails.get(r.target_user_id) if r.target_user_id else None}
         for r in rows
     ]
+
+
+@router.get("/llm-usage")
+def llm_usage(hours: int = 24, admin: User = Depends(admin_user), db: Session = Depends(get_db)):
+    """Model calls, tokens and quota state (aggregate only: no user data, so not audited)."""
+    from app.llm.pool import get_pool
+    from app.llm.provider import LLMError
+
+    hours = max(1, min(hours, 24 * 30))
+    since = utcnow() - timedelta(hours=hours)
+    rows = list(db.scalars(select(LlmUsage).where(LlmUsage.created_at >= since)))
+    by_model: dict[tuple, dict] = {}
+    by_intent: dict[str, dict] = {}
+    for r in rows:
+        if r.outcome == "fastpath":
+            continue
+        m = by_model.setdefault((r.provider, r.model, r.tier), {
+            "provider": r.provider, "model": r.model, "tier": r.tier, "calls": 0, "ok": 0, "errors": 0,
+            "rate_limited": 0, "prompt_tokens": 0, "completion_tokens": 0, "_latency": []})
+        m["calls"] += 1
+        m[{"ok": "ok", "error": "errors", "rate_limited": "rate_limited"}.get(r.outcome, "errors")] += 1
+        m["prompt_tokens"] += r.prompt_tokens or 0
+        m["completion_tokens"] += r.completion_tokens or 0
+        if r.outcome == "ok" and r.latency_ms is not None:
+            m["_latency"].append(r.latency_ms)
+        i = by_intent.setdefault(r.intent, {"intent": r.intent, "calls": 0, "tokens": 0})
+        i["calls"] += 1
+        i["tokens"] += (r.prompt_tokens or 0) + (r.completion_tokens or 0)
+    for m in by_model.values():
+        lat = m.pop("_latency")
+        m["avg_latency_ms"] = round(sum(lat) / len(lat)) if lat else None
+    fast = [r for r in rows if r.outcome == "fastpath"]
+    user_messages = db.scalar(select(func.count()).select_from(ChatMessage).where(
+        ChatMessage.role == "user", ChatMessage.created_at >= since)) or 0
+    model_calls = sum(m["calls"] for m in by_model.values())
+    try:
+        pool = get_pool().status()
+    except LLMError as e:
+        pool = [{"error": str(e)}]
+    return {
+        "hours": hours,
+        "totals": {
+            "user_messages": user_messages,
+            "model_calls": model_calls,
+            "fastpath_replies": len(fast),
+            "fastpath_share_pct": round(100 * len(fast) / user_messages) if user_messages else None,
+            "tokens": sum(m["prompt_tokens"] + m["completion_tokens"] for m in by_model.values()),
+            "errors": sum(m["errors"] for m in by_model.values()),
+            "rate_limited": sum(m["rate_limited"] for m in by_model.values()),
+            "escalations": sum(1 for r in rows if r.escalated and r.outcome == "ok"),
+        },
+        "by_model": sorted(by_model.values(), key=lambda m: (-m["calls"], m["model"])),
+        "by_intent": sorted(by_intent.values(), key=lambda i: -i["calls"]),
+        "fastpath": {name: sum(1 for r in fast if r.model == name) for name in sorted({r.model for r in fast})},
+        "pool": pool,
+    }

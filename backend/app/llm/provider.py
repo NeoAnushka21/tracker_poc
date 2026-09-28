@@ -4,6 +4,7 @@ Messages use the Anthropic Messages shape ({"role", "content"}) as the
 canonical format; another provider would translate at this boundary.
 """
 import json
+import re
 from dataclasses import dataclass, field
 from typing import Any, Protocol
 
@@ -14,6 +15,28 @@ from app.config import LLM_API_KEY, LLM_BASE_URL, LLM_EFFORT, LLM_MAX_TOKENS, LL
 
 class LLMError(Exception):
     """Raised when the LLM call fails in a way the user should be told about."""
+
+
+class LLMRateLimited(LLMError):
+    """The model's quota is used up for now; retry_after is in seconds when the host says."""
+
+    def __init__(self, message: str, retry_after: float | None = None):
+        super().__init__(message)
+        self.retry_after = retry_after
+
+
+_WAIT = re.compile(r"try again in\s+((?:\d+h)?(?:\d+m(?!s))?(?:[\d.]+s)?(?:[\d.]+ms)?)", re.I)
+
+
+def retry_after_seconds(message: str) -> float | None:
+    """Parse waits like 'Please try again in 14m16.5s' (Groq) into seconds."""
+    m = _WAIT.search(message or "")
+    if not m or not m.group(1):
+        return None
+    total = 0.0
+    for num, unit in re.findall(r"([\d.]+)(ms|h|m|s)", m.group(1)):
+        total += float(num) * {"h": 3600, "m": 60, "s": 1, "ms": 0.001}[unit]
+    return total or None
 
 
 @dataclass
@@ -31,15 +54,22 @@ class LLMResponse:
     # Provider-native assistant content, appended back verbatim within a turn
     # (keeps thinking/tool_use blocks intact for the tool loop).
     assistant_content: Any = field(repr=False, default=None)
+    # {"prompt_tokens": int, "completion_tokens": int} when the provider reports it.
+    usage: dict | None = None
 
 
 class LLMProvider(Protocol):
+    provider_name: str
+    model: str
+
     def complete(
         self, *, system_stable: str, system_dynamic: str, messages: list[dict], tools: list[dict]
     ) -> LLMResponse: ...
 
 
 class AnthropicProvider:
+    provider_name = "anthropic"
+
     def __init__(self, model: str = LLM_MODEL):
         self.model = model
         self._client: anthropic.Anthropic | None = None
@@ -68,7 +98,7 @@ class AnthropicProvider:
         except anthropic.AuthenticationError as e:
             raise LLMError("The LLM API key is missing or invalid. Set ANTHROPIC_API_KEY in backend/.env.") from e
         except anthropic.RateLimitError as e:
-            raise LLMError("The LLM is rate-limited right now. Try again in a minute.") from e
+            raise LLMRateLimited("The LLM is rate-limited right now. Try again in a minute.") from e
         except anthropic.BadRequestError as e:
             raise LLMError(f"The LLM rejected the request: {e.message}") from e
         except anthropic.APIStatusError as e:
@@ -84,11 +114,13 @@ class AnthropicProvider:
             ToolCall(id=b.id, name=b.name, input=dict(b.input))
             for b in response.content if b.type == "tool_use"
         ]
+        u = getattr(response, "usage", None)
         return LLMResponse(
             text=text,
             tool_calls=calls,
             stop_reason=response.stop_reason,
             assistant_content=response.content,
+            usage={"prompt_tokens": u.input_tokens, "completion_tokens": u.output_tokens} if u else None,
         )
 
 
@@ -100,18 +132,22 @@ class OpenAICompatibleProvider:
     stays provider-agnostic.
     """
 
-    def __init__(self, model: str = LLM_MODEL, base_url: str = LLM_BASE_URL, api_key: str = LLM_API_KEY):
+    def __init__(self, model: str = LLM_MODEL, base_url: str = LLM_BASE_URL, api_key: str = LLM_API_KEY,
+                 provider_name: str | None = None, max_retries: int = 1):
         self.model = model
         self.base_url = base_url
         self.api_key = api_key
+        self.provider_name = provider_name or _host_name(base_url)
+        # Few retries: on a 429 the model pool fails over to another model instead of waiting.
+        self.max_retries = max_retries
         self._client = None
 
     @property
     def client(self):
         if self._client is None:
             import openai
-            # Retries honour the server's retry-after on 429, which free tiers hit often.
-            self._client = openai.OpenAI(api_key=self.api_key or "none", base_url=self.base_url, max_retries=3)
+            self._client = openai.OpenAI(api_key=self.api_key or "none", base_url=self.base_url,
+                                         max_retries=self.max_retries)
         return self._client
 
     def complete(self, *, system_stable, system_dynamic, messages, tools) -> LLMResponse:
@@ -140,7 +176,14 @@ class OpenAICompatibleProvider:
         except openai.AuthenticationError as e:
             raise LLMError("The LLM API key is invalid. Check LLM_API_KEY in backend/.env.") from e
         except openai.RateLimitError as e:
-            raise LLMError("Hit the free-tier rate limit. Wait a minute and send again.") from e
+            msg = _error_message(e)
+            wait = retry_after_seconds(msg)
+            if wait is None:
+                try:
+                    wait = float(e.response.headers.get("retry-after"))
+                except (AttributeError, TypeError, ValueError):
+                    wait = None
+            raise LLMRateLimited(f"Rate limited on {self.model}: {msg}", wait) from e
         except openai.BadRequestError as e:
             raise LLMError(f"The LLM rejected the request: {_error_message(e)}") from e
         except openai.APIStatusError as e:
@@ -161,12 +204,21 @@ class OpenAICompatibleProvider:
 
         blocks: list[dict] = [{"type": "text", "text": text}] if text else []
         blocks += [{"type": "tool_use", "id": c.id, "name": c.name, "input": c.input} for c in calls]
+        u = getattr(response, "usage", None)
         return LLMResponse(
             text=text,
             tool_calls=calls,
             stop_reason=_FINISH_REASONS.get(choice.finish_reason, "end_turn"),
             assistant_content=blocks,
+            usage={"prompt_tokens": u.prompt_tokens, "completion_tokens": u.completion_tokens} if u else None,
         )
+
+
+def _host_name(base_url: str) -> str:
+    """'https://api.groq.com/openai/v1' -> 'groq'."""
+    host = re.sub(r"^https?://", "", base_url or "").split("/")[0].split(":")[0]
+    parts = [p for p in host.split(".") if p not in ("api", "www", "com", "ai", "net", "org", "io", "cloud")]
+    return parts[0] if parts else (host or "local")
 
 
 _FINISH_REASONS = {

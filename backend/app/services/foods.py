@@ -174,12 +174,27 @@ def nutrients_for_safe(food: UserFood, qty: float, unit: str) -> dict:
         return {**{k: None for k in NUTRIENTS}, "micronutrients": None}
 
 
-def library_context(db: Session, user: User) -> list[str]:
-    """Compact lines listing the user's foods for the LLM: 'id | name | kind | measures'."""
+def _stems(text: str) -> set[str]:
+    """Lowercase word stems (plural 's'/'es' dropped), 3+ letters, for loose name matching."""
+    words = re.findall(r"[a-z]{3,}", text.lower())
+    return {re.sub(r"(?:es|s)$", "", w) or w for w in words} - _STOPWORDS
+
+
+_STOPWORDS = {"had", "ate", "the", "and", "for", "with", "some", "cup", "glass", "piece", "cooked", "raw",
+              "breakfast", "lunch", "dinner", "snack", "morning", "evening", "today", "yesterday"}
+
+
+def library_context(db: Session, user: User, match_text: str | None = None) -> list[str]:
+    """Compact lines listing the user's foods for the LLM: 'id | name | kind | measures'.
+    With match_text, only foods sharing a word with it are listed (a big token saving)."""
+    foods = list_foods(db, user.id, CONTEXT_FOOD_LIMIT)
+    if match_text is not None:
+        wanted = _stems(match_text)
+        foods = [f for f in foods if _stems(f"{f.name} {f.brand_name or ''}") & wanted]
     return [
         f"{f.id} | {f.name}{f' ({f.brand_name})' if f.brand_name else ''}"
         f"{' | RECIPE' if f.kind == 'recipe' else ''} | {_measures(f)}"
-        for f in list_foods(db, user.id, CONTEXT_FOOD_LIMIT)
+        for f in foods
     ]
 
 

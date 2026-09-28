@@ -14,7 +14,7 @@ Differences from the spec's starting schema:
 """
 from datetime import date, datetime, timezone
 
-from sqlalchemy import JSON, Date, DateTime, Float, ForeignKey, Integer, String, Text, UniqueConstraint
+from sqlalchemy import JSON, Boolean, Date, DateTime, Float, ForeignKey, Integer, String, Text, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db import Base
@@ -107,6 +107,24 @@ class LogEntryItem(Base):
     micronutrients: Mapped[dict | None] = mapped_column(JSON)   # {iron_mg: 1.2, ...}; keys in config
 
     entry: Mapped[LogEntry] = relationship(back_populates="items")
+
+
+class LlmUsage(Base):
+    """One row per model call (or rule-based fast-path reply), for quota tracking and the admin view."""
+    __tablename__ = "llm_usage"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow, index=True)
+    user_id: Mapped[int | None] = mapped_column(ForeignKey("users.id"), index=True)
+    provider: Mapped[str] = mapped_column(String(40))        # e.g. groq, fastpath
+    model: Mapped[str] = mapped_column(String(120))
+    tier: Mapped[str] = mapped_column(String(10))            # small | large | none
+    intent: Mapped[str] = mapped_column(String(20))
+    prompt_tokens: Mapped[int | None] = mapped_column(Integer)
+    completion_tokens: Mapped[int | None] = mapped_column(Integer)
+    latency_ms: Mapped[int | None] = mapped_column(Integer)
+    outcome: Mapped[str] = mapped_column(String(20))         # ok | error | rate_limited | fastpath
+    escalated: Mapped[bool | None] = mapped_column(Boolean, default=False)
 
 
 class AdminAudit(Base):

@@ -229,3 +229,21 @@ export type Streaks = {
   last_7_days: { date: string; logged: boolean; on_target: boolean }[];
   rule: { calorie_tolerance_pct: number; min_protein_pct: number };
 };
+
+export type LlmUsageReport = {
+  hours: number;
+  totals: {
+    user_messages: number; model_calls: number; fastpath_replies: number; fastpath_share_pct: number | null;
+    tokens: number; errors: number; rate_limited: number; escalations: number;
+  };
+  by_model: {
+    provider: string; model: string; tier: string; calls: number; ok: number; errors: number; rate_limited: number;
+    prompt_tokens: number; completion_tokens: number; avg_latency_ms: number | null;
+  }[];
+  by_intent: { intent: string; calls: number; tokens: number }[];
+  fastpath: Record<string, number>;
+  pool: {
+    provider?: string; model?: string; tier?: string; license?: string | null; available?: boolean;
+    cooldown_seconds?: number; consecutive_failures?: number; last_error?: string | null; error?: string;
+  }[];
+};
