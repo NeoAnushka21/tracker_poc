@@ -4,7 +4,7 @@ from fastapi import FastAPI
 
 from app import models  # noqa: F401  (registers tables)
 from app.db import Base, engine
-from app.routers import actions, auth, chat, dashboard, profile
+from app.routers import actions, auth, chat, dashboard, foods, profile
 
 
 @asynccontextmanager
@@ -21,6 +21,7 @@ app.include_router(profile.router)
 app.include_router(chat.router)
 app.include_router(actions.router)
 app.include_router(dashboard.router)
+app.include_router(foods.router)
 
 
 @app.get("/api/health")

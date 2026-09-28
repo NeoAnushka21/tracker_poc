@@ -36,6 +36,8 @@ export type Item = Nutrients & {
   brand_name: string | null;
   quantity: number;
   unit: string;
+  food_id?: number | null;
+  source?: "estimate" | "library" | "recipe";
 };
 
 export type Entry = {
@@ -55,11 +57,22 @@ export type ActionPayload = {
   totals?: Nutrients;
   entry_id?: number;
   before?: Entry;
+  // save_recipe
+  name?: string;
+  replaces_recipe_id?: number | null;
+  ingredients?: Item[];
+  yield_pieces?: number | null;
+  yield_servings?: number | null;
+  cooked_weight_g?: number | null;
+  ref_qty?: number;
+  ref_unit?: string;
+  per_ref?: Nutrients;
+  batch_totals?: Nutrients;
 };
 
 export type Action = {
   id: number;
-  action_type: "create" | "edit" | "delete";
+  action_type: "create" | "edit" | "delete" | "save_recipe";
   status: "pending" | "confirmed" | "rejected" | "superseded" | "expired";
   target_entry_id: number | null;
   result_entry_id: number | null;
@@ -80,4 +93,29 @@ export type DailySummary = {
   consumed: Nutrients;
   remaining: Omit<Nutrients, "fiber_g"> | null;
   entries: Entry[];
+};
+
+export type RecipeIngredient = Partial<Nutrients> & {
+  food_id: number;
+  name: string;
+  quantity: number;
+  unit: string;
+};
+
+export type Food = Nutrients & {
+  id: number;
+  name: string;
+  brand_name: string | null;
+  kind: "food" | "recipe";
+  source: "estimate" | "user" | "recipe";
+  ref_qty: number;
+  ref_unit: string;
+  grams_per_piece: number | null;
+  grams_per_serving: number | null;
+  yield_pieces: number | null;
+  yield_servings: number | null;
+  cooked_weight_g: number | null;
+  measures: string;
+  last_used_at: string;
+  ingredients?: RecipeIngredient[];
 };

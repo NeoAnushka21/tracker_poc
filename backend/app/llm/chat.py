@@ -1,4 +1,6 @@
 """One chat turn: user message -> LLM tool loop -> assistant reply (+ any proposals)."""
+import re
+
 from sqlalchemy import select
 from sqlalchemy.orm import Session, selectinload
 
@@ -9,8 +11,29 @@ from app.llm.tools import TOOLS, ToolContext, ToolInputError, run_tool
 from app.models import ChatMessage, PendingAction, User
 from app.services.actions import action_to_dict, expire_stale, supersede_older
 
-PROPOSE_TOOLS = {"propose_entry", "propose_edit", "propose_delete"}
-FALLBACK_PROPOSAL_TEXT ="Here's what I've got. Check the card and confirm if it looks right."
+PROPOSE_TOOLS = {"propose_entry", "propose_edit", "propose_delete", "propose_recipe"}
+FALLBACK_PROPOSAL_TEXT = "Here's what I've got. Check the card and confirm if it looks right."
+
+# The model sometimes claims it saved something without calling a propose_* tool.
+FALSE_WRITE_CLAIM = re.compile(
+    r"^\s*(?:logged|saved|added|recorded|created)\b"
+    r"|\bI(?:'ve| have)?\s+(?:just\s+)?(?:logged|saved|added|recorded|created)\b",
+    re.I,
+)
+FALSE_CLAIM_NUDGE = (
+    "[App check] Your reply says you logged or saved something, but you didn't call a propose_* "
+    "tool, so nothing was created and the user can't confirm anything. If the user described food "
+    "they ate or asked to save a recipe, call the right propose_* tool now (put any question or "
+    "offer in its note). Otherwise, rewrite your reply without claiming anything was saved."
+)
+# Proposal notes should read as "not saved yet"; soften a leading "Logged ..." etc.
+SAVED_OPENER = re.compile(
+    r"^\s*(?:I(?:'ve| have|'m| am)?\s+)?(?:logged|saved|added|recorded|created|logging|saving|adding)\b", re.I
+)
+
+
+def _unsaved_wording(note: str) -> str:
+    return SAVED_OPENER.sub("Here's", note, count=1)
 
 
 def message_to_dict(m: ChatMessage) -> dict:
@@ -104,6 +127,7 @@ def _run_tool_loop(db: Session, user: User, messages: list[dict], ctx: ToolConte
     provider = get_provider()
     system_dynamic = build_dynamic_context(db, user)
     texts: list[str] = []
+    nudged = False
 
     for _ in range(LLM_MAX_TOOL_ROUNDS):
         resp = provider.complete(
@@ -121,6 +145,14 @@ def _run_tool_loop(db: Session, user: User, messages: list[dict], ctx: ToolConte
             texts.append("(My reply was cut off. Could you ask again more briefly?)")
             break
         if not resp.tool_calls:
+            if not ctx.created_actions and not nudged and FALSE_WRITE_CLAIM.search(resp.text):
+                # Claimed a write that never happened: send it back once to fix itself.
+                nudged = True
+                if texts and texts[-1] == resp.text.strip():
+                    texts.pop()
+                messages.append({"role": "assistant", "content": resp.text})
+                messages.append({"role": "user", "content": FALSE_CLAIM_NUDGE})
+                continue
             break
 
         messages.append({"role": "assistant", "content": resp.assistant_content})
@@ -137,7 +169,7 @@ def _run_tool_loop(db: Session, user: User, messages: list[dict], ctx: ToolConte
         # A round of only successful proposals ends the turn: the card plus the tool's
         # `note` is the reply, which saves a model call per logged meal.
         if all(c.name in PROPOSE_TOOLS for c in resp.tool_calls) and not any(r["is_error"] for r in results):
-            texts.extend(ctx.notes)
+            texts.extend(_unsaved_wording(n) for n in ctx.notes)
             break
         messages.append({"role": "user", "content": results})
     else:

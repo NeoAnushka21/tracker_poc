@@ -198,3 +198,23 @@ def test_calories_that_dont_match_macros_are_sent_back(client, user, fake_llm):
     assert first_result["is_error"] is True
     assert "don't agree" in first_result["content"]
     assert reply["actions"][0]["payload"]["totals"]["protein_g"] == 46.5
+
+
+def test_false_save_claim_is_sent_back_once(client, user, fake_llm):
+    provider = fake_llm(
+        text_reply("Logged 300 g lauki sabzi. Want me to save it as a recipe?"),
+        tool_reply("propose_entry", {"summary": "Lauki sabzi", "eaten_at": None, "meal_type": None,
+                                     "note": "Logged your sabzi. Want me to save it as a recipe?",
+                                     "items": [CHICKEN]}),
+    )
+    reply = client.post("/api/chat", json={"message": "my lauki sabzi was 300g lauki"}).json()[-1]
+    assert len(provider.calls) == 2
+    assert "[App check]" in provider.calls[1]["messages"][-2]["content"]   # [-1] is the retry
+    assert len(reply["actions"]) == 1
+    assert reply["content"].startswith("Here's your sabzi")      # "Logged" softened
+
+
+def test_normal_answers_mentioning_logs_are_not_nudged(client, user, fake_llm):
+    provider = fake_llm(text_reply("Today you've logged 2 meals, 900 kcal."))
+    client.post("/api/chat", json={"message": "how am I doing?"})
+    assert len(provider.calls) == 1

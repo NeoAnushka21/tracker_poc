@@ -13,6 +13,7 @@ from sqlalchemy.orm import Session
 
 from app.config import PENDING_TTL_HOURS
 from app.models import ChatMessage, LogEntry, LogEntryItem, PendingAction, User, utcnow
+from app.services.foods import FoodError, record_confirmed_items, save_recipe
 from app.services.logs import get_active_entry
 
 
@@ -97,6 +98,20 @@ def confirm_action(db: Session, user: User, action_id: int) -> tuple[PendingActi
     action = _get_open_action(db, user, action_id)
     p = action.payload
 
+    if action.action_type == "save_recipe":
+        try:
+            recipe = save_recipe(db, user, p)
+        except FoodError as e:
+            db.rollback()
+            raise HTTPException(status.HTTP_409_CONFLICT, str(e)) from e
+        action.status, action.resolved_at = "confirmed", utcnow()
+        event = _log_event(
+            db, user.id,
+            f"User confirmed proposal #{action.id}; recipe '{recipe.name}' saved to their library as food #{recipe.id}.",
+        )
+        db.commit()
+        return action, event
+
     if action.action_type == "create":
         entry = LogEntry(
             user_id=user.id,
@@ -107,6 +122,7 @@ def confirm_action(db: Session, user: User, action_id: int) -> tuple[PendingActi
         )
         db.add(entry)
         db.flush()
+        record_confirmed_items(db, user, p["items"])
         event_text = f"User confirmed proposal #{action.id}; saved as log entry #{entry.id}."
 
     else:
@@ -121,6 +137,7 @@ def confirm_action(db: Session, user: User, action_id: int) -> tuple[PendingActi
             entry.meal_type = p["meal_type"]
             entry.eaten_at = datetime.fromisoformat(p["eaten_at_utc"])
             entry.updated_at = utcnow()
+            record_confirmed_items(db, user, p["items"])
             event_text = f"User confirmed proposal #{action.id}; log entry #{entry.id} updated."
         elif action.action_type == "delete":
             entry.deleted_at = utcnow()

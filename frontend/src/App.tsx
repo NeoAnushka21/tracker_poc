@@ -7,11 +7,13 @@ import Chat from "./components/Chat";
 import Dashboard from "./components/Dashboard";
 import SettingsDialog from "./components/SettingsDialog";
 import SummaryStrip from "./components/SummaryStrip";
+import FoodsPage from "./components/FoodsPage";
 import { AssistantAvatar, UserAvatar } from "./components/Avatar";
 
 const TABS = [
   { id: "chat", label: "Chat" },
   { id: "dashboard", label: "Dashboard" },
+  { id: "foods", label: "My foods" },
 ] as const;
 type TabId = (typeof TABS)[number]["id"];
 
@@ -99,6 +101,9 @@ export default function App() {
       </main>
       <main className="page" id="panel-dashboard" role="tabpanel" aria-labelledby="tab-dashboard" hidden={tab !== "dashboard"}>
         <Dashboard dataVersion={dataVersion} />
+      </main>
+      <main className="page" id="panel-foods" role="tabpanel" aria-labelledby="tab-foods" hidden={tab !== "foods"}>
+        <FoodsPage dataVersion={dataVersion} />
       </main>
       {showSettings && (
         <SettingsDialog

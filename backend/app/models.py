@@ -14,7 +14,7 @@ Differences from the spec's starting schema:
 """
 from datetime import date, datetime, timezone
 
-from sqlalchemy import JSON, Date, DateTime, Float, ForeignKey, Integer, String, Text
+from sqlalchemy import JSON, Date, DateTime, Float, ForeignKey, Integer, String, Text, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db import Base
@@ -104,13 +104,71 @@ class LogEntryItem(Base):
     entry: Mapped[LogEntry] = relationship(back_populates="items")
 
 
+class UserFood(Base):
+    """A food in the user's personal library, or a saved recipe.
+
+    Nutrients are stored for a reference amount (`ref_qty` `ref_unit`), e.g. 100 g,
+    100 ml, 1 piece or 1 serving. Optional gram weights for a piece/serving let one
+    record answer "3 almonds" and "30 g almonds" alike. Scaling is done in code
+    (services/foods.py), so the LLM never does the arithmetic for known foods.
+    """
+    __tablename__ = "user_foods"
+    __table_args__ = (UniqueConstraint("user_id", "name_key", name="uq_user_food_name"),)
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), index=True)
+    name: Mapped[str] = mapped_column(String(200))
+    name_key: Mapped[str] = mapped_column(String(260))           # normalised name + brand
+    brand_name: Mapped[str | None] = mapped_column(String(200))
+    kind: Mapped[str] = mapped_column(String(10), default="food")  # food | recipe
+    # estimate (from the LLM, confirmed by the user) | user (edited by hand) | recipe
+    source: Mapped[str] = mapped_column(String(10), default="estimate")
+
+    ref_qty: Mapped[float] = mapped_column(Float)
+    ref_unit: Mapped[str] = mapped_column(String(32))              # g | ml | piece | serving | cup...
+    calories: Mapped[float] = mapped_column(Float)
+    protein_g: Mapped[float] = mapped_column(Float)
+    carbs_g: Mapped[float] = mapped_column(Float)
+    fat_g: Mapped[float] = mapped_column(Float)
+    fiber_g: Mapped[float] = mapped_column(Float, default=0)
+    grams_per_piece: Mapped[float | None] = mapped_column(Float)
+    grams_per_serving: Mapped[float | None] = mapped_column(Float)
+
+    # Recipe yield (recipes only): at least one is set.
+    yield_pieces: Mapped[float | None] = mapped_column(Float)
+    yield_servings: Mapped[float | None] = mapped_column(Float)
+    cooked_weight_g: Mapped[float | None] = mapped_column(Float)
+
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
+    updated_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow, onupdate=utcnow)
+    last_used_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow, index=True)
+
+    ingredients: Mapped[list["RecipeIngredient"]] = relationship(
+        foreign_keys="RecipeIngredient.recipe_id",
+        cascade="all, delete-orphan",
+        order_by="RecipeIngredient.id",
+    )
+
+
+class RecipeIngredient(Base):
+    __tablename__ = "recipe_ingredients"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    recipe_id: Mapped[int] = mapped_column(ForeignKey("user_foods.id"), index=True)
+    food_id: Mapped[int] = mapped_column(ForeignKey("user_foods.id"), index=True)
+    quantity: Mapped[float] = mapped_column(Float)
+    unit: Mapped[str] = mapped_column(String(32))
+
+    food: Mapped[UserFood] = relationship(foreign_keys=[food_id])
+
+
 class PendingAction(Base):
     """A write the LLM has proposed and the user has not yet confirmed."""
     __tablename__ = "pending_actions"
 
     id: Mapped[int] = mapped_column(primary_key=True)
     user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), index=True)
-    action_type: Mapped[str] = mapped_column(String(16))           # create | edit | delete
+    action_type: Mapped[str] = mapped_column(String(16))           # create | edit | delete | save_recipe
     target_entry_id: Mapped[int | None] = mapped_column(ForeignKey("log_entries.id"))
     payload: Mapped[dict] = mapped_column(JSON)
     # pending | confirmed | rejected | superseded | expired

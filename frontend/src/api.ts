@@ -1,4 +1,4 @@
-import type { Action, ChatMessage, DailySummary, User } from "./types";
+import type { Action, ChatMessage, DailySummary, Food, User } from "./types";
 
 export class ApiError extends Error {
   constructor(public status: number, message: string) {
@@ -48,6 +48,20 @@ export type TargetsInput = {
 
 type ActionResult = { action: Action; event: ChatMessage };
 
+export type FoodInput = {
+  name: string;
+  brand_name: string | null;
+  ref_qty: number;
+  ref_unit: string;
+  calories: number;
+  protein_g: number;
+  carbs_g: number;
+  fat_g: number;
+  fiber_g: number;
+  grams_per_piece: number | null;
+  grams_per_serving: number | null;
+};
+
 export const api = {
   me: () => request<User>("GET", "/api/auth/me"),
   register: (email: string, password: string) => request<User>("POST", "/api/auth/register", { email, password }),
@@ -65,6 +79,10 @@ export const api = {
     request<ChatMessage[]>("POST", "/api/chat", { message, feedback_on_action_id }),
   confirm: (id: number) => request<ActionResult>("POST", `/api/actions/${id}/confirm`),
   reject: (id: number) => request<ActionResult>("POST", `/api/actions/${id}/reject`),
+
+  foods: () => request<Food[]>("GET", "/api/foods"),
+  updateFood: (id: number, data: FoodInput) => request<Food>("PUT", `/api/foods/${id}`, data),
+  deleteFood: (id: number) => request<{ ok: boolean }>("DELETE", `/api/foods/${id}`),
 
   daily: (day?: string) => request<DailySummary>("GET", `/api/dashboard/daily${day ? `?day=${day}` : ""}`),
 };

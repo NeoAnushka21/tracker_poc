@@ -68,6 +68,9 @@ user message ─► FastAPI /api/chat ─► LLM (Groq gpt-oss-120b or Claude) w
 - **Needs changes** lets you type a correction. Claude re-proposes the entry, and the new card replaces the old one (the old one is marked "superseded").
 - Proposals left pending for 24 hours expire. Pending proposals never count toward totals.
 - The dashboard reads the database directly and never goes through the LLM.
+- **Personal food library (`user_foods`):** each confirmed meal teaches the app its foods. They're stored per 100 g/ml, or per piece/serving with a gram weight when known. Next time the model only has to match the food (`food_id`), and **the app scales the nutrients in code**, so the same food always gets the same numbers. A food you edit by hand in *My foods* is never overwritten by later estimates. Cancelled proposals teach nothing.
+- **Recipes:** say "save this as a recipe" (or accept the assistant's offer), give the raw ingredients for the whole batch and its yield (pieces, servings and/or cooked weight), and confirm the card. Logging "3 chapatis" then uses the recipe's per-piece values. Editing a recipe changes future logs only; past entries keep their numbers.
+- **Guard against false claims:** if the model says it logged or saved something without creating a card, the app sends it back once to either create the proposal or correct itself.
 - Meal type is inferred from your local time (breakfast 05–11, lunch 11–15, snack 15–19, dinner 19–23, otherwise snack). It's overridden when you say "for breakfast".
 - Targets use Mifflin-St Jeor for BMR, multiplied by an activity factor for TDEE, then adjusted for your goal. Protein is set in g/kg, fat is 25% of calories, and carbs fill the rest. All the tunable numbers are in `backend/app/config.py`.
 
@@ -82,8 +85,10 @@ user message ─► FastAPI /api/chat ─► LLM (Groq gpt-oss-120b or Claude) w
 | `backend/app/llm/provider.py` | LLM providers: Claude, and any OpenAI-compatible API (Groq, Gemini, Ollama…) |
 | `backend/app/services/actions.py` | Confirm / reject / expire proposals |
 | `backend/app/services/logs.py` | Totals, daily summary, log queries |
+| `backend/app/services/foods.py` | Food library + recipes: units, scaling, recipe maths |
+| `backend/app/routers/foods.py` | My foods API (list / edit / delete) |
 | `backend/app/nutrition.py` | BMR / TDEE / target calculation |
-| `frontend/src/components/` | Auth, Onboarding, Chat, ProposalCard, Dashboard, Settings |
+| `frontend/src/components/` | Auth, Onboarding, Chat (with voice input), ProposalCard, Dashboard, My foods, Settings |
 
 ## Scope of this base version
 

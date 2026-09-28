@@ -5,6 +5,7 @@ from sqlalchemy.orm import Session
 
 from app.models import User
 from app.services.actions import open_actions
+from app.services.foods import library_context
 from app.services.logs import current_weight, daily_summary
 from app.timeutil import local_now
 
@@ -45,9 +46,38 @@ when the user indicates a time other than now ("yesterday at lunch", "this morni
 - ingredient_name is the food only, never the amount: "brown rice, cooked", not \
 "50 g brown rice". The amount goes in quantity and unit.
 
+## The user's food library and recipes
+- "my_foods" in the context below lists foods the user has logged before and recipes they \
+saved, as "id | name | RECIPE? | measures". When an item matches one of them, set its \
+food_id, keep the user's quantity and unit, and send 0 for the nutrients; the app \
+computes them from the saved values. Only match when it's the same food in the same \
+state: "chicken breast, cooked" is not "chicken breast, raw", and "roti" can match a saved \
+"Chapati" recipe. If the unit can't be converted (e.g. they said "a bowl" but the food is \
+saved per 100 g), ask for grams or pieces, or estimate with food_id null.
+- If the user corrects the nutrition of a saved food ("your chicken numbers are wrong, it's \
+31 g protein per 100 g"), send that item with food_id null and the corrected numbers; the \
+confirmed values replace the saved ones.
+- For items in pieces, cups, slices and so on, fill unit_weight_g with the approximate grams \
+in one unit, so the food can later be logged in grams too.
+- Recipes: when the user asks to save something as a recipe, or agrees when you offer, \
+call propose_recipe with the raw ingredients for the whole batch (as the user describes \
+them, using food_id for ingredients already in the library) and its yield. Yield is \
+required: how many pieces it makes (chapatis, idlis, laddoos), or for dishes served from a \
+pot, the cooked weight of the whole batch and/or how many servings it makes. If the user \
+hasn't said, ask before proposing.
+- Offer to save a recipe when the user describes the ingredients of a named home dish \
+that isn't already saved. Still log the meal: call propose_entry for what they ate and \
+put the offer at the end of its note, e.g. "Want me to save this as your 'lauki sabzi' \
+recipe for next time?". Don't offer for simple single foods, and don't offer again if \
+they've declined.
+- To change a saved recipe, get its ingredients with get_food, then call propose_recipe \
+with the same name and the full new ingredient list. Past log entries keep their numbers.
+- If the user wants to log a meal and save its recipe in the same message, make both \
+calls: propose_recipe for the batch and propose_entry for what they ate (as estimates).
+
 ## Confirmation - how writes work
-- You cannot save, change or delete anything yourself. propose_entry, propose_edit and \
-propose_delete create a proposal card that the user sees with Confirm / Needs changes / \
+- You cannot save, change or delete anything yourself. propose_entry, propose_edit, \
+propose_delete and propose_recipe create a proposal card that the user sees with Confirm / Needs changes / \
 Cancel buttons. Only the user's click on Confirm writes to the database.
 - Put your reply to the user in the tool's `note` field: a sentence or two mentioning any \
 assumptions. The card already shows the items and totals, so don't repeat the numbers. \
@@ -117,5 +147,6 @@ def build_dynamic_context(db: Session, user: User) -> str:
         "today_remaining": today["remaining"],
         "today_entries": today_entries,
         "open_proposals": proposals,
+        "my_foods": library_context(db, user) or "(empty - nothing saved yet)",
     }
     return "## Current context\n" + json.dumps(context, indent=1, ensure_ascii=False)

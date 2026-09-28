@@ -14,6 +14,9 @@ from sqlalchemy.orm import Session
 from app.config import MEAL_TYPES
 from app.models import PendingAction, User, utcnow
 from app.schemas import ItemIn
+from app.services.foods import (
+    FoodError, compute_recipe, find_by_name, food_to_dict, get_user_food, resolve_library_item,
+)
 from app.services.logs import (
     daily_summary, entry_to_dict, get_active_entry, logs_by_day, sum_items,
 )
@@ -37,10 +40,20 @@ _ITEM_SCHEMA = {
         "carbs_g": {"type": "number"},
         "fat_g": {"type": "number"},
         "fiber_g": {"type": "number"},
+        "food_id": _nullable(
+            {"type": "integer"},
+            "Id from the user's food library when this item is one of their saved foods or recipes; "
+            "the app then computes the nutrients itself (send 0 for them). null for a new estimate.",
+        ),
+        "unit_weight_g": _nullable(
+            {"type": "number"},
+            "Approximate grams in ONE unit when the unit isn't g/ml (e.g. 1 almond = 1.2, 1 chapati = 40, "
+            "1 cup cooked rice = 160), else null.",
+        ),
     },
     "required": [
         "ingredient_name", "brand_name", "quantity", "unit",
-        "calories", "protein_g", "carbs_g", "fat_g", "fiber_g",
+        "calories", "protein_g", "carbs_g", "fat_g", "fiber_g", "food_id", "unit_weight_g",
     ],
     "additionalProperties": False,
 }
@@ -120,6 +133,40 @@ TOOLS = [
         },
     },
     {
+        "name": "propose_recipe",
+        "description": (
+            "Propose saving (or replacing) one of the user's recipes: raw ingredients for a whole batch "
+            "plus its yield. The app computes nutrients per piece / per 100 g / per serving. Only when the "
+            "user asks or agrees to save a recipe. Nothing is saved until they confirm."
+        ),
+        "strict": True,
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "name": {"type": "string", "description": "Recipe name as the user calls it, e.g. 'Chapati', 'Lauki sabzi'"},
+                "ingredients": {"type": "array", "items": _ITEM_SCHEMA,
+                                "description": "Raw ingredients for the WHOLE batch, with their nutrients (or food_id)."},
+                "yield_pieces": _nullable({"type": "number"}, "How many pieces the batch makes (chapatis, idlis), else null"),
+                "yield_servings": _nullable({"type": "number"}, "How many servings the batch makes, else null"),
+                "cooked_weight_g": _nullable({"type": "number"}, "Weight of the whole cooked batch in grams, if known, else null"),
+                "note": _NOTE,
+            },
+            "required": ["name", "ingredients", "yield_pieces", "yield_servings", "cooked_weight_g", "note"],
+            "additionalProperties": False,
+        },
+    },
+    {
+        "name": "get_food",
+        "description": "Get one saved food or recipe from the user's library (a recipe includes its ingredients).",
+        "strict": True,
+        "input_schema": {
+            "type": "object",
+            "properties": {"food_id": {"type": "integer"}},
+            "required": ["food_id"],
+            "additionalProperties": False,
+        },
+    },
+    {
         "name": "get_logs",
         "description": (
             f"Get confirmed log entries (with ids, items and per-day totals) for a local date range, "
@@ -181,19 +228,31 @@ def run_tool(ctx: ToolContext, name: str, args: dict) -> str:
 
 # --- helpers ---------------------------------------------------------------
 
-def _parse_items(raw_items: list) -> list[dict]:
+def _parse_items(ctx: ToolContext, raw_items: list, what: str = "items") -> list[dict]:
+    """Validate proposed items. Library items get nutrients computed from the saved food;
+    new estimates are sanity-checked (calories vs macros)."""
     if not raw_items:
-        raise ToolInputError("items must contain at least one item")
+        raise ToolInputError(f"{what} must contain at least one item")
     try:
         items = [ItemIn.model_validate(i).model_dump() for i in raw_items]
     except ValidationError as e:
         raise ToolInputError(f"Invalid item: {e.errors()[0]['msg']}") from e
+    resolved, estimates = [], []
     for it in items:
+        if it.get("food_id"):
+            try:
+                resolved.append(resolve_library_item(ctx.db, ctx.user, it))
+            except FoodError as e:
+                raise ToolInputError(str(e)) from e
+            continue
         for k in ("calories", "protein_g", "carbs_g", "fat_g", "fiber_g"):
             it[k] = round(it[k], 1)
         it["ingredient_name"] = strip_leading_quantity(it["ingredient_name"], it["quantity"])
-    _check_energy_balance(items)
-    return items
+        it["source"] = "estimate"
+        resolved.append(it)
+        estimates.append(it)
+    _check_energy_balance(estimates)
+    return resolved
 
 
 _LEADING_QTY = re.compile(r"^\s*(\d+(?:[.,]\d+)?)\s*(?:g|gm|gms|grams?|kg|ml|l|pcs?|pieces?|x)?\s+", re.I)
@@ -288,7 +347,7 @@ def _entry_or_error(ctx: ToolContext, entry_id: int):
 
 def _propose_entry(ctx: ToolContext, args: dict) -> dict:
     tz = ctx.user.timezone
-    items = _parse_items(args.get("items") or [])
+    items = _parse_items(ctx, args.get("items") or [])
     eaten_utc = _parse_local_dt(args["eaten_at"], tz) if args.get("eaten_at") else utcnow()
     eaten_local = utc_to_local(eaten_utc, tz)
     stated = args.get("meal_type")
@@ -308,7 +367,7 @@ def _propose_entry(ctx: ToolContext, args: dict) -> dict:
 def _propose_edit(ctx: ToolContext, args: dict) -> dict:
     tz = ctx.user.timezone
     entry = _entry_or_error(ctx, args["entry_id"])
-    items = _parse_items(args.get("items") or [])
+    items = _parse_items(ctx, args.get("items") or [])
     if args.get("eaten_at"):
         eaten_utc = _parse_local_dt(args["eaten_at"], tz)
     else:
@@ -343,6 +402,48 @@ def _propose_delete(ctx: ToolContext, args: dict) -> dict:
     return _add_action(ctx, "delete", payload, entry.id, args.get("note"))
 
 
+def _positive_or_none(v, label: str) -> float | None:
+    if v is None:
+        return None
+    if not isinstance(v, (int, float)) or v <= 0:
+        raise ToolInputError(f"{label} must be a positive number or null")
+    return float(v)
+
+
+def _propose_recipe(ctx: ToolContext, args: dict) -> dict:
+    name = (args.get("name") or "").strip()
+    if not name:
+        raise ToolInputError("Recipe name is required")
+    ingredients = _parse_items(ctx, args.get("ingredients") or [], "ingredients")
+    yield_pieces = _positive_or_none(args.get("yield_pieces"), "yield_pieces")
+    yield_servings = _positive_or_none(args.get("yield_servings"), "yield_servings")
+    cooked_weight_g = _positive_or_none(args.get("cooked_weight_g"), "cooked_weight_g")
+    try:
+        computed = compute_recipe(ingredients, yield_pieces, yield_servings, cooked_weight_g)
+    except FoodError as e:
+        raise ToolInputError(str(e)) from e
+    existing = find_by_name(ctx.db, ctx.user.id, name, None)
+    replaces = existing.id if existing is not None and existing.kind == "recipe" else None
+    payload = {
+        "summary": f"{'Update' if replaces else 'Save'} recipe: {name}",
+        "name": name,
+        "replaces_recipe_id": replaces,
+        "ingredients": ingredients,
+        "yield_pieces": yield_pieces,
+        "yield_servings": yield_servings,
+        "cooked_weight_g": cooked_weight_g,
+        **computed,
+    }
+    return _add_action(ctx, "save_recipe", payload, None, args.get("note"))
+
+
+def _get_food(ctx: ToolContext, args: dict) -> dict:
+    food = get_user_food(ctx.db, ctx.user.id, args["food_id"])
+    if food is None:
+        raise ToolInputError(f"No saved food with id {args['food_id']}")
+    return food_to_dict(food, with_ingredients=True)
+
+
 def _get_logs(ctx: ToolContext, args: dict) -> dict:
     start, end = _parse_date(args["start_date"]), _parse_date(args["end_date"])
     if end < start:
@@ -360,6 +461,8 @@ _HANDLERS = {
     "propose_entry": _propose_entry,
     "propose_edit": _propose_edit,
     "propose_delete": _propose_delete,
+    "propose_recipe": _propose_recipe,
+    "get_food": _get_food,
     "get_logs": _get_logs,
     "get_daily_summary": _get_daily_summary,
 }
