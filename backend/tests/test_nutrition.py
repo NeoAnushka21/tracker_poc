@@ -48,3 +48,11 @@ def test_local_day_bounds_utc_for_india():
     start, end = local_day_bounds_utc(date(2026, 9, 28), "Asia/Kolkata")
     assert start == datetime(2026, 9, 27, 18, 30)
     assert end == datetime(2026, 9, 28, 18, 30)
+
+
+def test_strip_leading_quantity_only_when_it_is_the_items_quantity():
+    from app.llm.tools import strip_leading_quantity as strip
+    assert strip("50 g brown rice, raw", 50) == "brown rice, raw"
+    assert strip("2 piece eggs, large", 2) == "eggs, large"
+    assert strip("150g chicken", 150) == "chicken"
+    assert strip("7 grain bread", 2) == "7 grain bread"

@@ -4,6 +4,7 @@ propose_* tools only create a PendingAction (shown to the user as a card).
 get_* tools are read-only over confirmed entries.
 """
 import json
+import re
 from dataclasses import dataclass, field
 from datetime import date, datetime, timedelta, timezone
 
@@ -27,7 +28,7 @@ def _nullable(schema: dict, description: str) -> dict:
 _ITEM_SCHEMA = {
     "type": "object",
     "properties": {
-        "ingredient_name": {"type": "string", "description": "e.g. 'chicken breast, cooked'"},
+        "ingredient_name": {"type": "string", "description": "Food name only, no amount, e.g. 'chicken breast, cooked'"},
         "brand_name": _nullable({"type": "string"}, "Brand if the user named one, else null"),
         "quantity": {"type": "number"},
         "unit": {"type": "string", "description": "g, ml, piece, cup, tbsp, slice, scoop..."},
@@ -190,8 +191,22 @@ def _parse_items(raw_items: list) -> list[dict]:
     for it in items:
         for k in ("calories", "protein_g", "carbs_g", "fat_g", "fiber_g"):
             it[k] = round(it[k], 1)
+        it["ingredient_name"] = strip_leading_quantity(it["ingredient_name"], it["quantity"])
     _check_energy_balance(items)
     return items
+
+
+_LEADING_QTY = re.compile(r"^\s*(\d+(?:[.,]\d+)?)\s*(?:g|gm|gms|grams?|kg|ml|l|pcs?|pieces?|x)?\s+", re.I)
+
+
+def strip_leading_quantity(name: str, quantity: float) -> str:
+    """'50 g brown rice' -> 'brown rice', but only when the number is this item's own
+    quantity, so names like '7 grain bread' are left alone."""
+    m = _LEADING_QTY.match(name)
+    if m and float(m.group(1).replace(",", ".")) == quantity:
+        rest = name[m.end():].strip()
+        return rest or name
+    return name
 
 
 _ALCOHOL_WORDS = ("beer", "wine", "vodka", "whisk", "rum", "gin", "tequila", "brandy",
