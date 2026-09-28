@@ -9,7 +9,9 @@ def test_tools_translate_to_function_schema():
     out = to_openai_tools(TOOLS)
     assert [t["function"]["name"] for t in out] == [t["name"] for t in TOOLS]
     assert out[0]["type"] == "function"
-    assert out[0]["function"]["parameters"] == TOOLS[0]["input_schema"]
+    params = out[0]["function"]["parameters"]
+    assert params["properties"].keys() == TOOLS[0]["input_schema"]["properties"].keys()
+    assert set(params["required"]) <= set(TOOLS[0]["input_schema"]["required"])   # only relaxed, never added
 
 
 def test_tool_loop_messages_translate():
@@ -51,3 +53,12 @@ def test_missing_or_invalid_args_become_tool_errors(client, user):
                 raise AssertionError("expected ToolInputError")
             except ToolInputError:
                 pass
+
+
+def test_nullable_and_defaulted_fields_are_optional_for_openai_hosts():
+    tools = {t["function"]["name"]: t["function"]["parameters"] for t in to_openai_tools(TOOLS)}
+    item = tools["propose_entry"]["properties"]["items"]["items"]
+    assert set(item["required"]) == {"ingredient_name", "quantity", "unit", "calories", "protein_g", "carbs_g", "fat_g"}
+    assert tools["propose_entry"]["required"] == ["summary", "items"]
+    # the Anthropic (strict) definitions are left untouched
+    assert "brand_name" in TOOLS[0]["input_schema"]["properties"]["items"]["items"]["required"]

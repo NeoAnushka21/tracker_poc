@@ -26,6 +26,8 @@ function title(action: Action): string {
     case "delete": return `Delete entry #${p.entry_id}`;
     case "save_recipe": return p.replaces_recipe_id ? "Update recipe" : "New recipe";
     case "water": return "Water";
+    case "move": return "Move food";
+    case "copy": return "Copy food";
   }
 }
 
@@ -130,6 +132,18 @@ export default function ProposalCard({ action, busy, awaitingFeedback, onConfirm
 
       {action.action_type === "save_recipe" && <RecipeBody p={p} />}
 
+      {(action.action_type === "move" || action.action_type === "copy") && p.items && (
+        <>
+          <div className="move-route">
+            <span className="meal-pill">{MEAL_LABEL[p.from_meal_type ?? ""] ?? p.from_meal_type}</span>
+            <span aria-hidden="true">{action.action_type === "copy" ? "⧉ →" : "→"}</span>
+            <span className="meal-pill to">{MEAL_LABEL[p.to_meal_type ?? ""] ?? p.to_meal_type}</span>
+            {p.to_date && <span className="muted small">on {p.to_date}</span>}
+          </div>
+          <ItemsTable items={p.items} />
+        </>
+      )}
+
       {action.action_type === "water" && p.amount_ml != null && (
         <div className="water-proposal">
           <b>{p.amount_ml.toLocaleString()} ml</b>
@@ -151,7 +165,9 @@ export default function ProposalCard({ action, busy, awaitingFeedback, onConfirm
           <button className="primary" onClick={onConfirm} disabled={busy}>
             {action.action_type === "delete" ? "Yes, delete"
               : action.action_type === "save_recipe" ? "Save recipe"
-              : action.action_type === "water" ? "Log water" : "Looks good"}
+              : action.action_type === "water" ? "Log water"
+              : action.action_type === "move" ? "Move it"
+              : action.action_type === "copy" ? "Copy it" : "Looks good"}
           </button>
           <button onClick={onNeedsChanges} disabled={busy}>Needs changes</button>
           <button className="ghost" onClick={onCancel} disabled={busy}>Cancel</button>

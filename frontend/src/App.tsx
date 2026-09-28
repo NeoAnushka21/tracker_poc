@@ -40,6 +40,7 @@ export default function App() {
   const [dataVersion, setDataVersion] = useState(0);
   const [showSettings, setShowSettings] = useState(false);
   const [tab, setTab] = useState<TabId>(tabFromHash);
+  const [chatDraft, setChatDraft] = useState<{ text: string; nonce: number } | null>(null);
 
   useEffect(() => {
     const onHash = () => setTab(tabFromHash());
@@ -141,10 +142,14 @@ export default function App() {
       {/* Panels stay mounted so the chat keeps its scroll position and draft text. */}
       <main className="page page-chat" id="panel-chat" role="tabpanel" aria-labelledby="tab-chat" hidden={current !== "chat"}>
         <SummaryStrip dataVersion={dataVersion} onOpen={() => openTab("dashboard")} />
-        <Chat user={user} onDataChanged={() => setDataVersion((v) => v + 1)} />
+        <Chat user={user} onDataChanged={() => setDataVersion((v) => v + 1)} draft={chatDraft} />
       </main>
       <main className="page" id="panel-dashboard" role="tabpanel" aria-labelledby="tab-dashboard" hidden={current !== "dashboard"}>
-        <Dashboard dataVersion={dataVersion} onDataChanged={() => setDataVersion((v) => v + 1)} />
+        <Dashboard
+          dataVersion={dataVersion}
+          onDataChanged={() => setDataVersion((v) => v + 1)}
+          onAskMacBro={(text) => { setChatDraft({ text, nonce: Date.now() }); openTab("chat"); }}
+        />
       </main>
       {/* Analysis and Admin load only when opened (admin views are audited). */}
       {current === "analysis" && (

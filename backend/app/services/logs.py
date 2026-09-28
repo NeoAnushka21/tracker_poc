@@ -24,6 +24,7 @@ def sum_items(items) -> dict:
 
 def item_to_dict(item) -> dict:
     return {
+        "id": item.id,
         "ingredient_name": item.ingredient_name,
         "brand_name": item.brand_name,
         "quantity": item.quantity,

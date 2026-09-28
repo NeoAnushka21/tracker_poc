@@ -1,11 +1,11 @@
 """Human-in-the-loop writes.
 
-The LLM can only *propose* a create/edit/delete (stored as a PendingAction).
-The actual database write happens in `confirm_action`, which is only reachable
-from the user's Confirm button (POST /api/actions/{id}/confirm). This is the
-code-level guarantee that nothing is written without explicit user confirmation.
+The LLM can only *propose* a write (stored as a PendingAction). The write happens in
+`confirm_action`, reachable only from the user's Confirm button
+(POST /api/actions/{id}/confirm). This is the code-level guarantee that nothing the LLM
+suggests is written without explicit user confirmation.
 """
-from datetime import datetime, timedelta
+from datetime import date, datetime, timedelta
 
 from fastapi import HTTPException, status
 from sqlalchemy import select, update
@@ -14,6 +14,7 @@ from sqlalchemy.orm import Session
 from app.config import PENDING_TTL_HOURS
 from app.models import ChatMessage, LogEntry, LogEntryItem, PendingAction, User, utcnow
 from app.services.foods import FoodError, record_confirmed_items, save_recipe
+from app.services.entries import transfer_items
 from app.services.logs import get_active_entry
 from app.services.water import add_water
 from app.timeutil import resolve_meal_type, utc_to_local
@@ -158,6 +159,19 @@ def confirm_action(db: Session, user: User, action_id: int) -> tuple[PendingActi
         elif action.action_type == "delete":
             entry.deleted_at = utcnow()
             event_text = f"User confirmed proposal #{action.id}; log entry #{entry.id} deleted."
+        elif action.action_type in ("move", "copy"):
+            by_id = {i.id: i for i in entry.items}
+            if not all(i in by_id for i in p["item_ids"]):
+                action.status, action.resolved_at = "expired", utcnow()
+                db.commit()
+                raise HTTPException(status.HTTP_409_CONFLICT, "Those foods changed since this was proposed")
+            to_date = date.fromisoformat(p["to_date"]) if p.get("to_date") else None
+            result = transfer_items(db, user, entry, [by_id[i] for i in p["item_ids"]],
+                                    p["to_meal_type"], to_date, copy=action.action_type == "copy")
+            verb = "copied" if action.action_type == "copy" else "moved"
+            event_text = (f"User confirmed proposal #{action.id}; food {verb} from entry #{entry.id} "
+                          f"to {p['to_meal_type']} (entry #{result.id}).")
+            entry = result
         else:
             raise HTTPException(status.HTTP_400_BAD_REQUEST, "Unknown action type")
 

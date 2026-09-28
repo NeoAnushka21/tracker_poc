@@ -38,6 +38,7 @@ export type User = {
 };
 
 export type Item = Nutrients & {
+  id?: number;
   ingredient_name: string;
   brand_name: string | null;
   quantity: number;
@@ -63,6 +64,10 @@ export type ActionPayload = {
   totals?: Nutrients;
   entry_id?: number;
   before?: Entry;
+  // move / copy
+  from_meal_type?: string;
+  to_meal_type?: string;
+  to_date?: string | null;
   // water
   amount_ml?: number;
   drank_at?: string;
@@ -81,7 +86,7 @@ export type ActionPayload = {
 
 export type Action = {
   id: number;
-  action_type: "create" | "edit" | "delete" | "save_recipe" | "water";
+  action_type: "create" | "edit" | "delete" | "save_recipe" | "water" | "move" | "copy";
   status: "pending" | "confirmed" | "rejected" | "superseded" | "expired";
   target_entry_id: number | null;
   result_entry_id: number | null;
@@ -94,6 +99,16 @@ export type ChatMessage = {
   content: string;
   created_at: string;
   actions: Action[];
+  kind?: "progress" | null;
+  data?: ProgressData | null;
+};
+
+export type ProgressData = {
+  calories: { consumed: number; target: number | null; pct: number | null };
+  macros: { key: string; label: string; consumed: number; target: number | null; pct: number | null }[];
+  water: { consumed_ml: number; target_ml: number | null };
+  meals_logged: number;
+  headline: string;
 };
 
 export type DailySummary = {

@@ -214,6 +214,8 @@ class ChatMessage(Base):
     # user | assistant | event (event = app-generated note, e.g. "user confirmed #12")
     role: Mapped[str] = mapped_column(String(16))
     content: Mapped[str] = mapped_column(Text)
+    kind: Mapped[str | None] = mapped_column(String(16))     # e.g. "progress" (day-so-far card)
+    data: Mapped[dict | None] = mapped_column(JSON)          # structured data for that card
     related_log_entry_id: Mapped[int | None] = mapped_column(ForeignKey("log_entries.id"))
     created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow, index=True)
 

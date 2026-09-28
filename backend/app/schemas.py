@@ -77,6 +77,12 @@ class ChatIn(BaseModel):
     message: str = Field(min_length=1, max_length=4000)
     # Set when the user clicked "Needs changes" on a proposal and is now typing feedback.
     feedback_on_action_id: int | None = None
+    # Lets the browser cancel this turn (Stop button) via /api/chat/cancel.
+    client_request_id: str | None = Field(default=None, max_length=64)
+
+
+class CancelIn(BaseModel):
+    client_request_id: str = Field(min_length=1, max_length=64)
 
 
 class ItemIn(BaseModel):

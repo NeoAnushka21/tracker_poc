@@ -129,7 +129,14 @@ class OpenAICompatibleProvider:
         if LLM_EFFORT and "gpt-oss" in self.model:
             params["reasoning_effort"] = LLM_EFFORT
         try:
-            response = self.client.chat.completions.create(**params)
+            try:
+                response = self.client.chat.completions.create(**params)
+            except openai.BadRequestError as e:
+                # Some hosts (e.g. Groq) reject a malformed tool call outright; the model is
+                # non-deterministic, so one retry usually succeeds.
+                if "tool" not in _error_message(e).lower():
+                    raise
+                response = self.client.chat.completions.create(**params)
         except openai.AuthenticationError as e:
             raise LLMError("The LLM API key is invalid. Check LLM_API_KEY in backend/.env.") from e
         except openai.RateLimitError as e:
@@ -179,6 +186,34 @@ def _error_message(e) -> str:
     return str(e)[:300]
 
 
+# Fields the backend fills in when missing, so hosts that validate tool calls against the
+# schema (e.g. Groq) don't reject a call just because the model left one out.
+_DEFAULTED_KEYS = {"note", "fiber_g", "micronutrients"}
+
+
+def _is_nullable(schema: dict) -> bool:
+    return any(opt.get("type") == "null" for opt in schema.get("anyOf", []))
+
+
+def _relax(schema: dict) -> dict:
+    """Copy of a JSON schema where nullable/defaulted properties are no longer required."""
+    if not isinstance(schema, dict):
+        return schema
+    out = {k: v for k, v in schema.items()}
+    if "properties" in out:
+        props = {k: _relax(v) for k, v in out["properties"].items()}
+        out["properties"] = props
+        out["required"] = [
+            k for k in out.get("required", [])
+            if k in props and not _is_nullable(props[k]) and k not in _DEFAULTED_KEYS
+        ]
+    if "items" in out:
+        out["items"] = _relax(out["items"])
+    if "anyOf" in out:
+        out["anyOf"] = [_relax(o) for o in out["anyOf"]]
+    return out
+
+
 def to_openai_tools(tools: list[dict]) -> list[dict]:
     return [
         {
@@ -186,7 +221,7 @@ def to_openai_tools(tools: list[dict]) -> list[dict]:
             "function": {
                 "name": t["name"],
                 "description": t.get("description", ""),
-                "parameters": t["input_schema"],
+                "parameters": _relax(t["input_schema"]),
             },
         }
         for t in tools

@@ -91,7 +91,7 @@ calls: propose_recipe for the batch and propose_entry for what they ate (as esti
 
 ## Confirmation - how writes work
 - You cannot save, change or delete anything yourself. propose_entry, propose_edit, \
-propose_delete, propose_recipe and propose_water create a proposal card that the user sees with Confirm / Needs changes / \
+propose_delete, propose_move, propose_recipe and propose_water create a proposal card that the user sees with Confirm / Needs changes / \
 Cancel buttons. Only the user's click on Confirm writes to the database.
 - Put your reply to the user in the tool's `note` field: a sentence or two mentioning any \
 assumptions. The card already shows the items and totals, so don't repeat the numbers. \
@@ -109,6 +109,12 @@ user. They record what happened to proposals (confirmed, cancelled, and so on).
 - For requests like "that chicken was 150g not 100g" or "delete the ice cream", find the \
 entry: first in today's entries below, otherwise with get_logs. Then call propose_edit (with \
 the complete corrected item list and recalculated nutrition) or propose_delete.
+- To move or copy food to another meal or day ("move my snack to breakfast", "shift the \
+rice to dinner", "copy yesterday's breakfast to today"), call propose_move. Use item_ids \
+to move only some foods from an entry. Never delete and re-add to move something.
+- Never ask the user for entry ids or item ids; they can't see them. Identify food by \
+meal, time and name, using today's entries below or get_logs, and only ask which one \
+when several really match.
 - If more than one entry could match, don't guess. List the candidates (time, items, \
 calories) and ask which one they mean.
 
@@ -143,7 +149,7 @@ def build_dynamic_context(db: Session, user: User) -> str:
             "time": e["eaten_at"][11:],
             "meal_type": e["meal_type"],
             "items": [
-                f'{i["quantity"]:g} {i["unit"]} {i["ingredient_name"]} ({i["calories"]:.0f} kcal)'
+                f'item {i["id"]}: {i["quantity"]:g} {i["unit"]} {i["ingredient_name"]} ({i["calories"]:.0f} kcal)'
                 for i in e["items"]
             ],
             "kcal": e["totals"]["calories"],

@@ -8,9 +8,10 @@ export class ApiError extends Error {
   }
 }
 
-async function request<T>(method: string, path: string, body?: unknown): Promise<T> {
+async function request<T>(method: string, path: string, body?: unknown, signal?: AbortSignal): Promise<T> {
   const res = await fetch(path, {
     method,
+    signal,
     credentials: "same-origin",
     headers: body !== undefined ? { "Content-Type": "application/json" } : undefined,
     body: body !== undefined ? JSON.stringify(body) : undefined,
@@ -48,7 +49,7 @@ export type TargetsInput = {
   fat_target_g: number;
 };
 
-type ActionResult = { action: Action; event: ChatMessage };
+type ActionResult = { action: Action; event: ChatMessage; progress: ChatMessage | null };
 
 export type FoodInput = {
   name: string;
@@ -84,8 +85,15 @@ export const api = {
     request<User>("POST", "/api/profile/weight", { weight_kg, recalculate_targets }),
 
   history: () => request<ChatMessage[]>("GET", "/api/chat/history"),
-  send: (message: string, feedback_on_action_id: number | null) =>
-    request<ChatMessage[]>("POST", "/api/chat", { message, feedback_on_action_id }),
+  send: (message: string, feedback_on_action_id: number | null, client_request_id: string, signal?: AbortSignal) =>
+    request<ChatMessage[]>("POST", "/api/chat", { message, feedback_on_action_id, client_request_id }, signal),
+  cancelChat: (client_request_id: string) =>
+    request<{ status: "cancelled" | "finished" }>("POST", "/api/chat/cancel", { client_request_id }),
+  transferItem: (itemId: number, to_meal_type: string, mode: "move" | "copy", to_date?: string) =>
+    request<{ ok: boolean; entry_id: number }>("POST", `/api/entries/items/${itemId}/transfer`, { to_meal_type, mode, to_date }),
+  setItemQuantity: (itemId: number, quantity: number) =>
+    request<{ ok: boolean }>("PATCH", `/api/entries/items/${itemId}`, { quantity }),
+  deleteItem: (itemId: number) => request<{ ok: boolean }>("DELETE", `/api/entries/items/${itemId}`),
   confirm: (id: number) => request<ActionResult>("POST", `/api/actions/${id}/confirm`),
   reject: (id: number) => request<ActionResult>("POST", `/api/actions/${id}/reject`),
 

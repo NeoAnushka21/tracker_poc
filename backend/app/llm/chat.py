@@ -9,9 +9,10 @@ from app.llm.prompt import SYSTEM_STABLE, build_dynamic_context
 from app.llm.provider import LLMError, get_provider
 from app.llm.tools import TOOLS, ToolContext, ToolInputError, run_tool
 from app.models import ChatMessage, PendingAction, User
+from app.services import cancel
 from app.services.actions import action_to_dict, expire_stale, supersede_older
 
-PROPOSE_TOOLS = {"propose_entry", "propose_edit", "propose_delete", "propose_recipe", "propose_water"}
+PROPOSE_TOOLS = {"propose_entry", "propose_edit", "propose_delete", "propose_recipe", "propose_water", "propose_move"}
 FALLBACK_PROPOSAL_TEXT = "Here's what I've got. Check the card and confirm if it looks right."
 
 # The model sometimes claims it saved something without calling a propose_* tool.
@@ -57,6 +58,8 @@ def message_to_dict(m: ChatMessage) -> dict:
         "content": m.content,
         "created_at": m.created_at.isoformat() + "Z",
         "actions": [action_to_dict(a) for a in m.actions],
+        "kind": m.kind,
+        "data": m.data,
     }
 
 
@@ -75,6 +78,8 @@ def _history_for_llm(messages: list[ChatMessage]) -> list[dict]:
     """Stored chat -> API messages. Proposals and app events are rendered as text notes."""
     out: list[dict] = []
     for m in messages:
+        if m.kind == "progress":
+            continue   # the day's totals are already in the per-turn context
         if m.role == "assistant":
             text = m.content
             for a in m.actions:
@@ -95,12 +100,14 @@ def _history_for_llm(messages: list[ChatMessage]) -> list[dict]:
 
 
 def handle_user_message(
-    db: Session, user: User, text: str, feedback_on_action_id: int | None = None
+    db: Session, user: User, text: str, feedback_on_action_id: int | None = None,
+    request_id: str | None = None,
 ) -> list[dict]:
     """Runs one turn. Returns the new messages (events + assistant reply) for the UI.
 
     Nothing is committed if the LLM call fails, so the user can simply retry.
     """
+    cancel.start(user.id, request_id)
     expire_stale(db, user.id)
     new_messages: list[ChatMessage] = []
 
@@ -119,7 +126,7 @@ def handle_user_message(
 
     history = _history_for_llm(recent_messages(db, user.id, CHAT_HISTORY_MESSAGES))
     ctx = ToolContext(db=db, user=user, raw_user_message=text)
-    reply_text = _run_tool_loop(db, user, history, ctx)
+    reply_text = _run_tool_loop(db, user, history, ctx, request_id)
 
     if not reply_text.strip():
         reply_text = FALLBACK_PROPOSAL_TEXT if ctx.created_actions else "Sorry, I didn't catch that. Could you rephrase?"
@@ -131,13 +138,15 @@ def handle_user_message(
         a.chat_message_id = reply.id
     if ctx.created_actions:
         supersede_older(db, user.id, before_id=min(a.id for a in ctx.created_actions))
+    cancel.finish_or_cancelled(user.id, request_id)   # last point where Stop can still discard the turn
     db.commit()
 
     db.refresh(reply)
     return [message_to_dict(m) for m in new_messages] + [message_to_dict(reply)]
 
 
-def _run_tool_loop(db: Session, user: User, messages: list[dict], ctx: ToolContext) -> str:
+def _run_tool_loop(db: Session, user: User, messages: list[dict], ctx: ToolContext,
+                   request_id: str | None = None) -> str:
     provider = get_provider()
     system_dynamic = build_dynamic_context(db, user)
     texts: list[str] = []
@@ -151,6 +160,7 @@ def _run_tool_loop(db: Session, user: User, messages: list[dict], ctx: ToolConte
             messages=messages,
             tools=TOOLS,
         )
+        cancel.raise_if_cancelled(user.id, request_id)
         if resp.text.strip():
             texts.append(resp.text.strip())
 

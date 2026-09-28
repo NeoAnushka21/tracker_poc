@@ -18,9 +18,9 @@ from app.services.foods import (
     FoodError, compute_recipe, find_by_name, food_to_dict, get_user_food, resolve_library_item,
 )
 from app.services.logs import (
-    daily_summary, entry_to_dict, get_active_entry, logs_by_day, sum_items,
+    daily_summary, entry_to_dict, get_active_entry, item_to_dict, logs_by_day, sum_items,
 )
-from app.timeutil import infer_meal_type, local_to_utc, resolve_meal_type, utc_to_local
+from app.timeutil import infer_meal_type, local_to_utc, local_today, resolve_meal_type, utc_to_local
 
 MAX_QUERY_DAYS = 31
 
@@ -30,13 +30,8 @@ def _nullable(schema: dict, description: str) -> dict:
 
 _MICROS_SCHEMA = {
     "type": "object",
-    "description": (
-        "Best estimate of these micronutrients for this item's amount (not per 100 g); "
-        "null for any you can't reasonably estimate."
-    ),
-    "properties": {
-        key: _nullable({"type": "number"}, f"{label} in {unit}") for key, label, unit, _, _ in MICRONUTRIENTS
-    },
+    "description": "For this item's amount; null if unknown",
+    "properties": {key: {"anyOf": [{"type": "number"}, {"type": "null"}]} for key, *_ in MICRONUTRIENTS},
     "required": [m[0] for m in MICRONUTRIENTS],
     "additionalProperties": False,
 }
@@ -44,25 +39,17 @@ _MICROS_SCHEMA = {
 _ITEM_SCHEMA = {
     "type": "object",
     "properties": {
-        "ingredient_name": {"type": "string", "description": "Food name only, no amount, e.g. 'chicken breast, cooked'"},
-        "brand_name": _nullable({"type": "string"}, "Brand if the user named one, else null"),
+        "ingredient_name": {"type": "string", "description": "Food only, no amount"},
+        "brand_name": _nullable({"type": "string"}, "Brand if named"),
         "quantity": {"type": "number"},
-        "unit": {"type": "string", "description": "g, ml, piece, cup, tbsp, slice, scoop..."},
+        "unit": {"type": "string", "description": "g, ml, piece, cup, tbsp..."},
         "calories": {"type": "number"},
         "protein_g": {"type": "number"},
         "carbs_g": {"type": "number"},
         "fat_g": {"type": "number"},
         "fiber_g": {"type": "number"},
-        "food_id": _nullable(
-            {"type": "integer"},
-            "Id from the user's food library when this item is one of their saved foods or recipes; "
-            "the app then computes the nutrients itself (send 0 for them). null for a new estimate.",
-        ),
-        "unit_weight_g": _nullable(
-            {"type": "number"},
-            "Approximate grams in ONE unit when the unit isn't g/ml (e.g. 1 almond = 1.2, 1 chapati = 40, "
-            "1 cup cooked rice = 160), else null.",
-        ),
+        "food_id": _nullable({"type": "integer"}, "my_foods id if it's a saved food/recipe (send 0 nutrients), else null"),
+        "unit_weight_g": _nullable({"type": "number"}, "grams in ONE unit if unit isn't g/ml, else null"),
         "micronutrients": _MICROS_SCHEMA,
     },
     "required": [
@@ -144,6 +131,32 @@ TOOLS = [
                 "note": _NOTE,
             },
             "required": ["entry_id", "summary", "note"],
+            "additionalProperties": False,
+        },
+    },
+    {
+        "name": "propose_move",
+        "description": (
+            "Propose moving or copying logged food to another meal and/or date, e.g. 'move my snack to "
+            "breakfast', 'move the rice from lunch to dinner', 'copy yesterday's breakfast to today'. "
+            "Done in one step on confirm. Never use propose_delete + propose_entry for a move."
+        ),
+        "strict": True,
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "entry_id": {"type": "integer"},
+                "item_ids": _nullable(
+                    {"type": "array", "items": {"type": "integer"}},
+                    "Ids of the specific items to move/copy; null for the whole entry",
+                ),
+                "to_meal_type": {"type": "string", "enum": MEAL_TYPES},
+                "to_date": _nullable({"type": "string"}, "Target local date 'YYYY-MM-DD'; null keeps the same day"),
+                "mode": {"type": "string", "enum": ["move", "copy"]},
+                "summary": {"type": "string", "description": "e.g. 'Move rice from lunch to dinner'"},
+                "note": _NOTE,
+            },
+            "required": ["entry_id", "item_ids", "to_meal_type", "to_date", "mode", "summary", "note"],
             "additionalProperties": False,
         },
     },
@@ -425,7 +438,15 @@ def _propose_edit(ctx: ToolContext, args: dict) -> dict:
     return _add_action(ctx, "edit", payload, entry.id, args.get("note"))
 
 
+_MOVE_WORDS = re.compile(r"\b(move|moved|moving|shift|shifted|transfer|put it (?:in|under)|change it to)\b", re.I)
+
+
 def _propose_delete(ctx: ToolContext, args: dict) -> dict:
+    if _MOVE_WORDS.search(ctx.raw_user_message):
+        raise ToolInputError(
+            "The user asked to move/shift food, not delete it. Use propose_move (mode 'move') so the "
+            "food is moved in one step; deleting first would lose it."
+        )
     entry = _entry_or_error(ctx, args["entry_id"])
     payload = {
         "summary": args.get("summary") or f"Delete entry #{entry.id}",
@@ -470,6 +491,40 @@ def _propose_recipe(ctx: ToolContext, args: dict) -> dict:
     return _add_action(ctx, "save_recipe", payload, None, args.get("note"))
 
 
+def _propose_move(ctx: ToolContext, args: dict) -> dict:
+    entry = _entry_or_error(ctx, args["entry_id"])
+    item_ids = args.get("item_ids")
+    by_id = {i.id: i for i in entry.items}
+    if item_ids:
+        missing = [i for i in item_ids if i not in by_id]
+        if missing:
+            raise ToolInputError(f"Items {missing} aren't in entry #{entry.id}. Its items: "
+                                 + ", ".join(f"{i.id}={i.ingredient_name}" for i in entry.items))
+        items = [by_id[i] for i in item_ids]
+    else:
+        items = list(entry.items)
+    to_meal = args["to_meal_type"]
+    if to_meal not in MEAL_TYPES:
+        raise ToolInputError(f"to_meal_type must be one of {MEAL_TYPES}")
+    to_date = _parse_date(args["to_date"]) if args.get("to_date") else None
+    if to_date and to_date > local_today(ctx.user.timezone):
+        raise ToolInputError("to_date is in the future")
+    mode = args.get("mode") if args.get("mode") in ("move", "copy") else "move"
+    moved = [item_to_dict(i) for i in items]
+    payload = {
+        "summary": args.get("summary") or f"{mode.title()} to {to_meal.replace('_', ' ')}",
+        "entry_id": entry.id,
+        "item_ids": [i.id for i in items],
+        "items": moved,
+        "totals": sum_items(moved),
+        "from_meal_type": entry.meal_type,
+        "to_meal_type": to_meal,
+        "to_date": to_date.isoformat() if to_date else None,
+        "before": entry_to_dict(entry, ctx.user.timezone),
+    }
+    return _add_action(ctx, mode, payload, entry.id, args.get("note"))
+
+
 def _propose_water(ctx: ToolContext, args: dict) -> dict:
     amount = args.get("amount_ml")
     if not isinstance(amount, (int, float)) or not 0 < amount <= WATER_MAX_LOG_ML:
@@ -510,6 +565,7 @@ _HANDLERS = {
     "propose_edit": _propose_edit,
     "propose_delete": _propose_delete,
     "propose_recipe": _propose_recipe,
+    "propose_move": _propose_move,
     "propose_water": _propose_water,
     "get_food": _get_food,
     "get_logs": _get_logs,

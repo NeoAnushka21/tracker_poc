@@ -169,8 +169,84 @@ function sumItems(items: Item[]) {
   );
 }
 
+type ItemActionsProps = {
+  item: Item;
+  meal: string;
+  isToday: boolean;
+  onChanged: () => void;
+  onAskMacBro: (text: string) => void;
+  onClose: () => void;
+};
+
+/** Inline panel for one logged food: move, copy, change quantity, delete, or hand off to chat. */
+function ItemActions({ item, meal, isToday, onChanged, onAskMacBro, onClose }: ItemActionsProps) {
+  const [qty, setQty] = useState(String(item.quantity));
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const name = `${item.quantity} ${item.unit} ${item.ingredient_name}`;
+  const today = new Date();
+  const todayIso = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
+
+  async function run(fn: () => Promise<unknown>) {
+    setBusy(true);
+    setError(null);
+    try {
+      await fn();
+      onClose();
+      onChanged();
+    } catch (e) {
+      setError((e as Error).message);
+      setBusy(false);
+    }
+  }
+
+  const otherMeals = MEAL_ORDER.filter((m) => m !== meal);
+  return (
+    <div className="item-actions" role="group" aria-label={`Actions for ${item.ingredient_name}`}>
+      <div className="ia-row">
+        <span className="ia-label">Move to</span>
+        {otherMeals.map((m) => (
+          <button key={m} type="button" className="chip" disabled={busy}
+                  onClick={() => run(() => api.transferItem(item.id!, m, "move"))}>{MEAL_LABEL[m]}</button>
+        ))}
+      </div>
+      <div className="ia-row">
+        <span className="ia-label">{isToday ? "Copy to" : "Copy to today's"}</span>
+        {MEAL_ORDER.map((m) => (
+          <button key={m} type="button" className="chip" disabled={busy}
+                  onClick={() => run(() => api.transferItem(item.id!, m, "copy", isToday ? undefined : todayIso))}>
+            {MEAL_LABEL[m]}
+          </button>
+        ))}
+      </div>
+      <form className="ia-row" onSubmit={(e) => { e.preventDefault(); run(() => api.setItemQuantity(item.id!, Number(qty))); }}>
+        <label className="ia-label" htmlFor={`qty-${item.id}`}>Quantity</label>
+        <input id={`qty-${item.id}`} type="number" step="any" min="0.01" value={qty} onChange={(e) => setQty(e.target.value)} className="ia-qty" />
+        <span className="muted small">{item.unit}</span>
+        <button className="primary" disabled={busy || Number(qty) <= 0 || Number(qty) === item.quantity}>Save</button>
+        <span className="muted tiny">nutrients scale with the amount</span>
+      </form>
+      <div className="ia-row">
+        <button type="button" className="ghost" disabled={busy}
+                onClick={() => { onClose(); onAskMacBro(`Edit the ${item.ingredient_name} in my ${MEAL_LABEL[meal].toLowerCase()}: `); }}>
+          ✎ Ask MacBro to edit
+        </button>
+        <button type="button" className="ghost danger" disabled={busy}
+                onClick={() => window.confirm(`Delete ${name} from ${MEAL_LABEL[meal]}?`) && run(() => api.deleteItem(item.id!))}>
+          Delete
+        </button>
+        <button type="button" className="ghost" onClick={onClose}>Close</button>
+      </div>
+      {error && <p className="error small">{error}</p>}
+    </div>
+  );
+}
+
 /** One meal: its own macro breakdown, then each food on its own line. */
-function MealSection({ meal, entries }: { meal: string; entries: Entry[] }) {
+function MealSection({ meal, entries, isToday, onChanged, onAskMacBro }: {
+  meal: string; entries: Entry[]; isToday: boolean; onChanged: () => void; onAskMacBro: (text: string) => void;
+}) {
+  const [menuFor, setMenuFor] = useState<number | null>(null);
   const items = entries.flatMap((e) => e.items);
   const t = sumItems(items);
   const [open, setOpen] = useState(true);
@@ -197,13 +273,22 @@ function MealSection({ meal, entries }: { meal: string; entries: Entry[] }) {
           </div>
           {open && <ul className="meal-items">
             {items.map((it, idx) => (
-              <li key={idx}>
+              <li key={it.id ?? idx} className={menuFor === it.id ? "open" : ""}>
                 <span className="meal-item-name">
                   {it.ingredient_name}
                   {it.brand_name && <span className="muted"> · {it.brand_name}</span>}
                 </span>
                 <span className="muted meal-item-qty">{it.quantity} {it.unit}</span>
                 <span className="num">{Math.round(it.calories)}</span>
+                {it.id != null && (
+                  <button type="button" className="ghost item-menu-btn" aria-expanded={menuFor === it.id}
+                          aria-label={`Move, copy, edit or delete ${it.ingredient_name}`}
+                          onClick={() => setMenuFor(menuFor === it.id ? null : it.id!)}>⋯</button>
+                )}
+                {menuFor === it.id && (
+                  <ItemActions item={it} meal={meal} isToday={isToday} onChanged={onChanged}
+                               onAskMacBro={onAskMacBro} onClose={() => setMenuFor(null)} />
+                )}
               </li>
             ))}
           </ul>}
@@ -215,9 +300,9 @@ function MealSection({ meal, entries }: { meal: string; entries: Entry[] }) {
   );
 }
 
-type DashboardProps = { dataVersion: number; onDataChanged: () => void };
+type DashboardProps = { dataVersion: number; onDataChanged: () => void; onAskMacBro: (text: string) => void };
 
-export default function Dashboard({ dataVersion, onDataChanged }: DashboardProps) {
+export default function Dashboard({ dataVersion, onDataChanged, onAskMacBro }: DashboardProps) {
   const [day, setDay] = useState<string | undefined>(undefined);
   const [today, setToday] = useState<string | null>(null);
   const [data, setData] = useState<DailySummary | null>(null);
@@ -279,7 +364,8 @@ export default function Dashboard({ dataVersion, onDataChanged }: DashboardProps
       <h3>Meals</h3>
       <div className="meals">
         {[...MEAL_ORDER, ...Object.keys(byMeal).filter((m) => !MEAL_ORDER.includes(m))].map((meal) => (
-          <MealSection key={meal} meal={meal} entries={byMeal[meal] ?? []} />
+          <MealSection key={meal} meal={meal} entries={byMeal[meal] ?? []} isToday={data.date === today}
+                       onChanged={onDataChanged} onAskMacBro={onAskMacBro} />
         ))}
       </div>
     </section>
