@@ -118,7 +118,7 @@ def _summary(ctx: ToolContext, text: str) -> str | None:
     return "\n".join(lines)
 
 
-# --- 4. foods that are all in My foods ---------------------------------------------
+# --- 4. foods that are all in Saved Food ---------------------------------------------
 
 _MEAL_WORDS = {"breakfast": "breakfast", "lunch": "lunch", "dinner": "dinner", "morning snack": "morning_snack",
                "evening snack": "evening_snack", "snack": "snack"}

@@ -9,6 +9,7 @@ import SettingsDialog from "./components/SettingsDialog";
 import HomePage from "./components/HomePage";
 import FoodsPage from "./components/FoodsPage";
 import BodyPage from "./components/BodyPage";
+import ExplorePage from "./components/ExplorePage";
 import AnalysisPage from "./components/AnalysisPage";
 import AdminPage from "./components/AdminPage";
 import ConsentGate from "./components/ConsentGate";
@@ -23,8 +24,9 @@ const TABS = [
   { id: "chat", label: "Chat" },
   { id: "dashboard", label: "Dashboard" },
   { id: "analysis", label: "Analysis" },
-  { id: "foods", label: "My foods" },
-  { id: "body", label: "Body" },
+  { id: "foods", label: "Saved Food" },
+  { id: "explore", label: "Explore" },
+  { id: "body", label: "Body Profile" },
 ] as const;
 type TabId = (typeof TABS)[number]["id"];
 
@@ -45,7 +47,7 @@ export default function App() {
   const [chatDraft, setChatDraft] = useState<{ text: string; nonce: number; date?: string } | null>(null);
   const [guideOpen, setGuideOpen] = useState(false);
   // Sliding underline under the active tab: measured from the button itself.
-  const tabsRef = useRef<HTMLElement>(null);
+  const tabsRef = useRef<HTMLDivElement>(null);
   const [indicator, setIndicator] = useState<{ left: number; width: number } | null>(null);
 
   useEffect(() => {
@@ -108,7 +110,7 @@ export default function App() {
       user={user}
       onClose={() => setShowSettings(false)}
       onSaved={(u) => { setUser(u); setDataVersion((v) => v + 1); }}
-      onDeleted={() => { setShowSettings(false); setUser(null); window.location.hash = ""; }}
+      onSignedOut={() => { setShowSettings(false); setUser(null); window.location.hash = ""; }}
     />
   );
 
@@ -116,6 +118,7 @@ export default function App() {
   if (user.is_admin) {
     return (
       <div className="app">
+        <div className="app-header"><div className="app-header-glass">
         <header className="topbar">
           <span className="brand"><AppLogo size={34} />{APP_NAME}<span className="admin-badge">Admin</span></span>
           <div className="topbar-actions">
@@ -124,6 +127,7 @@ export default function App() {
             <span className="topbar-user"><UserAvatar name={user.preferred_name} email={user.email} size={34} /></span>
           </div>
         </header>
+        </div></div>
         <main className="page page-wide"><AdminPage /></main>
         {settings}
       </div>
@@ -131,13 +135,15 @@ export default function App() {
   }
 
   if (!user.consented) return <ConsentGate onAccepted={setUser} onLogout={logout} />;
-  if (!user.onboarded) return <Onboarding onDone={setUser} />;
+  if (!user.onboarded) return <Onboarding onDone={setUser} initialName={user.preferred_name} />;
 
   const tabs = TABS;
   const current = tabs.some((t) => t.id === tab) ? tab : "home";
 
   return (
     <div className="app">
+      {/* One mesh image behind one frosted-glass layer, shared by the top bar and the tabs (styles.css, "header"). */}
+      <div className="app-header"><div className="app-header-glass">
       <header className="topbar">
         <span className="brand"><AppLogo size={34} />{APP_NAME}</span>
         <div className="topbar-actions">
@@ -151,7 +157,7 @@ export default function App() {
           </span>
         </div>
       </header>
-      <nav className="tabs" role="tablist" aria-label="Sections" ref={tabsRef}>
+      <div className="tabs" role="tablist" aria-label="Sections" ref={tabsRef}>
         {tabs.map((t) => (
           <button
             key={t.id}
@@ -167,7 +173,8 @@ export default function App() {
         ))}
         {indicator && <span className="tab-indicator" aria-hidden="true"
                             style={{ transform: `translateX(${indicator.left}px)`, width: indicator.width }} />}
-      </nav>
+      </div>
+      </div></div>
       {/* Panels stay mounted so the chat keeps its scroll position and draft text. */}
       <main className="page" id="panel-home" role="tabpanel" aria-labelledby="tab-home" hidden={current !== "home"}>
         <HomePage user={user} dataVersion={dataVersion} onDataChanged={() => setDataVersion((v) => v + 1)}
@@ -191,6 +198,9 @@ export default function App() {
       )}
       <main className="page" id="panel-foods" role="tabpanel" aria-labelledby="tab-foods" hidden={current !== "foods"}>
         <FoodsPage dataVersion={dataVersion} />
+      </main>
+      <main className="page" id="panel-explore" role="tabpanel" aria-labelledby="tab-explore" hidden={current !== "explore"}>
+        <ExplorePage />
       </main>
       <main className="page" id="panel-body" role="tabpanel" aria-labelledby="tab-body" hidden={current !== "body"}>
         <BodyPage user={user} onUserChanged={(u) => { setUser(u); setDataVersion((v) => v + 1); }} />

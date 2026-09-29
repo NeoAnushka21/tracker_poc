@@ -1,7 +1,9 @@
 from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi.responses import JSONResponse
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from app import config
 from app.db import get_db
 from app.config import CONSENT_VERSION
 from app.deps import current_user, is_admin, onboarded_user
@@ -9,6 +11,7 @@ from app.config import BODY_PARTS, BODY_PART_KEYS
 from app.models import BodyMeasurement, User, UserTarget, WeightLog
 from app.nutrition import age_on, calculate_targets
 from app.schemas import HeightIn, MeasurementsIn, OnboardingIn, TargetsIn, WeightIn
+from app.services.export import export_user_data
 from app.services.body import SAME_SESSION_DAYS, bmi, body_fat_navy
 from app.services.logs import current_targets, current_weight, targets_to_dict
 from app.timeutil import is_valid_timezone, local_today
@@ -38,6 +41,8 @@ def user_to_dict(db: Session, user: User) -> dict:
         "last_login_at": user.last_login_at.isoformat() + "Z" if user.last_login_at else None,
         "consented_at": user.consent_at.isoformat() + "Z" if user.consent_at else None,
         "guide_seen": user.guide_seen_at is not None,
+        "has_password": bool(user.hashed_password),
+        "google_linked": user.google_sub is not None,
     }
 
 
@@ -65,10 +70,26 @@ def _save_calculated_targets(db: Session, user: User, weight_kg: float) -> dict:
     return {"bmr": t.bmr, "tdee": t.tdee}
 
 
+@router.get("/export")
+def export_data(user: User = Depends(current_user), db: Session = Depends(get_db)):
+    """Download my data: everything stored about this account, as a JSON file."""
+    filename = f"{config.APP_NAME.lower()}-my-data-{local_today(user.timezone).isoformat()}.json"
+    return JSONResponse(export_user_data(db, user),
+                        headers={"Content-Disposition": f'attachment; filename="{filename}"',
+                                 "Cache-Control": "no-store"})
+
+
 @router.post("/onboarding")
 def onboarding(body: OnboardingIn, user: User = Depends(current_user), db: Session = Depends(get_db)):
     if not is_valid_timezone(body.timezone):
         raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT, f"Unknown time zone '{body.timezone}'")
+    age = age_on(body.date_of_birth, local_today(body.timezone))
+    if body.date_of_birth > local_today(body.timezone) or age > config.MAX_USER_AGE:
+        raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT, "Please check your date of birth")
+    if age < config.MIN_USER_AGE:
+        raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT,
+                            f"{config.APP_NAME} is for adults ({config.MIN_USER_AGE} and over), so we can't set up "
+                            "your profile. You can delete this account in Settings.")
     for field in ("preferred_name", "date_of_birth", "sex", "height_cm", "unit_system",
                   "timezone", "goal_type", "activity_level"):
         setattr(user, field, getattr(body, field))

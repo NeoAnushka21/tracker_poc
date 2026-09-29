@@ -28,7 +28,7 @@ def _nullable(schema: dict, description: str) -> dict:
     return {"anyOf": [schema, {"type": "null"}], "description": description}
 
 
-# Nullable: saved foods (food_id set) get their micronutrients from My foods, so models send
+# Nullable: saved foods (food_id set) get their micronutrients from Saved Food, so models send
 # null there. Hosts like Groq validate tool calls against this schema and reject the whole
 # reply on a mismatch, so null must be allowed here, not just described.
 _MICROS_SCHEMA = _nullable({

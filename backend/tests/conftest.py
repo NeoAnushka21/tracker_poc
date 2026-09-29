@@ -57,6 +57,8 @@ def fake_llm():
 
 @pytest.fixture
 def client():
+    from app.services import ratelimit
+    ratelimit.reset()   # the sign-in limits live in memory, across tests
     Base.metadata.drop_all(engine)
     Base.metadata.create_all(engine)
     with TestClient(app) as c:

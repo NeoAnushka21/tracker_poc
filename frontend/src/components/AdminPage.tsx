@@ -180,6 +180,7 @@ export default function AdminPage() {
       {selected && <UserDetail user={selected} onClose={() => setSelected(null)} />}
 
       <LlmUsagePanel />
+      <TwoStepPanel />
 
       <details className="card audit" onToggle={(e) => (e.target as HTMLDetailsElement).open && audit === null && api.adminAudit().then(setAudit).catch(() => setAudit([]))}>
         <summary>Audit log</summary>
@@ -303,6 +304,63 @@ function LlmUsagePanel() {
           </div>
         </>
       )}
+    </section>
+  );
+}
+
+
+/** Two-step sign-in for this admin account: scan a QR code, confirm one code, then logins need a code. */
+function TwoStepPanel() {
+  const [enabled, setEnabled] = useState<boolean | null>(null);
+  const [setup, setSetup] = useState<{ secret: string; qr_svg_data_uri: string } | null>(null);
+  const [code, setCode] = useState("");
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+
+  useEffect(() => { api.adminTotp().then((t) => setEnabled(t.enabled)).catch((e) => setError(e.message)); }, []);
+
+  async function run(fn: () => Promise<void>) {
+    setBusy(true);
+    setError(null);
+    try { await fn(); } catch (e) { setError((e as Error).message); } finally { setBusy(false); }
+  }
+
+  return (
+    <section className="card two-step" aria-labelledby="two-step-title">
+      <h2 id="two-step-title">Two-step sign-in</h2>
+      <p className="muted small">
+        Admin login also asks for a 6-digit code from an authenticator app (Google Authenticator, Microsoft
+        Authenticator, Authy…). Admin sessions last 12 hours.
+      </p>
+      {enabled === null && !error && <p className="muted">Loading…</p>}
+      {enabled === true && (
+        <form className="settings-form" onSubmit={(e) => { e.preventDefault(); run(async () => {
+          await api.adminTotpDisable(password, code); setEnabled(false); setCode(""); setPassword(""); }); }}>
+          <p className="ok">On. Logins need your password and a code.</p>
+          <label>Password<input type="password" value={password} onChange={(e) => setPassword(e.target.value)} required autoComplete="current-password" /></label>
+          <label>Current code<input value={code} onChange={(e) => setCode(e.target.value)} inputMode="numeric" autoComplete="one-time-code" required /></label>
+          <button disabled={busy}>Turn off</button>
+        </form>
+      )}
+      {enabled === false && !setup && (
+        <button className="primary" disabled={busy} onClick={() => run(async () => { setSetup(await api.adminTotpSetup()); })}>
+          Set up two-step sign-in
+        </button>
+      )}
+      {enabled === false && setup && (
+        <form className="settings-form" onSubmit={(e) => { e.preventDefault(); run(async () => {
+          await api.adminTotpEnable(code); setEnabled(true); setSetup(null); setCode(""); }); }}>
+          <p>1. In your authenticator app, add an account and scan this code:</p>
+          <img className="totp-qr" src={setup.qr_svg_data_uri} alt="QR code for your authenticator app" width={200} height={200} />
+          <p className="muted small">Can't scan? Enter this key instead: <code className="totp-key">{setup.secret}</code></p>
+          <label>2. Type the 6-digit code it shows
+            <input value={code} onChange={(e) => setCode(e.target.value)} inputMode="numeric" autoComplete="one-time-code" required />
+          </label>
+          <button className="primary" disabled={busy}>Turn on</button>
+        </form>
+      )}
+      {error && <p className="error small">{error}</p>}
     </section>
   );
 }

@@ -1,4 +1,4 @@
-"""Dashboard "Add food": one AI estimate for a food the user typed that isn't in My foods.
+"""Dashboard "Add food": one AI estimate for a food the user typed that isn't in Saved Food.
 
 Same tool, guards and confirm step as the chat: the model can only call propose_entry, and the
 pending action it creates is saved by confirm_action when the user presses "Add it". Nothing is

@@ -17,7 +17,7 @@ services:
       cd backend &&
       uvicorn app.main:app --host 0.0.0.0 --port $PORT --proxy-headers --forwarded-allow-ips="*"
     healthCheckPath: /api/health
-    autoDeployTrigger: commit    # every push to main redeploys
+    autoDeployTrigger: checksPass   # a push to main deploys only after CI passes (.github/workflows/ci.yml)
     envVars:
       - key: NODE_VERSION
         value: "24"
@@ -29,6 +29,18 @@ services:
         generateValue: true
       - key: COOKIE_SECURE
         value: "true"
+      - key: PUBLIC_APP_URL       # used to build links in emails (never taken from the request)
+        value: https://omniai-hkv2.onrender.com
+      - key: BREVO_API_KEY        # password-reset emails (docs/deployment.md); empty = Forgot password hidden
+        sync: false
+      - key: EMAIL_FROM           # the sender address verified in Brevo
+        sync: false
+      - key: SENTRY_DSN           # optional error reports; paste the DSN from sentry.io (docs/deployment.md)
+        sync: false
+      - key: AI_DAILY_MESSAGE_LIMIT   # AI messages per user per day (0 = unlimited)
+        value: "20"
+      - key: GOOGLE_CLIENT_ID      # Continue with Google; public, so kept here
+        value: 46117983475-u7cg29tsiu5kqc65isvne3s6ttu3vbb8.apps.googleusercontent.com
       - key: LLM_PROVIDER
         value: openai_compatible
       - key: LLM_BASE_URL
@@ -46,6 +58,7 @@ services:
       cd frontend && npm ci --include=dev && npm run build &&
       mv dist/launcher.html dist/index.html
     staticPublishPath: frontend/dist
+    autoDeployTrigger: checksPass
     routes:
       - type: rewrite            # any path (e.g. an old bookmark) shows the launcher
         source: /*

@@ -29,7 +29,16 @@ class User(Base):
 
     id: Mapped[int] = mapped_column(primary_key=True)
     email: Mapped[str] = mapped_column(String(255), unique=True, index=True)
+    # "" for accounts created with Google and no password set (the column is NOT NULL).
     hashed_password: Mapped[str] = mapped_column(String(255))
+    google_sub: Mapped[str | None] = mapped_column(String(255), index=True)   # Google account id, when linked
+    # Put in every session token; bumping it ends all sessions (password change, log out everywhere).
+    # None = 0 (accounts from before this column).
+    session_version: Mapped[int | None] = mapped_column(Integer, default=0)
+    # Two-step sign-in (admin): encrypted TOTP secret, when it was switched on, last accepted time step.
+    totp_secret: Mapped[str | None] = mapped_column(String(255))
+    totp_enabled_at: Mapped[datetime | None] = mapped_column(DateTime)
+    totp_last_step: Mapped[int | None] = mapped_column(Integer)
     preferred_name: Mapped[str | None] = mapped_column(String(80))
     date_of_birth: Mapped[date | None] = mapped_column(Date)
     sex: Mapped[str | None] = mapped_column(String(10))            # male | female
@@ -262,3 +271,27 @@ class ChatMessage(Base):
         order_by="PendingAction.id",
         viewonly=True,
     )
+
+
+class AiRequest(Base):
+    """One row per request the AI answered for a user (a chat message or a Dashboard estimate),
+    for the daily allowance. Written in the same transaction as the reply, so failed or stopped
+    requests don't count."""
+    __tablename__ = "ai_requests"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), index=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow, index=True)
+    kind: Mapped[str] = mapped_column(String(20))           # chat | dashboard_add
+
+
+class PasswordReset(Base):
+    """A "forgot password" link. Only a hash of the token is stored; it works once, for a short time."""
+    __tablename__ = "password_resets"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), index=True)
+    token_hash: Mapped[str] = mapped_column(String(64), unique=True, index=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
+    expires_at: Mapped[datetime] = mapped_column(DateTime)
+    used_at: Mapped[datetime | None] = mapped_column(DateTime)

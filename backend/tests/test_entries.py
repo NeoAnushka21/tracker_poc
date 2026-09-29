@@ -91,7 +91,7 @@ def test_chat_partial_copy(client, user, fake_llm):
     oil_id = entry["items"][1]["id"]
     action = chat_propose(client, fake_llm, "propose_move", {
         "entry_id": entry["id"], "item_ids": [oil_id], "to_meal_type": "dinner", "to_date": None,
-        "mode": "copy", "summary": "Copy oil to dinner"})
+        "mode": "copy", "summary": "Copy oil to dinner"}, message="copy the oil to dinner")
     client.post(f"/api/actions/{action['id']}/confirm")
     assert day(client)["consumed"]["calories"] == 165 + 44 + 44     # oil copied, not moved
 

@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState, type FormEvent } from "react";
 import { api } from "../api";
 import type { Food, MicroField } from "../types";
-import MacroChips from "./MacroChips";
+import { grams } from "../format";
 import { PencilIcon, TrashIcon } from "./icons";
 
 type Filter = "all" | "food" | "recipe";
@@ -25,20 +25,53 @@ function microValue(v: number): string {
   return String(v >= 100 ? Math.round(v) : Math.round(v * 100) / 100);
 }
 
-/** The food's saved micronutrients, per its reference amount, folded away by default. */
-function FoodMicros({ food, fields }: { food: Food; fields: MicroField[] }) {
+const MACROS = [
+  { key: "protein_g", label: "Protein", tone: "protein" },
+  { key: "carbs_g", label: "Carbs", tone: "carbs" },
+  { key: "fat_g", label: "Fat", tone: "fat" },
+  { key: "fiber_g", label: "Fiber", tone: "fiber" },
+] as const;
+
+/** Everything behind "Additional info": macros, micronutrients, where the numbers came from,
+ *  and a recipe's ingredients. All per the food's reference amount (`measures`). */
+function FoodInfo({ food, fields, id }: { food: Food; fields: MicroField[]; id: string }) {
   const m = food.micronutrients ?? {};
   const known = fields.filter((f) => m[f.key] != null);
-  if (!known.length) return null;
   return (
-    <details className="food-micros">
-      <summary>Micronutrients <span className="muted">· {known.length} of {fields.length} known, {food.measures}</span></summary>
-      <ul>
-        {known.map((f) => (
-          <li key={f.key}>{f.label}{f.kind === "limit" ? " (limit)" : ""} <b className="num">{microValue(m[f.key])} {f.unit}</b></li>
+    <div className="food-info" id={id}>
+      <div className="food-info-macros">
+        {MACROS.map((x) => (
+          <div key={x.key} className={`food-macro ${x.tone}`}>
+            <span><i className="swatch" aria-hidden="true" />{x.label}</span>
+            <b className="num">{grams(food[x.key])}</b>
+          </div>
         ))}
-      </ul>
-    </details>
+      </div>
+      <h4>Micronutrients <span className="muted">· {known.length} of {fields.length} known</span></h4>
+      {known.length ? (
+        <ul className="food-micros">
+          {known.map((f) => (
+            <li key={f.key}>{f.label}{f.kind === "limit" ? " (limit)" : ""} <b className="num">{microValue(m[f.key])} {f.unit}</b></li>
+          ))}
+        </ul>
+      ) : (
+        <p className="muted small">None saved yet. Add them with the pencil (Additional nutrients).</p>
+      )}
+      {food.kind === "recipe" && food.ingredients && food.ingredients.length > 0 && (
+        <>
+          <h4>Ingredients <span className="muted">· whole batch{yieldText(food) ? `, ${yieldText(food)}` : ""}</span></h4>
+          <ul className="ingredient-list">
+            {food.ingredients.map((i) => (
+              <li key={i.food_id}>
+                <span>{i.quantity} {i.unit} {i.name}</span>
+                <span className="muted num">{i.calories == null ? "–" : `${Math.round(i.calories)} kcal`}</span>
+              </li>
+            ))}
+          </ul>
+        </>
+      )}
+      <p className="muted small food-source">All values {food.measures} · {SOURCE_LABEL[food.source]}</p>
+    </div>
   );
 }
 
@@ -158,47 +191,36 @@ function FoodRow({ food, fields, onChanged, onDeleted }: {
     }
   }
 
+  const infoId = `food-info-${food.id}`;
   return (
-    <li className={`food-row ${food.kind}${editing ? " editing" : ""}`}>
-      <div className="food-main">
+    <li className={`food-row ${food.kind}${open ? " open" : ""}${editing ? " editing" : ""}`}>
+      <div className="food-line">
         <div className="food-title">
           <span className="food-name">{food.name}</span>
           {food.brand_name && <span className="muted"> · {food.brand_name}</span>}
           {food.kind === "recipe" && <span className="source-tag recipe">recipe</span>}
         </div>
-        <div className="food-nutrients">
-          <MacroChips n={food} label={`${food.measures}:`} />
+        <div className="food-kcal">
+          <b className="num">{Math.round(food.calories).toLocaleString()}</b> kcal
+          <span className="muted"> {food.measures}</span>
         </div>
-        <div className="muted small">
-          {SOURCE_LABEL[food.source]}{food.kind === "recipe" && yieldText(food) ? ` · ${yieldText(food)}` : ""}
-        </div>
-        <FoodMicros food={food} fields={fields} />
-      </div>
-      <div className="food-actions">
-        {food.kind === "recipe" && (
-          <button className="ghost" onClick={() => setOpen(!open)} aria-expanded={open}>
-            {open ? "Hide" : "Ingredients"}
+        <div className="food-actions">
+          <button className="ghost info-btn" onClick={() => setOpen(!open)} aria-expanded={open} aria-controls={infoId}
+                  title={open ? "Hide additional info" : "Additional info"}>
+            <span className="info-label">Additional info</span>
+            <i className="chevron" aria-hidden="true" />
           </button>
-        )}
-        <button className={`ghost icon-btn ${editing ? "on" : ""}`} onClick={() => setEditing(!editing)}
-                aria-label={`${editing ? "Close editing" : "Edit"} ${food.name}`} title={editing ? "Close" : "Edit"} aria-pressed={editing}>
-          <PencilIcon />
-        </button>
-        <button className="ghost icon-btn danger" onClick={remove} aria-label={`Delete ${food.name}`} title="Delete">
-          <TrashIcon />
-        </button>
+          <button className={`ghost icon-btn ${editing ? "on" : ""}`} onClick={() => setEditing(!editing)}
+                  aria-label={`${editing ? "Close editing" : "Edit"} ${food.name}`} title={editing ? "Close" : "Edit"} aria-pressed={editing}>
+            <PencilIcon />
+          </button>
+          <button className="ghost icon-btn danger" onClick={remove} aria-label={`Delete ${food.name}`} title="Delete">
+            <TrashIcon />
+          </button>
+        </div>
       </div>
+      {open && <FoodInfo food={food} fields={fields} id={infoId} />}
       {error && <p className="error small food-error">{error}</p>}
-      {open && food.ingredients && (
-        <ul className="ingredient-list">
-          {food.ingredients.map((i) => (
-            <li key={i.food_id}>
-              <span>{i.quantity} {i.unit} {i.name}</span>
-              <span className="muted num">{i.calories == null ? "–" : `${Math.round(i.calories)} kcal`}</span>
-            </li>
-          ))}
-        </ul>
-      )}
       {editing && (
         <EditForm food={food} fields={fields} onCancel={() => setEditing(false)} onSaved={(f) => { onChanged(f); setEditing(false); }} />
       )}
@@ -235,7 +257,7 @@ export default function FoodsPage({ dataVersion }: { dataVersion: number }) {
     <section className="foods card">
       <div className="foods-head">
         <div>
-          <h2>My foods</h2>
+          <h2>Saved Food</h2>
           <p className="muted small">
             Foods are saved automatically when you confirm a meal, so next time the app reuses the same
             numbers. Save a recipe by telling the chat, e.g. "save my chapati as a recipe".

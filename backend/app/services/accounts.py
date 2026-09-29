@@ -3,7 +3,7 @@ from sqlalchemy import delete, select, update
 from sqlalchemy.orm import Session
 
 from app.models import (
-    AdminAudit, BodyMeasurement, ChatMessage, LlmUsage, LogEntry, LogEntryItem, PendingAction, RecipeIngredient, User, UserFood,
+    AdminAudit, AiRequest, BodyMeasurement, PasswordReset, ChatMessage, LlmUsage, LogEntry, LogEntryItem, PendingAction, RecipeIngredient, User, UserFood,
     UserTarget, WaterLog, WeightLog,
 )
 
@@ -14,6 +14,8 @@ def delete_user_and_data(db: Session, user: User) -> None:
     food_ids = select(UserFood.id).where(UserFood.user_id == uid)
 
     # Order matters: children before the rows they point at.
+    db.execute(delete(AiRequest).where(AiRequest.user_id == uid))
+    db.execute(delete(PasswordReset).where(PasswordReset.user_id == uid))
     db.execute(delete(PendingAction).where(PendingAction.user_id == uid))
     db.execute(delete(ChatMessage).where(ChatMessage.user_id == uid))
     db.execute(delete(LogEntryItem).where(LogEntryItem.log_entry_id.in_(entry_ids)))

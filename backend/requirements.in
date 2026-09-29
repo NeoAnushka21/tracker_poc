@@ -1,0 +1,22 @@
+# Direct dependencies with minimum versions. requirements.txt pins every package (and their
+# dependencies) to exact versions, generated from this file. After editing, from backend/ run:
+#   .venv\Scripts\python -m uv pip compile requirements.in --universal --python-version 3.14 -o requirements.txt
+# Dependabot proposes updates as pull requests; CI tests them before anything deploys.
+fastapi>=0.115
+uvicorn[standard]>=0.30
+sqlalchemy>=2.0.36
+alembic>=1.13               # schema migrations (backend/migrations)
+psycopg[binary]>=3.2          # Postgres driver (production database on Neon)
+pyotp>=2.9                  # admin two-step sign-in (TOTP codes)
+segno>=1.6                  # QR code for setting it up
+argon2-cffi>=23.1            # password hashing (Argon2id)
+pyjwt[crypto]>=2.9           # crypto: verifies Google's RS256 sign-in tokens
+anthropic>=0.70
+openai>=3.0
+python-dotenv>=1.0
+sentry-sdk>=2.20            # optional error reports (only when SENTRY_DSN is set)
+tzdata>=2024.1
+httpx>=0.27                  # emails via Brevo's HTTP API; also the test client
+
+# dev / tests
+pytest>=8.0

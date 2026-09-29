@@ -71,6 +71,13 @@ export type TargetsInput = {
 
 type ActionResult = { action: Action; event: ChatMessage; progress: ChatMessage | null };
 
+/** Continue with Google: signed in, or come back with the user's OK (link an existing email account / consent for a new one). */
+export type AiAllowance = { limit: number | null; used: number; remaining: number | null; resets_at: string };
+
+export type GoogleLoginResult =
+  | { status: "ok"; user: User }
+  | { status: "link_required" | "consent_required"; email: string };
+
 /** Dashboard Add food: a saved food is added at once; any other food comes back as an AI estimate to confirm. */
 export type AddFoodResult =
   | { status: "added"; entry_id: number; item: Item }
@@ -118,15 +125,35 @@ export const api = {
   me: () => request<User>("GET", "/api/auth/me"),
   register: (email: string, password: string, consent: boolean) =>
     request<User>("POST", "/api/auth/register", { email, password, consent }),
-  adminLogin: (email: string, password: string) => request<User>("POST", "/api/auth/admin-login", { email, password }),
+  /** Once two-step sign-in is on, the first try fails with "code_required"; send it again with the code. */
+  adminLogin: (email: string, password: string, code?: string) =>
+    request<User>("POST", "/api/auth/admin-login", { email, password, code: code || null }),
+  adminTotp: () => request<{ enabled: boolean }>("GET", "/api/admin/totp"),
+  adminTotpSetup: () => request<{ secret: string; uri: string; qr_svg_data_uri: string }>("POST", "/api/admin/totp/setup"),
+  adminTotpEnable: (code: string) => request<{ enabled: boolean }>("POST", "/api/admin/totp/enable", { code }),
+  adminTotpDisable: (password: string, code: string) =>
+    request<{ enabled: boolean }>("POST", "/api/admin/totp/disable", { password, code }),
   changePassword: (current_password: string, new_password: string) =>
     request<{ ok: boolean }>("POST", "/api/auth/change-password", { current_password, new_password }),
-  deleteAccount: (password: string) => request<{ ok: boolean }>("POST", "/api/auth/delete-account", { password }),
+  /** Password accounts confirm with the password; Google-only accounts type their email. */
+  deleteAccount: (password: string, confirm_email = "") =>
+    request<{ ok: boolean }>("POST", "/api/auth/delete-account", { password, confirm_email }),
+  /** Download my data: everything stored about the account (DPDP right of access). */
+  exportData: () => request<Record<string, unknown>>("GET", "/api/profile/export"),
+  authOptions: () => request<{ google_client_id: string | null; password_reset: boolean }>("GET", "/api/auth/options"),
+  /** Always answers the same message, whether or not the account exists. */
+  forgotPassword: (email: string) => request<{ ok: boolean; message: string }>("POST", "/api/auth/forgot-password", { email }),
+  resetPassword: (token: string, new_password: string) =>
+    request<{ ok: boolean }>("POST", "/api/auth/reset-password", { token, new_password }),
+  googleLogin: (credential: string, flags: { consent?: boolean; link?: boolean } = {}) =>
+    request<GoogleLoginResult>("POST", "/api/auth/google", { credential, ...flags }),
   consentText: () => request<{ version: string; text: string }>("GET", "/api/auth/consent-text"),
   giveConsent: () => request<User>("POST", "/api/auth/consent"),
   guideSeen: () => request<User>("POST", "/api/auth/guide-seen"),
   login: (email: string, password: string) => request<User>("POST", "/api/auth/login", { email, password }),
   logout: () => request<{ ok: boolean }>("POST", "/api/auth/logout"),
+  /** Ends every session of the account, on all devices (this one too). */
+  logoutEverywhere: () => request<{ ok: boolean }>("POST", "/api/auth/logout-everywhere"),
 
   onboarding: (data: OnboardingInput) =>
     request<User & { calculation: { bmr: number; tdee: number } }>("POST", "/api/profile/onboarding", data),
@@ -147,6 +174,8 @@ export const api = {
   send: (message: string, feedback_on_action_id: number | null, client_request_id: string, signal?: AbortSignal,
          log_date?: string | null) =>
     request<ChatMessage[]>("POST", "/api/chat", { message, feedback_on_action_id, client_request_id, log_date: log_date ?? null }, signal),
+  /** Today's AI allowance; limit/remaining are null when unlimited. */
+  aiAllowance: () => request<AiAllowance>("GET", "/api/chat/allowance"),
   cancelChat: (client_request_id: string) =>
     request<{ status: "cancelled" | "finished" }>("POST", "/api/chat/cancel", { client_request_id }),
   transferItem: (itemId: number, to_meal_type: string, mode: "move" | "copy", to_date?: string) =>

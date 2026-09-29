@@ -103,7 +103,7 @@ def test_edit_and_delete_go_through_confirmation(client, user, fake_llm):
         }),
         text_reply("Here's the change."),
     )
-    edit = client.post("/api/chat", json={"message": "chicken was 150g"}).json()[-1]["actions"][0]
+    edit = client.post("/api/chat", json={"message": "the chicken was 150g"}).json()[-1]["actions"][0]
     assert edit["payload"]["before"]["totals"]["calories"] == 245
     assert consumed_kcal(client) == 245             # unchanged until confirmed
     client.post(f"/api/actions/{edit['id']}/confirm")

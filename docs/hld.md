@@ -1,6 +1,6 @@
 # OmniAI high-level design (HLD)
 
-> Last updated: 2026-09-29 (Dashboard Add food; Home protein streak).Update the diagrams whenever a component, data flow, table or external service changes (see [docs/README.md](README.md)).
+> Last updated: 2026-09-29 (tabs: Saved Food, Explore, Body Profile; admin two-step sign-in; tool allow-list; terms page; earlier: health notes, Alembic, forgot password…).Update the diagrams whenever a component, data flow, table or external service changes (see [docs/README.md](README.md)).
 > Diagrams are Mermaid. They render on GitHub and in VS Code with a Mermaid preview extension.
 
 ## 1. Purpose and principles
@@ -21,13 +21,15 @@ OmniAI is a chat-first calorie and macro tracker; its chat assistant is called M
 flowchart LR
     U([User<br/>browser]) -->|HTTPS| APP[OmniAI web app]
     A([Admin<br/>browser]) -->|HTTPS · Admin login| APP
+    U -->|Continue with Google<br/>ID token| GIS[(Google Identity Services)]
+    APP -->|public signing keys| GIS
     APP -->|OpenAI-compatible API<br/>tool calling| LLM[(Open-source models<br/>Groq: gpt-oss-20b / 120b<br/>backup: NVIDIA DeepSeek V4.1 Flash)]
     U -.->|Web Speech API<br/>voice to text, in browser| U
 ```
 
 | Actor | Uses |
 |---|---|
-| **User** | Home (summary, meal-logging and protein streaks), Chat logging, Dashboard, Analysis, My foods, Settings |
+| **User** | Home (summary, meal-logging and protein streaks), Chat logging, Dashboard, Analysis, Saved Food, Settings |
 | **Admin** (emails in `ADMIN_EMAILS`) | Admin console only: user list, per-user read-only data, audit log |
 | **LLM provider** | Nutrition estimation, clarifying questions, choosing tools. It never writes data. |
 
@@ -36,7 +38,7 @@ flowchart LR
 ```mermaid
 flowchart TB
     subgraph Browser
-        SPA[React 19 + Vite SPA<br/>Home · Chat · Dashboard · Analysis · My foods · Body<br/>Settings · Guide tour · Admin console<br/>wake screen while the server wakes]
+        SPA[React 19 + Vite SPA<br/>Home · Chat · Dashboard · Analysis · Saved Food · Explore · Body Profile<br/>Settings · Guide tour · Admin console<br/>public /privacy page<br/>wake screen while the server wakes]
         STT[Web Speech API]
         SPA --- STT
     end
@@ -71,7 +73,8 @@ flowchart LR
     U -->|3. app + /api over HTTPS| R["Render free web service · Singapore<br/>FastAPI serves the built SPA and /api<br/>sleeps after ~15 min idle"]
     R -->|SSL, pooled connections| N[("Neon Postgres · Singapore<br/>free, scales to zero")]
     R -->|HTTPS| G[(Groq: gpt-oss-20b / 120b)]
-    GH[GitHub main] -->|push = build + deploy| R
+    GH[GitHub main] -->|push| CI[GitHub Actions: tests SQLite + Postgres,<br/>build, dependency audit]
+    CI -->|all pass = build + deploy| R
 ```
 
 The free web service sleeps when idle, and Render shows its own page while it wakes. So people open the always-on **launcher** (a free static site). It shows our wake screen until the app answers, then opens it. Inside the app, a request that hits the sleeping server shows the same wake screen as an overlay and is retried once the server is back. The app itself stays one service, keeping the site and the API on one address (simple same-site cookie, one cold start). The server and the database share a region because one chat message makes many database round trips. Secrets are set in the Render dashboard. Step-by-step: [deployment.md](deployment.md).
@@ -123,6 +126,8 @@ flowchart TD
     R -->|query · edit · simple log| S[Small tier<br/>gpt-oss-20b]
     R -->|vague dish · 3+ foods · recipe ·<br/>feedback · long| L[Large tier<br/>gpt-oss-120b]
     S -->|2 validation errors| L
+    R --> AL{Daily AI allowance left?}
+    AL -->|no| X[429: used up, message kept in the box]
     S & L --> P[(Model pool<br/>rotation · cooldown on 429 ·<br/>short limits waited out · failover ·<br/>open-source licence gate)]
     P -->|all unavailable| E[Friendly 'servers are down']
     P --> U[(llm_usage)]
@@ -149,8 +154,12 @@ flowchart LR
 ```mermaid
 flowchart TD
     Start([Open app]) --> Me{GET /api/auth/me}
-    Me -->|401| Auth[Auth screen<br/>Log in · Create account · Admin login]
+    Me -->|401| Auth[Auth screen<br/>Log in · Create account · Continue with Google · Admin login]
     Auth -->|user login / register + consent| Me
+    Auth -->|Google ID token| G{POST /api/auth/google}
+    G -->|known Google account| Me
+    G -->|email has a password account| Link[Link Google? user's OK] --> Me
+    G -->|new email| GC[Consent] --> Me
     Auth -->|admin-login, ADMIN_EMAILS only| Admin[Admin console]
     Me -->|is_admin| Admin
     Me -->|consent outdated| Consent[Consent gate]
@@ -158,22 +167,26 @@ flowchart TD
     Me -->|not onboarded| Onb[Onboarding → targets]
     Onb --> Me
     Me -->|guide not seen| Guide[First-run guide tour]
-    Me --> Tabs[Home default · Chat · Dashboard · Analysis · My foods]
+    Me --> Tabs[Home default · Chat · Dashboard · Analysis · Saved Food]
     Guide --> Tabs
 ```
 
-Admin emails can't register or use the normal login. Admin accounts are hidden from the admin user list, and every admin view of a user's data is written to `admin_audit`.
+Admin emails can't register, use the normal login or Continue with Google.
+
+**Google sign-in** uses Google Identity Services: the browser receives Google's signed ID token, and the backend checks the signature (Google's public keys), our client ID, the expiry and a verified email, then sets our own session cookie. There's no client secret, only the `openid email profile` scopes, and no Google review or billing. A Google sign-in is linked to an existing email + password account only after the user confirms, and a new account needs the data consent.
+
+ Admin accounts are hidden from the admin user list, and every admin view of a user's data is written to `admin_audit`.
 
 ### 4.4 Adding food from the Dashboard
 
 ```mermaid
 flowchart TD
-    A[+ Add food: name, quantity, unit] --> M{Saved in My foods?<br/>picked, or name matches}
+    A[+ Add food: name, quantity, unit] --> M{Saved in Saved Food?<br/>picked, or name matches}
     M -->|yes| S[Scale saved numbers in code<br/>add to the meal at once]
     M -->|no| L[One AI call: propose_entry only<br/>same guards as the chat]
     L --> P[(pending action<br/>origin = dashboard)]
     P --> C{User: Add it?}
-    C -->|Add it| W[confirm_action: log entry +<br/>learn the food into My foods]
+    C -->|Add it| W[confirm_action: log entry +<br/>learn the food into Saved Food]
     C -->|Change / Cancel| R[reject: nothing saved]
     L -->|not a food| Q[Reason + Ask in chat instead]
 ```
@@ -195,6 +208,8 @@ erDiagram
     users ||--o{ pending_actions : "proposed writes"
     users ||--o{ chat_messages : "chat history"
     users ||--o{ admin_audit : "viewed by admin"
+    users ||--o{ ai_requests : "daily AI allowance"
+    users ||--o{ password_resets : "forgot-password links"
 ```
 
 Column-level detail is in [technical-overview.md](technical-overview.md#5-data-model).
@@ -210,17 +225,19 @@ Column-level detail is in [technical-overview.md](technical-overview.md#5-data-m
 | History | Today's chat only (+3 h grace): last 6 messages on the small tier, 12 on the large |
 | Per-call size | Only the tools and prompt sections the intent needs, and only saved foods named in the message (25–87% fewer instruction tokens per call) |
 | Observability | `llm_usage` table and the admin **AI usage** panel (calls, tokens, fast-path share, cooldowns) |
-| Guards | Energy balance, quantity cleanup, false "Logged" claim nudge, missed-water nudge, move-vs-delete guard |
+| Guards | Energy balance, quantity cleanup, false "Logged" claim nudge, missed-water nudge, move-vs-delete guard, tool allow-list per routed intent (other tool names are refused) |
 | Failure | Any provider error → HTTP 503 with a friendly message (`SHOW_LLM_ERRORS=true` shows details in dev) |
 
 ## 7. Non-functional notes
 
 | Area | Current state | Planned |
 |---|---|---|
-| **Security** | scrypt password hashes, JWT in an httpOnly SameSite cookie (Secure over HTTPS in production), per-user scoping on every query, admin audit | Rate limiting, OTP email verification |
-| **Privacy** | Consent at sign-up (versioned), full account deletion | Data export |
+| **Security** | Argon2id password hashes (OWASP settings; old scrypt hashes upgraded at login; no timing hint for unknown emails), or Google sign-in (verified ID token, verified email); JWT in an httpOnly SameSite cookie (Secure over HTTPS in production) with a per-user session version, so a password change or Log out of all devices ends existing sessions, admin two-step sign-in (authenticator codes, encrypted secret, no replay) and 12-hour admin sessions, forgot password by one-time emailed link (Brevo; hashed token, 30 min, no account enumeration, links built from a fixed address), per-user scoping on every query, admin audit, sign-in attempt limits (per email and per address), browser security headers (CSP without inline scripts, no framing, HSTS over HTTPS), API docs off in production | OTP email verification |
+| **Privacy** | Consent at sign-up (versioned); public plain-language notice at `/privacy`; **Download my data** (all rows, secrets excluded); full account deletion; adults only (18+ checked at onboarding) | Data retention periods and a scheduled purge; legal review before a public launch |
 | **Scale** | Single process; Postgres on Neon (SQLite locally) | Stateless app instances (move in-memory state to the database or Redis) |
-| **LLM capacity** | Groq free tier, per model (~200K tokens/day each for gpt-oss-20b and 120b); fast paths and slimmer calls stretch it | Second free provider for failover, see [llm-routing-strategy.md](llm-routing-strategy.md) |
+| **LLM capacity** | Groq free tier, per model (~200K tokens/day each for gpt-oss-20b and 120b); fast paths and slimmer calls stretch it; **daily AI allowance** per user (`AI_DAILY_MESSAGE_LIMIT`, 20, resets at local midnight; failed calls and instant replies don't count) | Second free provider for failover, see [llm-routing-strategy.md](llm-routing-strategy.md) |
+| **Monitoring** | Request ids on every response and log line; unexpected errors return a reference the user can quote; optional Sentry error reports (nothing personal); `/api/health` for an uptime monitor | Create the Sentry and UptimeRobot accounts (deployment.md) |
+| **Health safety** | Adults only; "estimates, not medical advice" at sign-in, on Home, Dashboard, Body and the privacy page; warning on calorie targets under 1,200 / 1,500 kcal; the model is told not to give medical advice | – |
 | **Accessibility** | WCAG AA contrast in light and dark, keyboard tooltips, ARIA tabs and dialogs | – |
 | **Responsive layout** | Phone/tablet: one column. Laptop (≥1024px): multi-column pages capped at 1200px, same top tabs. CSS only, no separate mobile app. | – |
-| **Deployment** | Live at `omniai-hkv2.onrender.com`: Render free web service + Neon free Postgres, Singapore; the free service sleeps after ~15 min idle (30–60 s first load) | Uptime pinger, custom domain, Alembic migrations |
+| **Deployment** | Live at `omniai-hkv2.onrender.com`: Render free web service + Neon free Postgres, Singapore; the free service sleeps after ~15 min idle (30–60 s first load) | Uptime pinger, custom domain |

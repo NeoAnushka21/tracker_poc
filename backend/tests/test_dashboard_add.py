@@ -33,11 +33,13 @@ def meal_items(client, meal: str, d: str | None = None) -> list[dict]:
 
 def test_saved_food_is_added_directly_without_the_model(client, user, fake_llm):
     log_and_confirm(client, fake_llm, [CHICKEN])
+    # The chat picks the meal from the clock; add to a different one so this works at any hour.
+    meal = "breakfast" if day(client)["entries"][0]["meal_type"] != "breakfast" else "dinner"
     provider = fake_llm()                       # an empty script: any model call would fail
-    r = add(client, name="Chicken Breast, Cooked", quantity=200)
+    r = add(client, name="Chicken Breast, Cooked", quantity=200, meal_type=meal)
     assert r.status_code == 200 and r.json()["status"] == "added"
     assert provider.calls == []
-    [item] = meal_items(client, "dinner")
+    [item] = meal_items(client, meal)
     assert item["calories"] == 330 and item["quantity"] == 200
 
 

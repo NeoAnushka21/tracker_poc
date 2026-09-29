@@ -20,11 +20,14 @@ The docs are part of the product. **Update them in the same change as the code**
 | Anything a user sees or does (labels, buttons, tabs, flows, messages) | `user-guide.md` **and** the steps in `GuideTour.tsx` if the tour mentions it |
 | A new screen, tab (e.g. Home), or major feature | `user-guide.md`, `GuideTour.tsx`, `hld.md` (container/flow), `technical-overview.md` (components) |
 | An API endpoint | `technical-overview.md` §4 (and `hld.md` if it's a new flow) |
-| A table or column | `technical-overview.md` §5 and the ER diagram in `hld.md` §5 |
+| A table or column | an Alembic migration (`alembic revision --autogenerate` in `backend/`), `technical-overview.md` §5 and the ER diagram in `hld.md` §5 |
 | An LLM tool, guard, prompt rule or provider | `technical-overview.md` §6, `hld.md` §6 |
+| A Python package | `backend/requirements.in`, then regenerate `requirements.txt` (technical-overview §10) |
 | Config / env variables | `technical-overview.md` §9, `backend/.env.example` |
 | Target formulas, meal windows, water or micronutrient rules | `user-guide.md` (§2, §5, §11) and `technical-overview.md` |
 | App or assistant name, logo, hostname | `frontend/src/brand.ts` (name, logo text, `APP_DEV_HOST`, `APP_DOMAIN`), `public/favicon.svg`, `backend/app/config.py` `APP_NAME`, the persona line in `prompt.py`, all docs titles, and `technical-overview.md` §8 |
 | Deployment or infrastructure | `deployment.md`, `render.yaml`, `hld.md` §3.1 and §7, `technical-overview.md` §1 and §9, the root `README.md` |
+
+Before committing, besides the backend tests and `npm run build`, run `npm run lint` in `frontend/` (CI runs all three).
 
 Also bump the **Last updated** date at the top of each file you touch.

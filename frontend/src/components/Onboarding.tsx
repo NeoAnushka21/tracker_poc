@@ -5,11 +5,18 @@ import type { User } from "../types";
 import TargetsEditor from "./TargetsEditor";
 
 const LB_PER_KG = 2.20462;
+
+/** Latest date of birth for an 18-year-old today (the server checks it too). */
+function adultMax(): string {
+  const d = new Date();
+  d.setFullYear(d.getFullYear() - 18);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
 const CM_PER_IN = 2.54;
 
-export default function Onboarding({ onDone }: { onDone: (u: User) => void }) {
+export default function Onboarding({ onDone, initialName }: { onDone: (u: User) => void; initialName?: string | null }) {
   const [units, setUnits] = useState<"metric" | "imperial">("metric");
-  const [name, setName] = useState("");
+  const [name, setName] = useState(initialName ?? "");   // from Google, when signed up with it
   const [dob, setDob] = useState("");
   const [sex, setSex] = useState<"male" | "female">("male");
   const [heightCm, setHeightCm] = useState("");
@@ -79,7 +86,8 @@ export default function Onboarding({ onDone }: { onDone: (u: User) => void }) {
         <div className="row">
           <label>
             Date of birth
-            <input type="date" value={dob} onChange={(e) => setDob(e.target.value)} required />
+            <input type="date" value={dob} onChange={(e) => setDob(e.target.value)} required max={adultMax()} />
+            <span className="muted small">You need to be 18 or over.</span>
           </label>
           <label>
             Sex <span className="muted">(for the BMR formula)</span>

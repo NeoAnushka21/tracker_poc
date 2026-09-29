@@ -1,33 +1,45 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, type SyntheticEvent } from "react";
 import { api } from "../api";
 import type { Action, DailySummary, Entry, Food, Item, MicroSummary, WaterSummary } from "../types";
 import { MEAL_LABEL, MEAL_ORDER, friendlyDate, grams, kcal, litres, shiftDay } from "../format";
+import { haptic } from "../haptics";
+import { useRevealFill } from "../motion";
 import { StackedBar } from "./charts";
 import MacroChips from "./MacroChips";
 import { ArrowRightIcon, ChatIcon, CheckIcon, CloseIcon, PencilIcon, TrashIcon, WaterDrop } from "./icons";
 
-/** A meter: one macro against its target. Identity comes from the label; the fill hue repeats it. */
+/** How a macro stands against its target. Protein and fiber are goals: going past is good.
+ *  Carbs and fat are budgets: 100-105% counts as hitting the target, beyond that is over. */
+export function macroState(tone: string, value: number, target: number): "reached" | "over" | "under" {
+  if (target <= 0 || value < target) return "under";
+  if (tone === "protein" || tone === "fiber") return "reached";
+  return value <= target * 1.05 ? "reached" : "over";
+}
+
+/** A meter: one macro against its target. Identity comes from the label; the fill hue repeats it.
+ *  Reaching the target swaps the flat fill for a slow-moving gradient, as a small reward. */
 export function Bar({ label, value, target, unit, tone }: {
   label: string; value: number; target: number; unit: string; tone: "protein" | "fiber" | "carbs" | "fat";
 }) {
   const pct = target > 0 ? Math.min(100, (value / target) * 100) : 0;
+  const [ref, shownPct] = useRevealFill<HTMLDivElement>(pct);
   const left = Math.round(target - value);
-  // Going past the fiber target is fine, so it never shows as a warning.
-  const over = target > 0 && value > target && tone !== "fiber";
-  const met = tone === "fiber" && target > 0 && value >= target;
+  const state = macroState(tone, value, target);
+  const goal = tone === "protein" || tone === "fiber";
   return (
     <div className={`bar-row ${tone}`} title={`${label}: ${Math.round(value)} of ${target} ${unit}`}>
       <div className="bar-label">
         <span className="bar-name"><i className="swatch" aria-hidden="true" />{label}</span>
         <span className="num">
           {Math.round(value)} / {target} {unit}
-          <span className={over ? "warn" : "muted"}>
-            {" · "}{met ? "goal met ✓" : over ? `${-left} ${unit} over` : `${left} ${unit} left`}
+          <span className={state === "over" ? "warn" : state === "reached" ? "ok" : "muted"}>
+            {" · "}{state === "reached" ? (goal ? "goal met ✓" : "on target ✓")
+              : state === "over" ? `${-left} ${unit} over` : `${left} ${unit} left`}
           </span>
         </span>
       </div>
-      <div className="bar" role="progressbar" aria-valuenow={Math.round(value)} aria-valuemax={target} aria-label={label}>
-        <div className={`bar-fill ${over ? "over" : ""}`} style={{ width: `${pct}%` }} />
+      <div className="bar" ref={ref} role="progressbar" aria-valuenow={Math.round(value)} aria-valuemax={target} aria-label={label}>
+        <div className={`bar-fill ${state === "under" ? "" : state}`} style={{ width: `${shownPct}%` }} />
       </div>
     </div>
   );
@@ -37,18 +49,19 @@ export function Bar({ label, value, target, unit, tone }: {
 export function CalorieRing({ eaten, target }: { eaten: number; target: number }) {
   const r = 52;
   const circumference = 2 * Math.PI * r;
-  const frac = target > 0 ? Math.min(1, eaten / target) : 0;
+  const [ref, frac] = useRevealFill<SVGSVGElement>(target > 0 ? Math.min(1, eaten / target) : 0);
   const remaining = Math.round(target - eaten);
   const over = remaining < 0;
   return (
     <div className="kcal-ring-wrap">
-      <svg className={`kcal-ring ${over ? "over" : ""}`} viewBox="0 0 120 120" role="img"
+      <svg ref={ref} className={`kcal-ring ${over ? "over" : ""}`} viewBox="0 0 120 120" role="img"
            aria-label={`${Math.round(eaten)} of ${target} kcal eaten`}>
         <title>{`${Math.round(eaten)} of ${target} kcal eaten`}</title>
         <circle className="ring-track" cx="60" cy="60" r={r} />
         <circle className="ring-fill" cx="60" cy="60" r={r}
                 strokeDasharray={`${frac * circumference} ${circumference}`}
-                transform="rotate(-90 60 60)" />
+                transform="rotate(-90 60 60)"
+                style={frac > 0 ? undefined : { opacity: 0 }} /* a zero-length stroke still draws its round cap */ />
         <text x="60" y="57" className="ring-value">{Math.round(eaten).toLocaleString()}</text>
         <text x="60" y="75" className="ring-caption">/ {target.toLocaleString()} kcal</text>
       </svg>
@@ -67,11 +80,29 @@ function fmtMicro(v: number): string {
   return v >= 100 ? Math.round(v).toLocaleString() : String(Math.round(v * 10) / 10);
 }
 
-/** Secondary panel: one muted hue for every nutrient; the label carries identity. */
+const MICROS_OPEN_KEY = "micros-open";
+
+/** Secondary panel, folded by default so the day's main goals stay on top; the choice is remembered
+ *  on this device. One muted hue for every nutrient; the label carries identity. */
 function Micronutrients({ m }: { m: MicroSummary }) {
+  const [open, setOpen] = useState(() => {
+    try { return localStorage.getItem(MICROS_OPEN_KEY) === "1"; } catch { return false; }
+  });
+  function toggle(e: SyntheticEvent<HTMLDetailsElement>) {
+    const now = e.currentTarget.open;
+    setOpen(now);
+    try { localStorage.setItem(MICROS_OPEN_KEY, now ? "1" : "0"); } catch { /* not remembered, that's fine */ }
+  }
+  const low = m.nutrients.filter((n) => n.kind !== "limit" && n.target > 0 && n.consumed < n.target * 0.5).length;
+  const over = m.nutrients.filter((n) => n.kind === "limit" && n.consumed > n.target).length;
   return (
-    <section className="micros" aria-labelledby="micros-heading">
-      <h3 id="micros-heading">Additional micronutrients</h3>
+    <details className="micros accordion" open={open} onToggle={toggle}>
+      <summary>
+        <span className="accordion-title">Additional micronutrients</span>
+        <span className="muted small">
+          {m.nutrients.length} tracked{over > 0 ? ` · ${over} over limit` : low > 0 ? ` · ${low} under half` : ""}
+        </span>
+      </summary>
       <p className="muted small">
         Approximate: estimated by the assistant from typical food data.
         {m.items_total > 0 && m.items_with_data < m.items_total &&
@@ -97,7 +128,7 @@ function Micronutrients({ m }: { m: MicroSummary }) {
           );
         })}
       </div>
-    </section>
+    </details>
   );
 }
 
@@ -107,6 +138,7 @@ export function Water({ w, isToday, onChanged }: { w: WaterSummary; isToday: boo
   const [error, setError] = useState<string | null>(null);
   const target = w.target_ml ?? 0;
   const pct = target > 0 ? Math.min(100, (w.consumed_ml / target) * 100) : 0;
+  const [barRef, shownPct] = useRevealFill<HTMLDivElement>(pct);
   const met = target > 0 && w.consumed_ml >= target;
   const last = w.logs[w.logs.length - 1];
 
@@ -134,14 +166,14 @@ export function Water({ w, isToday, onChanged }: { w: WaterSummary; isToday: boo
           </span>
         </span>
       </div>
-      <div className="bar water-bar" role="progressbar" aria-label="Water"
+      <div className="bar water-bar" ref={barRef} role="progressbar" aria-label="Water"
            aria-valuenow={w.consumed_ml} aria-valuemax={target}>
-        <div className="bar-fill" style={{ width: `${pct}%` }} />
+        <div className={`bar-fill ${met ? "reached" : ""}`} style={{ width: `${shownPct}%` }} />
       </div>
       {isToday && (
         <div className="water-actions">
-          <button onClick={() => run(() => api.addWater(250))} disabled={busy}>+ 250 ml</button>
-          <button onClick={() => run(() => api.addWater(500))} disabled={busy}>+ 500 ml</button>
+          <button onClick={() => { haptic("tap"); run(() => api.addWater(250)); }} disabled={busy}>+ 250 ml</button>
+          <button onClick={() => { haptic("tap"); run(() => api.addWater(500)); }} disabled={busy}>+ 500 ml</button>
           <button className="ghost" onClick={() => last && run(() => api.deleteWater(last.id))}
                   disabled={busy || !last} title={last ? `Remove the last ${last.amount_ml} ml` : undefined}>
             Undo
@@ -256,7 +288,7 @@ function ItemActions({ day, item, meal, isToday, onChanged, onAskMacBro, onClose
 
 const UNIT_SUGGESTIONS = ["g", "ml", "piece", "serving", "cup", "bowl", "slice", "tbsp", "tsp", "glass"];
 
-/** Add a food to a meal without the chat. A saved food (from My foods) is added at once with its
+/** Add a food to a meal without the chat. A saved food (from Saved Food) is added at once with its
  *  saved numbers; any other food gets an AI estimate that is only saved after "Add it". */
 function AddFoodPanel({ day, meal, onChanged, onAskMacBro, onClose }: {
   day: string; meal: string; onChanged: () => void; onAskMacBro: (text: string, date?: string) => void; onClose: () => void;
@@ -335,7 +367,7 @@ function AddFoodPanel({ day, meal, onChanged, onAskMacBro, onClose }: {
         </ul>
         {p.totals && <MacroChips n={p.totals} />}
         {estimate.note && <p className="small add-note">{estimate.note}</p>}
-        <p className="muted small">Adding it also saves the food to My foods, so next time it's instant.</p>
+        <p className="muted small">Adding it also saves the food to Saved Food, so next time it's instant.</p>
         <div className="proposal-actions">
           <button className="primary" onClick={confirm} disabled={busy}>Add it</button>
           <button onClick={() => discard(false)} disabled={busy}>Change</button>
@@ -370,7 +402,7 @@ function AddFoodPanel({ day, meal, onChanged, onAskMacBro, onClose }: {
           <>
             <input id={`add-unit-${meal}`} className="add-unit" list={`units-${meal}`} value={unit}
                    onChange={(e) => setUnit(e.target.value)} maxLength={32} />
-            <datalist id={`units-${meal}`}>{UNIT_SUGGESTIONS.map((u) => <option key={u} value={u} />)}</datalist>
+            <datalist id={`units-${meal}`}>{UNIT_SUGGESTIONS.map((u) => <option key={u} value={u} aria-label={u} />)}</datalist>
           </>
         )}
         <button className="primary add-go" disabled={busy || !ready}>{busy ? "Estimating…" : "Add"}</button>
@@ -547,6 +579,7 @@ export default function Dashboard({ dataVersion, onDataChanged, onAskMacBro }: D
           </div>
         </section>
       </div>
+      <p className="muted small health-note">Calories, nutrients and targets are estimates to help you track, not medical advice. <a href="/privacy#health" target="_blank" rel="noopener">More</a></p>
     </div>
   );
 }

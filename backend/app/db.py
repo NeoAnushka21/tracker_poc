@@ -37,13 +37,14 @@ class Base(DeclarativeBase):
     pass
 
 
-def add_missing_columns() -> list[str]:
-    """Tiny forward-only migration: add columns that exist in the models but not in the
-    database (new nullable columns only). Enough for this app until it adopts Alembic."""
+def add_missing_columns(connection=None) -> list[str]:
+    """Add nullable columns that exist in the models but not in the database. Since Alembic (2026-09-29)
+    this only brings a database from before then up to the baseline (app/migrate.py)."""
+    from contextlib import nullcontext
     from sqlalchemy import inspect, text
 
     added = []
-    with engine.begin() as conn:
+    with (nullcontext(connection) if connection is not None else engine.begin()) as conn:
         insp = inspect(conn)   # same connection as the ALTERs, so both see one schema
         existing_tables = set(insp.get_table_names())
         for table in Base.metadata.sorted_tables:
@@ -55,7 +56,7 @@ def add_missing_columns() -> list[str]:
                     continue
                 if not col.nullable:
                     raise RuntimeError(f"Can't auto-add NOT NULL column {table.name}.{col.name}")
-                col_type = col.type.compile(dialect=engine.dialect)
+                col_type = col.type.compile(dialect=conn.dialect)
                 conn.execute(text(f'ALTER TABLE "{table.name}" ADD COLUMN "{col.name}" {col_type}'))
                 added.append(f"{table.name}.{col.name}")
     return added

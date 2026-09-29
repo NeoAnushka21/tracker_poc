@@ -82,7 +82,7 @@ user message ─► FastAPI /api/chat ─► LLM (Groq gpt-oss-120b or Claude) w
 - **Needs changes** lets you type a correction. Claude re-proposes the entry, and the new card replaces the old one (the old one is marked "superseded").
 - Proposals left pending for 24 hours expire. Pending proposals never count toward totals.
 - The dashboard reads the database directly and never goes through the LLM.
-- **Personal food library (`user_foods`):** each confirmed meal teaches the app its foods. They're stored per 100 g/ml, or per piece/serving with a gram weight when known. Next time the model only has to match the food (`food_id`), and **the app scales the nutrients in code**, so the same food always gets the same numbers. A food you edit by hand in *My foods* is never overwritten by later estimates. Cancelled proposals teach nothing.
+- **Personal food library (`user_foods`):** each confirmed meal teaches the app its foods. They're stored per 100 g/ml, or per piece/serving with a gram weight when known. Next time the model only has to match the food (`food_id`), and **the app scales the nutrients in code**, so the same food always gets the same numbers. A food you edit by hand in *Saved Food* is never overwritten by later estimates. Cancelled proposals teach nothing.
 - **Recipes:** say "save this as a recipe" (or accept the assistant's offer), give the raw ingredients for the whole batch and its yield (pieces, servings and/or cooked weight), and confirm the card. Logging "3 chapatis" then uses the recipe's per-piece values. Editing a recipe changes future logs only; past entries keep their numbers.
 - **Guard against false claims:** if the model says it logged or saved something without creating a card, the app sends it back once to either create the proposal or correct itself.
 - Meal type is inferred from your local time: breakfast 05–10, morning snack 10–12, lunch 12–15, evening snack 15–19, dinner 19–23, and evening snack otherwise. It's overridden when you say "for breakfast".
@@ -94,10 +94,11 @@ user message ─► FastAPI /api/chat ─► LLM (Groq gpt-oss-120b or Claude) w
 - **Chat:** talk to MacBro (typing or voice). Proposals appear as cards you confirm.
 - **Dashboard:** today's calorie ring; protein, fiber, carbs and fat meters; calorie split; water tracker; micronutrients; five meal sections with per-meal macros.
 - **Analysis:** 7, 14 or 30-day trends: calories and protein vs target, macro lines, calorie split, calories by meal, water, and a data table. All charts have hover and keyboard tooltips.
-- **My foods:** your saved foods and recipes.
-- **Admin console:** reached through **Admin login** on the login page, and only for `ADMIN_EMAILS`. Admin emails can't sign up or use the normal login. The admin account is created at startup from `ADMIN_INITIAL_PASSWORD` if it doesn't exist yet. The console shows users, logins and activity, with read-only access to each user's logs, foods and chat, and every view is written to an audit log.
+- **Saved Food:** your saved foods and recipes.
+- **Admin console:** reached through **Admin login** on the login page, and only for `ADMIN_EMAILS`. Admin emails can't sign up or use the normal login. The admin account is created at startup from `ADMIN_INITIAL_PASSWORD` if it doesn't exist yet. Two-step sign-in (authenticator app codes) can be switched on in the console; admin sessions last 12 hours. The console shows users, logins and activity, with read-only access to each user's logs, foods and chat, and every view is written to an audit log.
 - **Body:** weight, height, BMI (WHO categories) and an estimated body-fat percentage (US Navy equations, shown only when the needed measurements are there), plus a male/female body diagram: tap a body part to see how to measure it and add a dated measurement.
-- **Settings (⚙):** Account (email, registration date, last login, consent, and appearance), Targets, Password, and **Delete account**, which requires your password and permanently removes all of your data.
+- **Privacy:** a public plain-language notice at `/privacy` (linked from sign-in and Settings); accounts are for adults (18+), checked at onboarding.
+- **Settings (⚙):** Account (email, registration date, last login, consent, appearance, and **Download my data**), Targets, Password, and **Delete account**, which requires your password (Google-only accounts type their email) and permanently removes all of your data. Google-only accounts see **Set password** instead of Password. **Log out of all devices** ends every session; a password change signs out the other devices.
 - **? Guide:** the first-run walkthrough. It opens once for new users and can be reopened any time.
 - Light, dark or system theme (in Settings → Account), with text contrast checked against WCAG AA in both.
 - Sign-up requires accepting a data-use consent notice. Existing accounts are asked once, and again if the wording (`CONSENT_VERSION`) changes.
@@ -114,9 +115,9 @@ user message ─► FastAPI /api/chat ─► LLM (Groq gpt-oss-120b or Claude) w
 | `backend/app/services/actions.py` | Confirm / reject / expire proposals |
 | `backend/app/services/logs.py` | Totals, daily summary, log queries |
 | `backend/app/services/foods.py` | Food library + recipes: units, scaling, recipe maths |
-| `backend/app/routers/foods.py` | My foods API (list / edit / delete) |
+| `backend/app/routers/foods.py` | Saved Food API (list / edit / delete) |
 | `backend/app/nutrition.py` | BMR / TDEE / target calculation |
-| `frontend/src/components/` | Auth, Onboarding, GuideTour, Chat (with voice input), ProposalCard, Dashboard, Analysis, My foods, Settings, Admin |
+| `frontend/src/components/` | Auth, Onboarding, GuideTour, Chat (with voice input), ProposalCard, Dashboard, Analysis, Saved Food, Settings, Admin |
 
 Full details: [docs/technical-overview.md](docs/technical-overview.md).
 
@@ -124,7 +125,8 @@ Full details: [docs/technical-overview.md](docs/technical-overview.md).
 
 **Included:**
 
-- email + password login, consent, and an admin console
+- CI on GitHub Actions (tests on SQLite and Postgres, build, dependency audit); Render deploys only after it passes
+- email + password login or **Continue with Google** (linking to an existing account only with the user's OK), consent, and an admin console
 - onboarding with editable targets
 - chat logging (typed or by voice) with clarifying questions, and confirm cards
 - editing, deleting, moving and copying through chat or the dashboard
@@ -132,7 +134,7 @@ Full details: [docs/technical-overview.md](docs/technical-overview.md).
 - a daily dashboard with macros, fiber, micronutrients, water and five meals
 - 7, 14 and 30-day analysis
 - a food library and recipes
-- a Body tab with BMI, a body-fat estimate and an interactive body diagram for measurements
+- a Body Profile tab with BMI, a body-fat estimate and an interactive body diagram for measurements
 - a first-run guide
 - light and dark themes
 
@@ -149,4 +151,4 @@ Full details: [docs/technical-overview.md](docs/technical-overview.md).
 - Proposed writes are stored in a `pending_actions` table instead of a `status=pending` column on `log_entries`. This gives proposed edits and deletes of confirmed entries somewhere to wait for confirmation too.
 - `log_entries.eaten_at` (when you ate) is separate from `created_at` (when you logged it).
 - Deletes are soft (`deleted_at`).
-- Tables are created on startup. Add Alembic before changing the schema on a database with real data in it.
+- The schema is managed with Alembic (`backend/migrations`); migrations run on startup. To change it: edit the models, `alembic revision --autogenerate -m "..."` in `backend/`, review and commit the file.

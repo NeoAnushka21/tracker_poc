@@ -23,6 +23,9 @@ export default function TargetsEditor({ user, saveLabel, onSaved, alwaysEnabled 
     Number(cal) !== t.calories || Number(protein) !== t.protein_g ||
     Number(carbs) !== t.carbs_g || Number(fat) !== t.fat_g;
   const macroKcal = Number(protein) * 4 + Number(carbs) * 4 + Number(fat) * 9;
+  // Usual floor without medical supervision (a warning only; the user decides).
+  const lowFloor = user.sex === "female" ? 1200 : 1500;
+  const tooLow = Number(cal) > 0 && Number(cal) < lowFloor;
 
   async function submit(e: FormEvent) {
     e.preventDefault();
@@ -55,6 +58,12 @@ export default function TargetsEditor({ user, saveLabel, onSaved, alwaysEnabled 
         Macros add up to {Math.round(macroKcal)} kcal
         {Math.abs(macroKcal - Number(cal)) > 50 && " (doesn't match the calorie target)"}
       </p>
+      {tooLow && (
+        <p className="small warn" role="note">
+          Heads-up: under {lowFloor.toLocaleString()} kcal a day is usually only advised with a doctor or dietitian
+          involved. Very low targets can make it hard to get enough nutrients.
+        </p>
+      )}
       {error && <p className="error">{error}</p>}
       <button className="primary" disabled={busy || (!alwaysEnabled && !changed)}>{busy ? "Saving…" : saveLabel}</button>
     </form>

@@ -13,3 +13,5 @@ export const APP_MARK = "OAI";
 export const BOT_NAME = "MacBro";
 export const APP_DEV_HOST = "omniai.localhost";
 export const APP_DOMAIN = "omniai.com";
+/** Where people send privacy questions and requests (shown on /privacy). */
+export const PRIVACY_CONTACT = "mhatre.anushka.work@gmail.com";

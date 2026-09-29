@@ -17,6 +17,9 @@ from app.routers.profile import body_profile, user_to_dict
 from app.services.foods import food_to_dict, list_foods
 from app.services.logs import logs_by_day
 from app.timeutil import local_today
+from app.schemas import TotpCodeIn, TotpDisableIn
+from app.security import verify_password
+from app.services import totp
 
 router = APIRouter(prefix="/api/admin", tags=["admin"])
 
@@ -170,3 +173,45 @@ def llm_usage(hours: int = 24, admin: User = Depends(admin_user), db: Session = 
         "fastpath": {name: sum(1 for r in fast if r.model == name) for name in sorted({r.model for r in fast})},
         "pool": pool,
     }
+
+
+# --- two-step sign-in for the admin account ------------------------------------------------
+
+@router.get("/totp")
+def totp_status(admin: User = Depends(admin_user)):
+    return {"enabled": totp.enabled(admin)}
+
+
+@router.post("/totp/setup")
+def totp_setup(admin: User = Depends(admin_user), db: Session = Depends(get_db)):
+    """A new secret to scan; it takes effect only after a correct code (POST /totp/enable)."""
+    if totp.enabled(admin):
+        raise HTTPException(status.HTTP_409_CONFLICT, "Two-step sign-in is already on")
+    secret = totp.new_secret()
+    admin.totp_secret, admin.totp_last_step = totp.seal(secret), None
+    db.commit()
+    return totp.provisioning(secret, admin.email)
+
+
+@router.post("/totp/enable")
+def totp_enable(body: TotpCodeIn, admin: User = Depends(admin_user), db: Session = Depends(get_db)):
+    if totp.enabled(admin):
+        raise HTTPException(status.HTTP_409_CONFLICT, "Two-step sign-in is already on")
+    if not totp.verify(admin, body.code):
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "That code isn't right. Check the app shows OmniAI and try the current code.")
+    admin.totp_enabled_at = utcnow()
+    _audit(db, admin, None, "two-step sign-in turned on")
+    db.commit()
+    return {"enabled": True}
+
+
+@router.post("/totp/disable")
+def totp_disable(body: TotpDisableIn, admin: User = Depends(admin_user), db: Session = Depends(get_db)):
+    if not totp.enabled(admin):
+        return {"enabled": False}
+    if not verify_password(body.password, admin.hashed_password) or not totp.verify(admin, body.code):
+        raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Password or code is wrong")
+    admin.totp_secret = admin.totp_enabled_at = admin.totp_last_step = None
+    _audit(db, admin, None, "two-step sign-in turned off")
+    db.commit()
+    return {"enabled": False}

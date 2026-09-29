@@ -1,6 +1,6 @@
 # OmniAI technical overview
 
-> Last updated: 2026-09-29 (Home protein streak at 85% of the protein target; Dashboard Add food).Update this file in the same change as any code change it describes (see [docs/README.md](README.md)).
+> Last updated: 2026-09-29 (frosted-glass header over a mesh image; Saved Food list, Body Profile, Explore tab; admin two-step sign-in; frontend lint + a11y fixes; tool allow-list; terms page; earlier: health notes, pinned deps, Alembic, forgot password…).Update this file in the same change as any code change it describes (see [docs/README.md](README.md)).
 > Architecture diagrams: [hld.md](hld.md). End-user manual: [user-guide.md](user-guide.md).
 
 ## 1. Tech stack
@@ -8,13 +8,13 @@
 | Layer | Choice |
 |---|---|
 | Frontend | React 19, TypeScript, Vite. No UI or chart library: charts are hand-rolled SVG (`charts.tsx`). |
-| Styling | One `styles.css` with CSS custom-property tokens (colours, `--radius` 16px / `--radius-sm` 12px, `--shadow-card`, `--accent-grad`, `--glass`). Light and dark via `prefers-color-scheme` and `data-theme`. **Responsive:** one layout for phones and tablets (a `max-width: 860px` block tightens spacing and grids), and from `min-width: 1024px` a "wide screens" block at the end of `styles.css` adds columns: Home (summary tile + `.home-side` with the water tile and streaks), Dashboard (`.dash-cols`: `.dash-summary` with the macro, micronutrient and water tiles + `.dash-meals`), Analysis (`.analysis-charts`, 2 columns, CSS `order` pairs the cards), My foods (`.food-list`, 2 columns; `.food-row.editing` spans both). Content is capped by `--content-max` (1200px), and `--edge` gives the top bar, tabs and pages the same outer edge. Chat bubbles cap at 780px for line length. |
+| Styling | One `styles.css` with CSS custom-property tokens (colours, `--radius` 22px / `--radius-sm` 14px, `--shadow-card` (wide, faint), `--accent-grad`, `--glass`, and the motion curves `--ease-out` for fills and `--ease-spring` for reveals). Light and dark via `prefers-color-scheme` and `data-theme`. **Responsive:** one layout for phones and tablets (a `max-width: 860px` block tightens spacing and grids), and from `min-width: 1024px` a "wide screens" block at the end of `styles.css` adds columns: Home (summary tile + `.home-side` with the water tile and streaks), Dashboard (`.dash-cols`: `.dash-summary` with the macro, micronutrient and water tiles + `.dash-meals`), Analysis (`.analysis-charts`, 2 columns, CSS `order` pairs the cards), Explore (`.explore-grid`, auto-fill tiles). Saved Food is a one-column list at every width. Content is capped by `--content-max` (1200px), and `--edge` gives the top bar, tabs and pages the same outer edge. Chat bubbles cap at 780px for line length. |
 | Font | Plus Jakarta Sans (variable), self-hosted via `@fontsource-variable/plus-jakarta-sans` (no Google Fonts request) |
 | Voice | Browser Web Speech API (`useSpeechToText.ts`), on-device or browser-vendor; no server audio. |
 | Backend | Python 3.12+ (developed on 3.14), FastAPI, Uvicorn |
 | ORM / DB | SQLAlchemy 2.x. Development: SQLite (`backend/macro_tracker.db`). Production: Postgres on Neon via `psycopg` 3 (`db.make_engine` rewrites `postgres://` URLs to the psycopg driver and pings pooled connections, since Neon suspends idle databases) |
 | Hosting | One free Render web service (`render.yaml`, Singapore): builds the React app, and FastAPI serves it plus `/api`. See [deployment.md](deployment.md). |
-| Auth | Email + password, stdlib `scrypt` hashes, PyJWT session token in an httpOnly cookie (`SESSION_DAYS`, default 14) |
+| Auth | Email + password (**Argon2id** via `argon2-cffi`: 19 MiB, 2 passes, 1 lane, OWASP's minimum; older scrypt hashes still verify and are re-hashed on the next successful login; an unknown email does the same hashing work as a wrong password, so timing doesn't reveal which emails exist) or **Continue with Google** (Google Identity Services button; `app/google_auth.py` verifies the RS256 ID token with PyJWT's `crypto` extra and Google's JWKS). Either way, a PyJWT session token in an httpOnly cookie (`SESSION_DAYS`, default 14) carrying the user's `session_version` (`sv`); `deps.current_user` rejects a token whose version is out of date, so bumping it ends every session (password change: other devices; Log out of all devices: all). Tokens without `sv` count as 0. |
 | LLM | `openai` SDK against any OpenAI-compatible host (default Groq `openai/gpt-oss-120b`), or the `anthropic` SDK |
 | Tests | pytest + FastAPI TestClient, with a `FakeProvider` in place of the LLM (no key or network needed) |
 
@@ -25,6 +25,8 @@ POC_new/
 ├── README.md                     # quick start
 ├── CLAUDE.md                     # rules for AI-assisted changes (keep docs in sync)
 ├── render.yaml                   # Render Blueprint (build, start, env vars)
+├── .github/workflows/ci.yml      # CI: tests (SQLite + Postgres), build, audits
+├── .github/dependabot.yml        # weekly dependency update PRs
 ├── .python-version               # Python version for Render (3.14)
 ├── docs/
 │   ├── README.md                 # docs index + maintenance checklist
@@ -35,15 +37,20 @@ POC_new/
 │   └── llm-routing-strategy.md   # multi-model open-source plan
 ├── backend/
 │   ├── .env.example
-│   ├── requirements.txt
+│   ├── requirements.in           # direct dependencies (minimum versions)
+│   ├── requirements.txt          # every package pinned, generated from requirements.in by uv
+│   ├── alembic.ini, migrations/  # Alembic: env.py + versions/ (0001 = baseline)
 │   ├── app/
 │   │   ├── main.py               # FastAPI app, startup migrations, router wiring, serves frontend/dist
 │   │   ├── config.py             # every tunable constant + env settings
-│   │   ├── db.py                 # engine, session, add_missing_columns()
+│   │   ├── db.py                 # engine, session, add_missing_columns() (pre-Alembic databases)
+│   │   ├── migrate.py            # Alembic at startup (adopts pre-Alembic databases)
 │   │   ├── data_migrations.py    # one-off data fixes + admin bootstrap
 │   │   ├── models.py             # SQLAlchemy models
 │   │   ├── schemas.py            # Pydantic request bodies
-│   │   ├── security.py           # password hashing, JWT
+│   │   ├── security.py           # password hashing (Argon2id), JWT
+│   │   ├── observability.py      # request ids, logging, friendly 500s, optional Sentry
+│   │   ├── google_auth.py        # verify Google sign-in ID tokens
 │   │   ├── deps.py               # current_user / admin_user / onboarded_user
 │   │   ├── nutrition.py          # BMR / TDEE / targets
 │   │   ├── timeutil.py           # time zones, local day bounds
@@ -62,6 +69,8 @@ POC_new/
         ├── App.tsx               # auth gate, tabs (Home default, Body last), top bar, guide tour
         ├── api.ts                # typed fetch client (retries once after the server wakes)
         ├── types.ts, format.ts, theme.ts, useSpeechToText.ts
+        ├── motion.ts             # useRevealFill: meters fill once they're on screen
+        ├── haptics.ts            # haptic('tap' | 'success' | 'celebrate') via navigator.vibrate
         ├── styles.css
         └── components/           # section 7
 ```
@@ -80,6 +89,12 @@ POC_new/
 | `services/progress.py` | Card after a confirm, for the day the change landed on (`routers/actions._action_day`: `drank_at_utc` / `eaten_at_utc` / `to_date`, else today). Water confirms get `build_water_progress` (`focus: "water"`: litres, % of goal, hydration line); food changes get `build_progress` (`focus: "macros"`: calories, macro %, motivational line). Both carry `date` and `is_today`. |
 | `services/micros.py` | Clean, scale and total the micronutrient JSON |
 | `services/cancel.py` | In-memory registry for the Stop button: `start`, `raise_if_cancelled`, `finish_or_cancelled` (atomic check before commit), `cancel` |
+| `services/allowance.py` | Daily AI allowance: `status` (limit, used, remaining, `resets_at` = next local midnight), `check` (raises `AllowanceExceeded` before any model call), `record` (one `ai_requests` row, committed with the reply, so failed or stopped requests don't count). Counted: AI-answered chat messages (`llm/chat.py`, after the fast paths) and Dashboard estimates (`routers/entries.add_food`, new foods only). |
+| `services/ratelimit.py` | In-memory sliding windows for sign-in: wrong passwords per email (`LOGIN_FAILURES_PER_EMAIL` in `LOGIN_FAILURE_WINDOW_S`, cleared on success) and login/register/Google requests per address (`AUTH_REQUESTS_PER_IP` in `AUTH_REQUEST_WINDOW_S`; address = first `X-Forwarded-For` entry, which a client can fake only to dodge its own limit). 429 with a wait time. A restart clears them. |
+| `services/export.py` | `export_user_data`: every row the user owns (account, weights, targets, measurements, food log with items, water, Saved Food with recipe ingredients, chat, proposals, AI requests and model calls, and admin views of the account), with the password hash and Google id left out. |
+| `services/password_reset.py` | Forgot password: `create_link` (32-byte token, only its SHA-256 stored, `PASSWORD_RESET_MINUTES`, older open links retired; link = `PUBLIC_APP_URL/reset-password#token=…`, never the request's Host), `use_link` (once, unexpired; sets the password, bumps `session_version`) |
+| `services/email.py` | Brevo HTTP API (`BREVO_API_KEY`, `EMAIL_FROM`); `enabled()` is true when configured, or in development (then the email is logged instead of sent). Sent as a background task after the response. |
+| `services/totp.py` | Admin two-step sign-in (TOTP, `pyotp`): secret encrypted with a key derived from `SECRET_KEY` (Fernet), QR as an SVG data URI (`segno`), ±1 step clock drift, each time step accepted once (`users.totp_last_step`). `scripts/reset_admin_2fa.py` turns it off for a lost phone. |
 | `services/accounts.py` | `delete_user_and_data`: removes every row the user owns, keeps and unlinks the admin audit trail |
 
 ## 4. HTTP API
@@ -88,17 +103,21 @@ All endpoints are JSON under `/api`, authenticated by the session cookie. Every 
 
 | Router | Endpoints |
 |---|---|
-| `auth` | `GET consent-text` · `POST register` (needs `consent`; blocks admin emails) · `POST login` (blocks admin emails) · `POST admin-login` (only `ADMIN_EMAILS`) · `POST change-password` · `POST delete-account` · `POST logout` · `POST consent` · `POST guide-seen` · `GET me` |
-| `profile` | `POST onboarding` · `GET preview-targets` · `PUT targets` · `POST weight` · `GET body` (weight, height, sex, `bmi`, `body_fat`, latest value/change/tip per part, history) · `POST height` · `POST measurements` (a new dated set; any subset) · `PUT measurements/{id}` (correct a saved set; the body is the whole set, nulls clear) · `DELETE measurements/{id}` |
-| `chat` | `GET day?day=` (one local day of chat, default today, plus `prev_day`, the latest earlier day with messages) · `GET history` (legacy, last N) · `POST ""` (send; body may include `log_date`, a past day picked in the UI; 503 with friendly text if the LLM fails) · `POST cancel` |
+| `auth` | `GET consent-text` · `GET options` (`google_client_id`, null hides the button; `password_reset`, whether Forgot password shows) · `POST forgot-password` (same reply for every email; emails after the response; 3 per address per hour; not for admin emails; 503 when email is off) · `POST reset-password` (token + new password; 400 if used or expired) · `POST google` (`credential`, `consent`, `link`: returns `ok` + user with the cookie set, or `link_required` / `consent_required` for the UI to ask; 401 bad token, 403 admin email, 409 email linked to another Google account, 503 not configured) · `POST register` (needs `consent`; blocks admin emails) · `POST login` (blocks admin emails) · `POST admin-login` (only `ADMIN_EMAILS`; with two-step on, 401 `code_required` until `code` is sent; admin sessions last `ADMIN_SESSION_HOURS`, 12) · `POST change-password` (no current password needed when the account has none: sets the first; bumps `session_version` and re-issues this browser's cookie, so other devices are signed out) · `POST delete-account` (password, or `confirm_email` for Google-only accounts) · `POST logout` (this browser) · `POST logout-everywhere` (bumps `session_version`, ends every session) · `POST consent` · `POST guide-seen` · `GET me` |
+| `profile` | `GET export` (Download my data: the JSON as an attachment; any logged-in account, onboarded or not) · `POST onboarding` (422 for a future or impossible date of birth, or under `MIN_USER_AGE`, judged on the user's local date) · `GET preview-targets` · `PUT targets` · `POST weight` · `GET body` (weight, height, sex, `bmi`, `body_fat`, latest value/change/tip per part, history) · `POST height` · `POST measurements` (a new dated set; any subset) · `PUT measurements/{id}` (correct a saved set; the body is the whole set, nulls clear) · `DELETE measurements/{id}` |
+| `chat` | `GET day?day=` (one local day of chat, default today, plus `prev_day`, the latest earlier day with messages) · `GET history` (legacy, last N) · `POST ""` (send; body may include `log_date`, a past day picked in the UI; 503 with friendly text if the LLM fails; 429 when the daily AI allowance is used up, nothing saved) · `GET allowance` (today's AI allowance) · `POST cancel` |
 | `actions` | `POST {id}/confirm` (returns the action + progress card) · `POST {id}/reject` |
 | `dashboard` | `GET daily?date=` · `GET range?days=&end=` · `GET streaks` (logging and protein streaks, best, last 7 days) |
 | `entries` | `POST add` (name, quantity, unit, meal_type, optional `day` and `food_id`; returns `added` for a saved food, `estimate` with a pending action + note for a new food, or `no_estimate` with the model's reason; 422 for a future day or an unconvertible unit, 503 if the AI is down) · `POST items/{id}/transfer` (move/copy) · `PATCH items/{id}` (quantity) · `DELETE items/{id}` |
 | `foods` | `GET ""` · `GET micronutrients` (keys, labels, units for the edit form, from `config.MICRONUTRIENTS`) · `GET {id}` · `PUT {id}` (optional `micronutrients` per the reference amount: known keys, non-negative; blank/missing = unknown; omitting the field keeps the stored values; recipes ignore it) · `DELETE {id}` |
 | `water` | `POST ""` · `DELETE {id}` |
-| `admin` | `GET users` (admins excluded) · `GET users/{id}` · `GET users/{id}/chat` · `GET audit` · `GET llm-usage?hours=` (model calls, tokens, fast-path share, pool state; aggregate only, not audited). Every read of user data is audited. |
+| `admin` | `GET users` (admins excluded) · `GET users/{id}` · `GET users/{id}/chat` · `GET audit` · `GET llm-usage?hours=` (model calls, tokens, fast-path share, pool state; aggregate only, not audited) · `GET totp` · `POST totp/setup` · `POST totp/enable` · `POST totp/disable` (the admin's own two-step sign-in; on/off is audited). Every read of user data is audited. |
 
-FastAPI's interactive docs are at `http://localhost:8000/docs` while the backend is running.
+FastAPI's interactive docs are at `http://localhost:8000/docs` while the backend is running in development. In production (`COOKIE_SECURE=true`) `/docs`, `/redoc` and `/openapi.json` are off unless `API_DOCS=true`.
+
+**Request ids and errors** (`app/observability.py`): every response has `X-Request-ID`; app log lines (`omniai.*`, `macbro.*`, INFO) carry it. An unhandled exception is caught inside the middleware stack, logged with the id, sent to Sentry when `SENTRY_DSN` is set, and answered with 500 "Something went wrong on our side (ref …)" (with the security headers). Sentry settings: `send_default_pii=False`, `max_request_body_size="never"`, `include_local_variables=False`, no tracing.
+
+**Security headers** (`main.security_headers` middleware, every response): a Content-Security-Policy that allows only our own files plus Google's sign-in origins (`https://accounts.google.com/gsi/client`, `/gsi/`, `/gsi/style`, as Google documents), no inline scripts (the theme script is `public/theme-init.js` for this), `'unsafe-inline'` for styles only (React style attributes), `frame-ancestors 'none'`, `object-src 'none'`; `X-Frame-Options: DENY`, `X-Content-Type-Options: nosniff`, `Referrer-Policy: strict-origin-when-cross-origin`, `Permissions-Policy` (microphone for our own pages only), `Cross-Origin-Opener-Policy: same-origin-allow-popups` (Google's sign-in popup), and HSTS (one year) only over HTTPS. The Vite dev server doesn't send them, so check CSP changes on the built app served by the backend (`http://localhost:8000`). A new external script, frame or API the page calls must be added to `CONTENT_SECURITY_POLICY`.
 
 `GET /api/health` returns `{"ok": true}` without touching the database, with `Access-Control-Allow-Origin: *` and `Cache-Control: no-store` so the launcher (another origin) can poll it.
 
@@ -108,7 +127,7 @@ When `frontend/dist` exists (`FRONTEND_DIST`), `main.mount_frontend` also serves
 
 | Table | Key columns | Notes |
 |---|---|---|
-| `users` | email, hashed_password, preferred_name, date_of_birth, sex, height_cm, unit_system, timezone, goal_type, activity_level, consent_at, consent_version, last_login_at, login_count, guide_seen_at | `onboarded` = DOB and goal set. `guide_seen_at` stops the first-run tour reopening. |
+| `users` | email, hashed_password (`""` = no password: a Google-only account), google_sub (Google account id when linked; nullable, added at startup), session_version (in every session token; bumped to end all sessions; nullable = 0), totp_secret (encrypted), totp_enabled_at, totp_last_step (admin two-step sign-in; migration 0002), preferred_name, date_of_birth, sex, height_cm, unit_system, timezone, goal_type, activity_level, consent_at, consent_version, last_login_at, login_count, guide_seen_at | `onboarded` = DOB and goal set. `guide_seen_at` stops the first-run tour reopening. |
 | `weight_logs` | weight_kg, logged_at | Latest row = current weight |
 | `user_targets` | daily_calorie_target, protein/carbs/fat_target_g, effective_date, is_custom | Dated: history is kept, and the latest effective row applies |
 | `body_measurements` | measured_at, neck/shoulders/chest/biceps/forearm/wrist/waist/hips/thigh/calf `_cm` | Optional, any subset per row; shoulders and wrist added 2026-09-29 (nullable, added at startup) |
@@ -120,9 +139,11 @@ When `frontend/dist` exists (`FRONTEND_DIST`), `main.mount_frontend` also serves
 | `pending_actions` | action_type, target_entry_id, payload (JSON), status, chat_message_id, result_entry_id, resolved_at | Status: pending → confirmed / rejected / superseded / expired |
 | `chat_messages` | role (user/assistant/event), content, kind (e.g. `progress`), data (JSON), related_log_entry_id | `event` rows are context for the model and hidden in the UI |
 | `admin_audit` | admin_user_id, target_user_id, action | Kept after account deletion (unlinked) |
+| `password_resets` | user_id, token_hash (SHA-256), created_at, expires_at, used_at | One-time reset links. Deleted with the account. |
+| `ai_requests` | user_id, created_at, kind (chat / dashboard_add) | One row per AI-answered request, for the daily allowance. Deleted with the account. |
 | `llm_usage` | created_at, user_id, provider, model, tier, intent, prompt/completion tokens, latency_ms, outcome (ok / error / rate_limited / fastpath), escalated | One row per model call or rule-based reply. Kept (anonymised) after account deletion |
 
-**Migrations.** Tables are created at startup, and `db.add_missing_columns()` adds new *nullable* columns to existing tables. `data_migrations.run_all()` handles one-off data fixes and creates the admin account from `ADMIN_INITIAL_PASSWORD` if it's missing. Adopt Alembic before non-additive schema changes or a move to Postgres.
+**Migrations (Alembic, since 2026-09-29).** `app/migrate.py` runs at startup: an empty database gets every migration (`0001` is the baseline of the schema on 2026-09-29); a database from before Alembic (tables but no `alembic_version`, e.g. Neon) is first brought to the baseline the old way (missing tables, nullable columns via `db.add_missing_columns`, missing indexes), stamped `0001`, then upgraded; otherwise pending migrations run. To change the schema: edit `app/models.py`, then in `backend/` run `.venv\Scripts\alembic revision --autogenerate -m "what changed"`, review the new file in `migrations/versions/` (autogenerate misses renames and data changes), and commit it with the model change. `tests/test_migrations.py` fails if the models and migrations disagree. `data_migrations.run_all()` still handles one-off data fixes and creates the admin account from `ADMIN_INITIAL_PASSWORD` if it's missing.
 
 ## 6. LLM layer (`backend/app/llm/`)
 
@@ -130,7 +151,7 @@ When `frontend/dist` exists (`FRONTEND_DIST`), `main.mount_frontend` also serves
 |---|---|
 | `router.py` | Rule-based **routing**: intent (`query`, `edit`, `log`, `full`) and tier (`small` / `large`), plus the tools and prompt sections each intent gets. Leans towards `large` when unsure (vague dishes, 3+ foods, several meals, no amounts, recipes, feedback on a card, long messages). |
 | `pool.py` | **Model pool**: models per tier from config (+ optional `llm_pool.json` providers). Primary models first (this tier, rotating, then the other tier), **backup** (priority 2) models only after every primary is unavailable. Per-provider timeouts. Rotates within a tier, fails over on errors, puts a model on **cooldown** on a 429 (using the host's "try again in 14m16s") or after 3 errors in a row, then falls back to the other tier before the friendly error. **Short limits are waited out:** if no model answers only because of rate limits that end soon (Groq's per-minute token limit says e.g. "try again in 9.6s"), `complete()` sleeps until the soonest one and retries just those models, up to `LLM_RATE_LIMIT_MAX_WAIT_S` (20 s) per call; longer limits still fail fast. **Open source only:** a model is used only if its licence is in `ALLOWED_MODEL_LICENSES` (Apache-2.0, MIT). Licences are looked up per model version in `config.MODEL_LICENSES` (longest name prefix wins, e.g. GLM-5.3 is blocked but GLM-5.3-Flash is MIT; Mistral Large and Codestral are blocked); Llama, Gemma, Nemotron and Minitron are caught anywhere in the name; unknown models are blocked. |
-| `fastpath.py` | **No-LLM replies** for common messages, creating the same cards through the same tool handlers: water amounts, "yes"/"ok" while a card is pending (points to the button), today's summary / "how much protein is left", foods that are all in My foods ("had 3 eggs for breakfast"), and "same breakfast as yesterday". Strict: anything unusual goes to the model. |
+| `fastpath.py` | **No-LLM replies** for common messages, creating the same cards through the same tool handlers: water amounts, "yes"/"ok" while a card is pending (points to the button), today's summary / "how much protein is left", foods that are all in Saved Food ("had 3 eggs for breakfast"), and "same breakfast as yesterday". Strict: anything unusual goes to the model. |
 | `usage.py` | Collects one record per call during a turn; the chat router saves them after commit/rollback, so failed calls are counted. |
 | `provider.py` | `AnthropicProvider` and `OpenAICompatibleProvider` behind `LLMProvider`. `to_openai_tools` uses `_relax` so optional fields aren't strictly required on OpenAI-compatible hosts. Retries once on a tool-validation error. Maps errors to a friendly message. `set_provider` injects the fake one in tests. |
 | `prompt.py` | `SYSTEM_STABLE`: the MacBro persona and all logging rules (stable, so it can be cached). `build_dynamic_context`: local date and time, the picked day (`selected_date` with that day's entries and item ids) when set, meal window, targets, today's totals, recent entries with item ids, and the user's library foods. |
@@ -159,6 +180,7 @@ When `frontend/dist` exists (`FRONTEND_DIST`), `main.mount_frontend` also serves
 - **False-claim nudge:** a reply that says "logged/saved" without a proposal is sent back once. Any remaining "Logged…" wording becomes "Here's…".
 - **Missed-water nudge:** if the message mentions water but no `propose_water` was made.
 - **Move vs delete:** a move request must use `propose_move`, never delete + create.
+- **Tool allow-list:** only the tools offered for the routed intent run; a call to any other tool name is returned to the model as an error (`chat._run_tool_loop`). Corrections like "the chicken was 150g" route to the edit tools (`router._EDIT`: `was/were + number`).
 - **One call per meal:** proposals carry the reply in `note`, which ends the turn.
 
 **Failure handling:** a provider exception returns HTTP 503 with `LLM_UNAVAILABLE_MESSAGE` ("MacBro's servers are temporarily down…"). `SHOW_LLM_ERRORS=true` shows the raw error in development.
@@ -169,22 +191,26 @@ When `frontend/dist` exists (`FRONTEND_DIST`), `main.mount_frontend` also serves
 
 | Component | Purpose |
 |---|---|
-| `App.tsx` | Loads `/me`, then routes: auth screen → admin console, or consent gate → onboarding → tabbed app (Home, Chat, Dashboard, Analysis, My foods; Home is the default). Tabs live in the URL hash. Owns `dataVersion` (bumped after writes so views refetch) and the first-run guide. |
-| `AuthScreen` | Log in / Create account (with consent) / Admin login modes |
+| `App.tsx` | Loads `/me`, then routes: auth screen → admin console, or consent gate → onboarding → tabbed app (Home, Chat, Dashboard, Analysis, Saved Food, Explore, Body Profile; Home is the default). Tabs live in the URL hash; the ids stay `foods` and `body` so older links keep working. Owns `dataVersion` (bumped after writes so views refetch) and the first-run guide. |
+| `AuthScreen` + `GoogleButton` | Log in / Create account (with consent) / Admin login modes. Below the form, **Continue with Google** (`GoogleButton` loads `accounts.google.com/gsi/client` and renders Google's own button) when `GET /auth/options` has a client ID. A `link_required` / `consent_required` answer shows a confirm card (Link and continue, or consent + Create account) that resends the same credential with `link` / `consent`. |
 | `ConsentGate` | Re-consent when `CONSENT_VERSION` changes |
 | `Onboarding` | Profile form, then editable target preview |
 | `GuideTour` | First-run walkthrough docked at the bottom. It switches tabs per step and calls `POST /auth/guide-seen` when closed. The **? Guide** button reopens it. **Its steps must match `docs/user-guide.md`.** |
-| `Chat` | Progress cards: `ProgressCard` (macros) or `WaterProgressCard` (`data.focus === "water"`); older cards without `focus` render as macros. Today's chat (fresh each day) with **Show earlier chat** loading previous days above a date divider; jumps to the latest message whenever the tab opens (`active` prop); **Logging for** date picker (sends `log_date`, tags the message); example chips, mic, Stop, feedback mode, progress card |
-| `ProposalCard` | Renders each action type with Looks good / Needs changes / Cancel |
-| `HomePage` | Default tab: time-of-day greeting, today's summary tile (macros) and a separate water tile (reuses `CalorieRing`, `Bar`, `Water` from `Dashboard`), and the two streak cards (Meal logging, Protein) |
-| `Dashboard` | Separate tiles (cards): day navigation, then macros (calorie ring, macro bars, calorie split), micronutrients, water, and meals; water, micronutrients, meal sections; each item has a pencil that opens an edit panel (Move/Copy toggle + meal dropdown, quantity, and icon buttons for edit in chat, delete, close). Each meal has **+ Add food** (`AddFoodPanel`): name with saved-food suggestions (a `datalist` from `GET /api/foods`), quantity, unit (a select of the saved food's `units`, else free text with suggestions); a new food shows the AI estimate (`MacroChips`, note) with Add it (`POST /actions/{id}/confirm`) / Change / Cancel (reject). Shared icons live in `components/icons.tsx` |
+| `Chat` | Progress cards: `ProgressCard` (macros, one `ProgressMacro` per bar) or `WaterProgressCard` (`data.focus === "water"`); older cards without `focus` render as macros. Messages that arrive in this session are tracked in `freshIds`; only those animate (`.spring-in` for cards, `.fade-in` for bubbles), so history loads still. While a reply is pending, `MacBroThinking` shows the nodding avatar with floating maths symbols and a rotating line (one steady "MacBro is thinking" for screen readers). A confirm calls `haptic("success")`. Today's chat (fresh each day) with **Show earlier chat** loading previous days above a date divider; jumps to the latest message whenever the tab opens (`active` prop); **Logging for** date picker (sends `log_date`, tags the message); AI messages left today (`GET /chat/allowance`, refreshed after each send; amber at 3 or fewer, red at 0; sending isn't blocked because fast paths still work); example chips, mic, Stop, feedback mode, progress card |
+| `ProposalCard` | Renders each action type with Looks good / Needs changes / Cancel. Entry and recipe cards use progressive disclosure: `Hero` (big kcal + protein), `ItemsBrief` (dimmed name + amount per item, always visible so the user can check before confirming), and `Details` (a `<details>` "View details" with the full `ItemsTable` and `MacroChips` totals). `fresh` adds the spring-in. On phones `.confirm-btn` takes a full row. |
+| `HomePage` | Default tab: time-of-day greeting, today's summary tile (macros) and a separate water tile (reuses `CalorieRing`, `Bar`, `Water` from `Dashboard`), and the two streak cards (Meal logging, Protein). When a streak's `today_done` flips to true between loads, the card gets `.celebrate` (a one-off pop, cleared on `animationend` so re-showing the tab doesn't replay it) and `haptic("celebrate")` fires. |
+| `Dashboard` | Separate tiles (cards): day navigation, then macros (calorie ring, macro bars, calorie split), micronutrients (a `.accordion` `<details>`, closed by default; open state in `localStorage` `micros-open`; the summary counts nutrients under half or over a limit), water, and meals. `Bar`, `CalorieRing` and `Water` draw through `useRevealFill`, so they fill from empty when first seen and animate changes only while visible (a hidden tab keeps the old value until opened). `macroState(tone, value, target)` returns under / reached / over: protein and fiber are goals (reached at ≥100%, never over); carbs and fat are budgets (reached at 100–105%, over beyond). `.bar-fill.reached` is a moving same-hue gradient with a glowing track. Water quick-add calls `haptic("tap")`; water, micronutrients, meal sections; each item has a pencil that opens an edit panel (Move/Copy toggle + meal dropdown, quantity, and icon buttons for edit in chat, delete, close). Each meal has **+ Add food** (`AddFoodPanel`): name with saved-food suggestions (a `datalist` from `GET /api/foods`), quantity, unit (a select of the saved food's `units`, else free text with suggestions); a new food shows the AI estimate (`MacroChips`, note) with Add it (`POST /actions/{id}/confirm`) / Change / Cancel (reject). Shared icons live in `components/icons.tsx` |
 | `AnalysisPage` + `charts.tsx` | 7/14/30-day range: stat tiles, line, bar and stacked charts with hover/keyboard tooltips and data tables |
-| `FoodsPage` | Library search, filter, edit and delete. Cards fold out the saved micronutrients (`FoodMicros`); the edit form has an **Additional nutrients** section (blank = unknown). |
-| `SettingsDialog` | Account (and appearance), Targets (`TargetsEditor`), Password, Delete account |
-| `BodyPage` + `BodyFigure` | Body tab: weight, height, BMI, body-fat tiles; the diagram (`BodyCallouts`: labelled arrows on both sides, `BodyDots`: numbered dots for narrow cards, switched by a container query at 520px) with an editor showing each part's tip; weight/height forms; history with edit and delete. The figure is a mirrored half outline smoothed with Catmull-Rom curves; anchors per sex in `BodyFigure.tsx`. |
-| `AdminPage` | User table, per-user detail, audit log |
-| `MacroChips` | Bold kcal plus colour-coded P / C / F / Fiber chips (chat cards, My foods) |
+| `FoodsPage` | **Saved Food** tab (id `foods`). Search, All / Foods / Recipes filter, and a one-column list: each `FoodRow` shows name + kcal (per `measures`), an **Additional info** toggle (`aria-expanded`) and edit / delete icons. `FoodInfo` (opened) shows the protein / carbs / fat / fiber tiles, the known micronutrients, the recipe's ingredients and the source. The edit form has an **Additional nutrients** section (blank = unknown). |
+| `ExplorePage` | **Explore** tab (id `explore`): a static preview of planned recipe collections (`COLLECTIONS`), each tile marked Coming soon; no API yet (open points §5). |
+| `SettingsDialog` | Account (appearance, and how the user signs in), Targets (`TargetsEditor`), Password (**Set password** when `has_password` is false), **Log out of all devices** (`POST /auth/logout-everywhere`), Delete account (password, or typing the email for Google-only accounts). `Onboarding` pre-fills the name from Google. `TargetsEditor` (onboarding and Settings) warns, without blocking, when calories are under 1,200 (female) / 1,500 (male). Home and the Dashboard end with a `.health-note` (estimates, not medical advice; links to `/privacy#health`); the sign-in screen says it too. |
+| `BodyPage` + `BodyFigure` | **Body Profile** tab (id `body`): weight, height, BMI, body-fat tiles; the diagram (`BodyCallouts`: labelled arrows on both sides, `BodyDots`: numbered dots for narrow cards, switched by a container query at 520px) with an editor showing each part's tip; weight/height forms; history with edit and delete. The figure is a mirrored half outline smoothed with Catmull-Rom curves; anchors per sex in `BodyFigure.tsx`. |
+| `AdminPage` | User table, per-user detail, audit log, AI usage, and **Two-step sign-in** (`TwoStepPanel`: QR code from `POST /admin/totp/setup`, confirm with a code, turn off with password + code). The admin login asks for the code when the backend answers `code_required`. |
+| `MacroChips` | Bold kcal plus colour-coded P / C / F / Fiber chips (chat card details, Dashboard add-food estimate) |
 | `Avatar`, `ThemeToggle` | `AppLogo` (placeholder "OAI" tile, used everywhere outside the chat), `MacBroAvatar` (chat and the wake screen), user avatar; theme switch (Settings only) |
+| `ResetPasswordPage` | Public `/reset-password#token=…` (rendered by `main.tsx` like `/privacy`): reads the token from the fragment, removes it from the address bar, new password + confirm. `AuthScreen` has a **forgot** mode (email → `POST /auth/forgot-password`) behind **Forgot password?** when `password_reset` is on. |
+| `TermsPage` | Public plain-language terms at `/terms` (like `/privacy`), linked from sign-in, Settings and the privacy page. |
+| `PrivacyPage` | Public notice at `/privacy`: `main.tsx` renders it instead of `App` for that path (the server returns `index.html` for any non-API path), so it needs no login. Contact from `brand.ts` `PRIVACY_CONTACT`. Linked from the sign-in screen and Settings → Account, which also has **Download my data** (`GET /profile/export`, saved as a file). Keep its wording in step with the consent text, the export and account deletion. |
 | `WakeScreen` + `wake.ts` | Loader with a **dancing MacBro** (CSS keyframes: bounce + sway, floor shadow, notes; still under "reduce motion") and rotating lines. Used for app start (`DelayedWakeScreen`, only after 600 ms so fast loads don't flash it), as a full-screen overlay mounted in `main.tsx` while the free server wakes, and by the launcher. `api.ts` `request()` treats an HTML response (Render's waking page) or a network error while `/api/health` fails as "asleep": `recoverServer()` shows the overlay, polls `/api/health` every 2 s, then retries the request once. A request slower than 4 s triggers a health probe, so a slow chat reply on an awake server shows nothing. |
 | `launcher.tsx` (`launcher.html`) | Second Vite page (`build.rollupOptions.input`). Published alone by the always-on static site `omniai-app`: shows the `WakeScreen`, polls `VITE_APP_URL/api/health` (CORS-open), then `location.replace`s to the app, keeping the `#tab`. Gives up with **Try again** after 3 minutes. |
 
@@ -192,15 +218,17 @@ When `frontend/dist` exists (`FRONTEND_DIST`), `main.mount_frontend` also serves
 
 | Token | Light | Dark |
 |---|---|---|
-| Protein | `#1db371` | `#1fa855` |
-| Fiber | `#c73e91` | `#c73e91` |
-| Carbs | `#e07b12` | `#e0730f` |
-| Fat | `#0b8fc9` | `#0b8fc9` |
-| Water | `#4a3aa7` | `#9085e9` |
+| Protein | `#10b476` | `#15ad52` |
+| Fiber | `#c73e91` | `#c94696` |
+| Carbs | `#e68a0a` | `#d17f08` |
+| Fat | `#0b9ad0` | `#089fbf` |
+| Water | `#4a3aa7` | `#8a7fe6` |
 
-Light passes every check (worst colour-blind separation ΔE 9.4). Dark is in the 6–8 "floor" band (ΔE 7.9, green vs amber), which is allowed because every bar, chip and legend also carries a text label. Text always uses text tokens, never a series colour; neutral text tokens pass WCAG AA on every surface.
+Re-checked 2026-09-29 over **all pairs** of the five colours (the calorie split bar puts protein next to carbs). Light passes every check (worst colour-blind separation ΔE 9.0, green vs amber, protan). Dark is in the 6–8 "floor" band (ΔE 6.5, fat vs fiber), which is allowed because every bar, chip and legend also carries a text label; the previous dark palette failed on fat vs water. In dark mode the lightness band caps how bright a mark may be, so the "glowing" look comes from soft shadows, not lighter colours. Text always uses text tokens, never a series colour; neutral text tokens pass WCAG AA on every surface.
 
-**Visual language:** slate off-white background (`#f8fafc`) with white cards and soft shadows; pill tabs with a sliding gradient underline (`App.tsx` measures the active tab); a pill-shaped chat input with gradient Send and mic buttons; a mint-tinted proposal card with row dividers only; a large glowing calorie ring; 14px macro bars; charts with rounded bar tops, dashed grid lines, no axis lines, and an arrow tooltip; Analysis stat cards with faint background icons; My foods as cards with hover-revealed icon buttons.
+**Header:** the top bar and the tabs sit inside one `.app-header` (both layouts in `App.tsx`, admin too). Its background is `--header-mesh` (five soft radial gradients, `cover` / `center`; pure CSS, so no image file and no CSP change). Inside, `.app-header-glass` is the glass: `--header-glass` (white or `#1c1c1f` at 75%) with `backdrop-filter: blur(12px)`, which blurs the mesh behind it. Top bar and tabs are transparent, so there's no seam. Contrast was computed against the glass over each mesh colour at full strength: light worst 4.75:1 (accent), dark worst 5.6:1 (muted), all AA. The active pill and `.tab-indicator` (now `z-index: 1`) are opaque and sit above the glass; the underline overlaps the header's bottom border as before. `prefers-reduced-transparency` swaps in a plain surface.
+
+**Visual language:** neutral alabaster background (`#fafafa`, dark: charcoal `#121212` with `#1c1c1f` cards) with white cards, 22px corners and wide, faint shadows; pill tabs with a sliding gradient underline (`App.tsx` measures the active tab); a pill-shaped chat input with gradient Send and mic buttons; a mint-tinted proposal card that leads with big kcal and protein numbers; a large glowing calorie ring; 14px macro bars that fill with an ease-out and shimmer once a target is reached; buttons that press to 98%; charts with rounded bar tops, dashed grid lines, no axis lines, and an arrow tooltip; Analysis stat cards with faint background icons; Saved Food as cards with hover-revealed icon buttons.
 
 ## 8. Naming
 
@@ -235,6 +263,13 @@ The environment is set in `backend/.env` (template: `backend/.env.example`):
 | `ADMIN_EMAILS`, `ADMIN_INITIAL_PASSWORD` | Admin accounts (default admin: `mhatre.anushka.work@gmail.com`) |
 | `SHOW_LLM_ERRORS` | Development only |
 | `DATABASE_URL` | Default: local SQLite. Production: the Neon connection string (`postgresql://…?sslmode=require`). On Postgres the app refuses to start with the development `SECRET_KEY`. |
+| `MIN_USER_AGE`, `MAX_USER_AGE` (config constants, 18 / 120) | Dates of birth outside this range are refused at onboarding (DPDP Act: under-18s need parental consent, which the app doesn't collect). |
+| `AI_DAILY_MESSAGE_LIMIT` | AI-answered messages per user per local day (default 20; 0 = unlimited; also in `render.yaml`). Sign-in limits (`LOGIN_FAILURES_PER_EMAIL` 10 / 15 min, `AUTH_REQUESTS_PER_IP` 60 / 10 min) are config constants. |
+| `BREVO_API_KEY`, `EMAIL_FROM`, `PUBLIC_APP_URL` | Password-reset emails via Brevo; `PUBLIC_APP_URL` (required in production, `http://localhost:5173` in development) is the base of emailed links. `PASSWORD_RESET_MINUTES` (30) and `PASSWORD_RESETS_PER_EMAIL` (3 an hour) are constants. |
+| `SENTRY_DSN`, `SENTRY_ENVIRONMENT` | Optional error reports to Sentry (empty = off); environment defaults to production when `COOKIE_SECURE` |
+| `ADMIN_SESSION_HOURS` | Admin session length (default 12 h; users get `SESSION_DAYS`) |
+| `API_DOCS` | FastAPI's `/docs`: default on in development, off when `COOKIE_SECURE=true` |
+| `GOOGLE_CLIENT_ID` | OAuth web client ID for Continue with Google (public; also in `render.yaml`). Empty hides the button. Its authorised JavaScript origins in Google Cloud are the live address, `http://localhost:5173` and `http://localhost`, so test Google sign-in locally on `localhost:5173`, not `omniai.localhost`. |
 | `COOKIE_SECURE`, `SESSION_DAYS` | `true` in production (HTTPS); session length |
 | `FRONTEND_DIST` | Built frontend folder served by the backend (default `frontend/dist`) |
 | `VITE_APP_URL` (frontend build) | Only for the launcher build on the static site: the app's address to wait for and open (`render.yaml`). Empty = same origin (dev: `/launcher.html`). |
@@ -249,8 +284,9 @@ Domain constants (`BODY_PARTS` with how-to-measure tips, `BMI_CATEGORIES`, `BODY
 
 ```bash
 cd backend
-.venv\Scripts\python -m pytest -q      # 228 tests (1 needs Postgres), fake LLM, no network
+.venv\Scripts\python -m pytest -q      # 292 tests (1 needs Postgres), fake LLM, no network
 cd ../frontend
+npm run lint                           # oxlint: bugs, React hooks, accessibility (jsx-a11y)
 npm run build                          # type-check + production build
 ```
 
@@ -265,12 +301,14 @@ npm run build                          # type-check + production build
 
   Never point `TEST_DATABASE_URL` at real data: tables are dropped per test.
 - `tests/conftest.py` gives each test a fresh database and a scripted `FakeProvider`. It also pins `ADMIN_EMAILS` and blanks `ADMIN_INITIAL_PASSWORD` so the local `.env` can't leak into tests.
-- Coverage by file: `test_flow` (confirm loop, auth, guide flag), `test_foods` (library, recipes, micronutrients learned on first log, repeat logs from the library without the model, editing micronutrients), `test_micros`, `test_water_meals`, `test_admin`, `test_analysis`, `test_entries` (move/copy/quantity/delete, progress cards: macros vs water, logged day), `test_dashboard_add` (saved food without the model, units, meal time, past/future days, estimate saved only on confirm and learned into My foods, kept apart from chat proposals, energy check, not-a-food, AI down), `test_body` (BMI bands, US Navy equations, missing/implausible inputs, edits), `test_openai_provider`, `test_nutrition`, `test_streaks` (protein streak at 85%, calories ignored, today in progress), `test_chat_days`, `test_deploy` (URL handling, frontend serving, health CORS for the launcher, SQLite → Postgres copy), `test_routing` (router, fast paths, pool failover and cooldowns, licence gate, escalation, usage report).
+- Coverage by file: `test_flow` (confirm loop, auth, guide flag), `test_migrations` (migrations build an empty database exactly like the models, run twice safely, adopt a pre-Alembic database with a missing table and index), `test_password_reset` (same reply for known and unknown emails, fixed link address, reset signs out everywhere, one use, newest link wins, expiry, only a hash stored, per-address limit, no admin reset, off in production without email, dev logs the link), `test_admin_2fa` (12-hour admin sessions, setup needs a correct code, login needs the code, no replay, wrong password first, turning off needs password + code, secret encrypted, recovery script, users can't use it), `test_llm_hardening` (tools not offered are refused, prompt injection still needs the button, no access to another user's data, replies stored as text, corrections routed to edit tools), `test_passwords` (Argon2id settings, old scrypt hashes log in and are upgraded only on success, unknown emails do the hashing work), `test_sessions` (password change signs out other devices only, log out everywhere, a copied cookie stops working, pre-version tokens still valid), `test_privacy` (18+ on the 18th birthday, impossible dates, export contents without secrets, only your own data, login needed), `test_limits` (allowance counted and capped with no model call, fast paths/buttons/saved foods and failed calls not counted, new day and per user, 0 = unlimited; wrong-password pause per email, cleared on success; requests per address), `test_google_auth` (tokens signed with a test RSA key through the real check: bad signature, audience, issuer, expiry or unverified email refused; consent for new accounts, link only with OK, admin email refused, set password and delete for Google-only accounts), `test_foods` (library, recipes, micronutrients learned on first log, repeat logs from the library without the model, editing micronutrients), `test_micros`, `test_water_meals`, `test_admin`, `test_analysis`, `test_entries` (move/copy/quantity/delete, progress cards: macros vs water, logged day), `test_dashboard_add` (saved food without the model, units, meal time, past/future days, estimate saved only on confirm and learned into Saved Food, kept apart from chat proposals, energy check, not-a-food, AI down), `test_body` (BMI bands, US Navy equations, missing/implausible inputs, edits), `test_openai_provider`, `test_nutrition`, `test_streaks` (protein streak at 85%, calories ignored, today in progress), `test_chat_days`, `test_deploy` (URL handling, frontend serving, health CORS for the launcher, SQLite → Postgres copy, security headers and CSP, HSTS only over HTTPS, API docs off in production, request ids, friendly 500 with a reference, private Sentry settings), `test_routing` (router, fast paths, pool failover and cooldowns, licence gate, escalation, usage report).
+- **Frontend lint** (`npm run lint`, `oxlint` with `.oxlintrc.json`): correctness, React hooks and accessibility (`jsx-a11y`) rules; errors fail CI, warnings (React Compiler advisories, effect dependencies) don't. `typescript-eslint` doesn't support TypeScript 7 yet, hence oxlint.
+- **CI** (`.github/workflows/ci.yml`, GitHub Actions): every push and pull request runs the backend suite on SQLite and on a throwaway Postgres 17, the frontend lint + type-check + build, and `pip-audit` / `npm audit`. Render deploys `main` only after all pass (`autoDeployTrigger: checksPass`). Tests must not depend on the time of day (the chat picks a meal from the clock) or on files that aren't in git (`.env`, `frontend/dist`).
+- **Dependencies:** `backend/requirements.in` lists what we use; `requirements.txt` pins everything (with platform markers) and is what Render, CI and developers install. To add or upgrade a package: edit `requirements.in`, then in `backend/` run `.venv\Scripts\python -m uv pip compile requirements.in --universal --python-version 3.14 -o requirements.txt`, install it, test, and commit both files. The frontend is pinned by `package-lock.json`. Dependabot (`.github/dependabot.yml`) opens weekly update pull requests (small updates grouped), which CI tests.
 - **Policy:** development and tests use the fake model. Don't use the real LLM API for routine testing, because the free-tier quota is shared with real users.
 
 ## 11. Known limitations and next steps
 
-- A single process (one Render instance). The Stop-button registry and the model pool's cooldowns are in memory, so multiple instances would need Redis or the database; a restart (e.g. Render waking from sleep) forgets cooldowns.
-- No Alembic yet; `add_missing_columns` only adds nullable columns.
+- A single process (one Render instance). The Stop-button registry, the sign-in attempt limits and the model pool's cooldowns are in memory, so multiple instances would need Redis or the database; a restart (e.g. Render waking from sleep) forgets cooldowns.
 - The free-tier LLM quota caps daily usage. Phases 1–3 of [llm-routing-strategy.md](llm-routing-strategy.md) are in (fast paths, routing, pool); a second provider (phase 4) and the evaluation run (phase 5) need decisions and accounts.
 - Deferred: OTP email verification, branded-product web search, data export, a scheduled cleanup of stale proposals. Deployment is set up (Render + Neon, [deployment.md](deployment.md)); an uptime pinger and a custom domain are open decisions.

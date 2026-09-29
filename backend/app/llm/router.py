@@ -39,7 +39,7 @@ _QUESTION_START = re.compile(
     r"show|list|tell me|give me|summari[sz]e|compare|check)\b", re.I)
 _EDIT = re.compile(
     r"\b(?:move|shift|copy|duplicate|delete|remove|undo|change|update|edit|correct|replace|swap|"
-    r"instead|actually|wrong|mistake|wasn'?t|was not|make (?:it|that|the)|should be|not \d)\b", re.I)
+    r"instead|actually|wrong|mistake|wasn'?t|was not|make (?:it|that|the)|should be|not \d|(?:was|were) \d[\w.]*)\b", re.I)
 _RECIPE = re.compile(r"\brecipes?\b", re.I)
 _QTY = re.compile(r"\d|\b(?:a|an|one|two|three|four|five|six|half|couple)\b", re.I)
 # Portions or dishes whose contents vary a lot: worth the large model's judgement.

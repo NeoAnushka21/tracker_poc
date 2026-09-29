@@ -1,9 +1,12 @@
 import { Fragment, useEffect, useRef, useState, type FormEvent, type KeyboardEvent, type ReactNode } from "react";
-import { api } from "../api";
-import type { Action, ChatMessage, ProgressData, User, WaterProgressData } from "../types";
+import { api, type AiAllowance } from "../api";
+import type { Action, ChatMessage, MacroProgressData, ProgressData, User, WaterProgressData } from "../types";
 import { dayLabel, litres, localTodayIso } from "../format";
+import { haptic } from "../haptics";
+import { useRevealFill } from "../motion";
 import { useSpeechToText } from "../useSpeechToText";
 import { MacBroAvatar, UserAvatar } from "./Avatar";
+import { macroState } from "./Dashboard";
 import ProposalCard from "./ProposalCard";
 import { WaterDrop } from "./icons";
 
@@ -26,10 +29,11 @@ type Props = {
 type DayBlock = { day: string; messages: ChatMessage[] };
 
 /** After a water log: the day's water against the goal (no macros). */
-function WaterProgressCard({ d }: { d: WaterProgressData }) {
+function WaterProgressCard({ d, fresh }: { d: WaterProgressData; fresh?: boolean }) {
   const { consumed_ml: had, target_ml: target, pct } = d.water;
+  const [barRef, shownPct] = useRevealFill<HTMLDivElement>(Math.min(100, pct ?? 0));
   return (
-    <div className="progress-card water">
+    <div className={`progress-card water ${fresh ? "spring-in" : ""}`}>
       <div className="progress-head">
         <span className="progress-title">
           <span className="water-icon"><WaterDrop /></span>
@@ -44,19 +48,73 @@ function WaterProgressCard({ d }: { d: WaterProgressData }) {
           <span className="muted small">{had >= target ? " · goal met ✓" : ` · ${litres(target - had)} to go`}</span>
         )}
       </div>
-      <div className="bar water-bar"><div className="bar-fill" style={{ width: `${Math.min(100, pct ?? 0)}%` }} /></div>
+      <div className="bar water-bar" ref={barRef}>
+        <div className={`bar-fill ${target != null && had >= target ? "reached" : ""}`} style={{ width: `${shownPct}%` }} />
+      </div>
       <p className="progress-headline">{d.headline}</p>
     </div>
   );
 }
 
-function ProgressCard({ m }: { m: ChatMessage }) {
+/** One macro on the "Day so far" card. It fills from empty when the card appears (just after
+ *  "Looks good"), and turns into the moving gradient once the target is reached. */
+function ProgressMacro({ x }: { x: MacroProgressData["macros"][number] }) {
+  const tone = x.key.replace("_g", "");
+  const [ref, shownPct] = useRevealFill<HTMLDivElement>(Math.min(100, x.pct ?? 0));
+  const left = x.target != null ? Math.max(0, Math.round(x.target - x.consumed)) : null;
+  const state = x.target != null ? macroState(tone, x.consumed, x.target) : "under";
+  return (
+    <div className={`bar-row ${tone} progress-macro`}>
+      <div className="bar-label">
+        <span className="bar-name"><i className="swatch" aria-hidden="true" />{x.label}</span>
+        <span className="num">{x.pct != null ? `${x.pct}%` : `${x.consumed} g`}</span>
+      </div>
+      <div className="bar" ref={ref}><div className={`bar-fill ${state === "under" ? "" : state}`} style={{ width: `${shownPct}%` }} /></div>
+      {left != null && <div className="muted tiny">{left > 0 ? `${left} g to go` : state === "over" ? "over target" : "done ✓"}</div>}
+    </div>
+  );
+}
+
+const THINKING_LINES = [
+  "Doing the maths…",
+  "Weighing it up…",
+  "Checking my food notes…",
+  "Adding up the protein…",
+];
+
+/** While a reply is on its way: MacBro nodding along with maths symbols floating up, and a
+ *  rotating line. Screen readers hear one steady "MacBro is thinking". */
+function MacBroThinking({ onStop }: { onStop: () => void }) {
+  const [line, setLine] = useState(0);
+  useEffect(() => {
+    const t = setInterval(() => setLine((n) => (n + 1) % THINKING_LINES.length), 2400);
+    return () => clearInterval(t);
+  }, []);
+  return (
+    <div className="msg-row assistant">
+      <span className="thinking-avatar">
+        <MacBroAvatar />
+        <span className="math-glyphs" aria-hidden="true"><i>+</i><i>×</i><i>=</i><i>÷</i></span>
+      </span>
+      <div className="msg">
+        <div className="bubble thinking" role="status">
+          <span className="sr-only">MacBro is thinking</span>
+          <span key={line} className="thinking-line" aria-hidden="true">{THINKING_LINES[line]}</span>
+          <span className="typing" aria-hidden="true"><span /><span /><span /></span>
+        </div>
+        <button type="button" className="ghost stop-inline" onClick={onStop}>■ Stop</button>
+      </div>
+    </div>
+  );
+}
+
+function ProgressCard({ m, fresh }: { m: ChatMessage; fresh?: boolean }) {
   const data = m.data as ProgressData;
-  if (data.focus === "water") return <WaterProgressCard d={data} />;
+  if (data.focus === "water") return <WaterProgressCard d={data} fresh={fresh} />;
   const d = data;
   const kcalPct = d.calories.pct ?? 0;
   return (
-    <div className="progress-card">
+    <div className={`progress-card ${fresh ? "spring-in" : ""}`}>
       <div className="progress-head">
         <span className="progress-title">{d.is_today === false && d.date ? `${dayLabel(d.date)} total` : "Day so far"}</span>
         <span className="muted small">{d.meals_logged} meal{d.meals_logged === 1 ? "" : "s"} logged</span>
@@ -69,19 +127,7 @@ function ProgressCard({ m }: { m: ChatMessage }) {
         )}
       </div>
       <div className="progress-macros">
-        {d.macros.map((x) => {
-          const left = x.target != null ? Math.max(0, Math.round(x.target - x.consumed)) : null;
-          return (
-            <div key={x.key} className={`bar-row ${x.key.replace("_g", "")} progress-macro`}>
-              <div className="bar-label">
-                <span className="bar-name"><i className="swatch" aria-hidden="true" />{x.label}</span>
-                <span className="num">{x.pct != null ? `${x.pct}%` : `${x.consumed} g`}</span>
-              </div>
-              <div className="bar"><div className="bar-fill" style={{ width: `${Math.min(100, x.pct ?? 0)}%` }} /></div>
-              {left != null && <div className="muted tiny">{left > 0 ? `${left} g to go` : "done ✓"}</div>}
-            </div>
-          );
-        })}
+        {d.macros.map((x) => <ProgressMacro key={x.key} x={x} />)}
       </div>
       <p className="progress-headline">{d.headline}</p>
     </div>
@@ -122,8 +168,12 @@ export default function Chat({ user, onDataChanged, draft, active }: Props) {
   const [input, setInput] = useState("");
   const [sending, setSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [ai, setAi] = useState<AiAllowance | null>(null);   // today's AI allowance
   const [feedbackFor, setFeedbackFor] = useState<Action | null>(null);
   const [busyAction, setBusyAction] = useState<number | null>(null);
+  // Messages that arrived in this session (not loaded from history): only these spring in.
+  const [freshIds, setFreshIds] = useState<Set<number>>(() => new Set());
+  const markFresh = (ids: number[]) => setFreshIds((f) => new Set([...f, ...ids]));
   const bottomRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const speechBaseRef = useRef("");
@@ -143,7 +193,12 @@ export default function Chat({ user, onDataChanged, draft, active }: Props) {
     setInput(base ? `${base} ${spoken}` : spoken);
   });
 
+  function refreshAllowance() {
+    api.aiAllowance().then(setAi).catch(() => setAi(null));
+  }
+
   async function loadToday() {
+    refreshAllowance();
     const d = await api.chatDay();
     setMessages(d.messages);
     // Earlier days already on screen stay; otherwise offer the most recent one.
@@ -226,6 +281,7 @@ export default function Chat({ user, onDataChanged, draft, active }: Props) {
     try {
       const newMsgs = await api.send(text, feedbackId, requestId, controller.signal, logDate);
       const newActionIds = new Set(newMsgs.flatMap((m) => m.actions.map((a) => a.id)));
+      markFresh(newMsgs.filter((m) => m.role === "assistant").map((m) => m.id));
       // The reply includes the saved copy of the user's message, which replaces the optimistic one.
       setMessages((ms) => [
         // The server supersedes older open proposals when a new one is made; mirror that.
@@ -249,6 +305,7 @@ export default function Chat({ user, onDataChanged, draft, active }: Props) {
       if (inflightRef.current?.id === requestId) {
         inflightRef.current = null;
         setSending(false);
+        refreshAllowance();
         inputRef.current?.focus();
       }
     }
@@ -284,7 +341,11 @@ export default function Chat({ user, onDataChanged, draft, active }: Props) {
     try {
       const res = kind === "confirm" ? await api.confirm(action.id) : await api.reject(action.id);
       updateAction(res.action);
-      if (res.progress) setMessages((ms) => [...ms, res.progress!]);
+      if (res.progress) {
+        markFresh([res.progress.id]);
+        setMessages((ms) => [...ms, res.progress!]);
+      }
+      if (kind === "confirm") haptic("success");
       if (feedbackFor?.id === action.id) setFeedbackFor(null);
       if (kind === "confirm") onDataChanged();
     } catch (err) {
@@ -315,6 +376,7 @@ export default function Chat({ user, onDataChanged, draft, active }: Props) {
 
   function renderMessage(m: ChatMessage) {
     const picked = m.role === "user" && m.data && "log_date" in m.data ? m.data.log_date : undefined;
+    const fresh = freshIds.has(m.id);
     return (
       <div key={m.id} className={`msg-row ${m.role}`}>
         {m.role === "assistant"
@@ -322,11 +384,14 @@ export default function Chat({ user, onDataChanged, draft, active }: Props) {
           : <UserAvatar name={user.preferred_name} email={user.email} />}
         <div className="msg">
           {picked && <span className="msg-date-tag">📅 for {dayLabel(picked, today)}</span>}
-          {m.kind === "progress" && m.data ? <ProgressCard m={m} /> : <div className="bubble">{renderText(m.content)}</div>}
+          {m.kind === "progress" && m.data
+            ? <ProgressCard m={m} fresh={fresh} />
+            : <div className={`bubble ${fresh ? "fade-in" : ""}`}>{renderText(m.content)}</div>}
           {m.actions.map((a) => (
             <ProposalCard
               key={a.id}
               action={a}
+              fresh={fresh}
               busy={busyAction === a.id}
               awaitingFeedback={feedbackFor?.id === a.id}
               onConfirm={() => resolve(a, "confirm")}
@@ -378,17 +443,7 @@ export default function Chat({ user, onDataChanged, draft, active }: Props) {
           </div>
         )}
         {visible.map(renderMessage)}
-        {sending && (
-          <div className="msg-row assistant">
-            <MacBroAvatar />
-            <div className="msg">
-              <div className="bubble typing" aria-label="MacBro is thinking">
-                <span /><span /><span />
-              </div>
-              <button type="button" className="ghost stop-inline" onClick={stop}>■ Stop</button>
-            </div>
-          </div>
-        )}
+        {sending && <MacBroThinking onStop={stop} />}
         <div ref={bottomRef} />
       </div>
 
@@ -411,6 +466,13 @@ export default function Chat({ user, onDataChanged, draft, active }: Props) {
                  title="Pick a day to add or change food for" />
           {logDate && (
             <button type="button" className="link" onClick={() => setLogDate(null)}>Back to today</button>
+          )}
+          {ai?.limit != null && ai.remaining != null && (
+            <span className={`ai-left ${ai.remaining === 0 ? "out" : ai.remaining <= 3 ? "low" : ""}`}
+                  title="AI messages reset at midnight. Instant replies (water, today's summary, saved foods) and buttons don't count.">
+              {ai.remaining === 0 ? "No AI messages left today · resets at midnight"
+                : `${ai.remaining} of ${ai.limit} AI messages left today`}
+            </span>
           )}
         </div>
         {speech.listening && <div className="listening-hint">Listening… tap the mic again when you're done.</div>}

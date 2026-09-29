@@ -1,0 +1,26 @@
+# Weekly update pull requests for dependencies (free on GitHub). CI runs the full test suite on each
+# one; merge the green ones. Security fixes come as soon as they're published.
+version: 2
+updates:
+  - package-ecosystem: pip          # backend/requirements.txt (pinned; generated from requirements.in)
+    directory: /backend
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5
+    groups:
+      python-minor-and-patch:        # one PR for all small updates
+        update-types: [minor, patch]
+
+  - package-ecosystem: npm          # frontend/package-lock.json
+    directory: /frontend
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5
+    groups:
+      npm-minor-and-patch:
+        update-types: [minor, patch]
+
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: monthly

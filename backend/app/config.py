@@ -16,7 +16,29 @@ DATABASE_URL = os.getenv("DATABASE_URL", f"sqlite:///{BACKEND_DIR / 'macro_track
 DEV_SECRET_KEY = "dev-only-insecure-secret-change-me-in-backend-env"
 SECRET_KEY = os.getenv("SECRET_KEY", DEV_SECRET_KEY)
 SESSION_DAYS = int(os.getenv("SESSION_DAYS", "14"))
+# Admin sessions are shorter: the admin can read every user's data.
+ADMIN_SESSION_HOURS = int(os.getenv("ADMIN_SESSION_HOURS", "12"))
 COOKIE_SECURE = os.getenv("COOKIE_SECURE", "false").lower() == "true"
+# FastAPI's interactive API docs (/docs, /redoc, /openapi.json): on in development, off in production
+# (HTTPS) unless API_DOCS=true, so the API isn't mapped out publicly.
+# Emails (password reset) via Brevo's HTTP API (free tier, ~300 emails a day). Off when BREVO_API_KEY is
+# empty: then development prints reset links to the log, and production hides "Forgot password?".
+BREVO_API_KEY = os.getenv("BREVO_API_KEY", "").strip()
+EMAIL_FROM = os.getenv("EMAIL_FROM", "").strip()          # a sender address verified in Brevo
+# The app's public address, used to build links in emails. Required in production: links are never built
+# from the request's Host header (a forged header could point a reset link at someone else's site).
+PUBLIC_APP_URL = os.getenv("PUBLIC_APP_URL", "" if COOKIE_SECURE else "http://localhost:5173").strip().rstrip("/")
+PASSWORD_RESET_MINUTES = 30
+PASSWORD_RESETS_PER_EMAIL = 3           # reset emails per address ...
+PASSWORD_RESET_WINDOW_S = 60 * 60       # ... per hour
+
+# Error reports to Sentry (free tier), only when set. Nothing personal is sent (see observability.py).
+SENTRY_DSN = os.getenv("SENTRY_DSN", "").strip()
+SENTRY_ENVIRONMENT = os.getenv("SENTRY_ENVIRONMENT", "production" if COOKIE_SECURE else "development")
+API_DOCS = os.getenv("API_DOCS", "false" if COOKIE_SECURE else "true").lower() == "true"
+# "Continue with Google": the OAuth web client ID from Google Cloud (not a secret; it's in the page).
+# Empty = the Google button is hidden.
+GOOGLE_CLIENT_ID = os.getenv("GOOGLE_CLIENT_ID", "").strip()
 # The built React app (npm run build). When it exists the backend serves it too, so the
 # site and the API share one address (production on Render). In development Vite serves it.
 FRONTEND_DIST = Path(os.getenv("FRONTEND_DIST", BACKEND_DIR.parent / "frontend" / "dist"))
@@ -58,6 +80,20 @@ LLM_MAX_TOKENS = int(os.getenv("LLM_MAX_TOKENS", "16000" if _IS_ANTHROPIC else "
 # logged. Set true in development to show the real reason in the chat instead.
 SHOW_LLM_ERRORS = os.getenv("SHOW_LLM_ERRORS", "false").lower() == "true"
 LLM_UNAVAILABLE_MESSAGE = "MacBro's servers are temporarily down. Please try again in a little while."
+# Accounts are for adults: India's DPDP Act 2023 needs verifiable parental consent for under-18s,
+# and weight-loss targets aren't suitable for children. Dates of birth outside this range are refused.
+MIN_USER_AGE = 18
+MAX_USER_AGE = 120
+
+# Daily AI allowance per user (the free model quota is shared): AI-answered chat messages plus
+# Dashboard "Add food" estimates. Resets at the user's local midnight. 0 = unlimited.
+# Instant replies (fast paths), saved foods and every button action never count.
+AI_DAILY_MESSAGE_LIMIT = int(os.getenv("AI_DAILY_MESSAGE_LIMIT", "20"))
+# Sign-in attempt limits (in memory, per server process).
+LOGIN_FAILURES_PER_EMAIL = 10       # wrong passwords per email ...
+LOGIN_FAILURE_WINDOW_S = 15 * 60    # ... within 15 minutes
+AUTH_REQUESTS_PER_IP = 60           # login / register / Google requests per address ...
+AUTH_REQUEST_WINDOW_S = 10 * 60     # ... within 10 minutes
 LLM_MAX_TOOL_ROUNDS = 8          # safety cap on the tool loop per user message
 
 # --- Multi-model routing (docs/llm-routing-strategy.md) ----------------------

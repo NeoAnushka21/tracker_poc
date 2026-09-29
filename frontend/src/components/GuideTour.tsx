@@ -3,7 +3,7 @@ import { AppLogo } from "./Avatar";
 import { APP_NAME, BOT_NAME } from "../brand";
 
 // Keep these steps in sync with docs/user-guide.md whenever the UI changes.
-export type GuideTab = "home" | "chat" | "dashboard" | "analysis" | "foods" | "body";
+export type GuideTab = "home" | "chat" | "dashboard" | "analysis" | "foods" | "explore" | "body";
 
 type Step = { tab: GuideTab; title: string; body: ReactNode };
 
@@ -36,7 +36,7 @@ function steps(name: string | null): Step[] {
             <li>"150g grilled chicken with a cup of rice"</li>
             <li>"two glasses of water"</li>
           </ul>
-          <p className="muted small">Quantities help. If something is unclear, {BOT_NAME} asks before guessing.</p>
+          <p className="muted small">Quantities help. If something is unclear, {BOT_NAME} asks before guessing. You get a daily number of AI messages (shown above the message box); quick replies like water and foods you've saved don't use them.</p>
         </>
       ),
     },
@@ -45,7 +45,7 @@ function steps(name: string | null): Step[] {
       title: "2. Nothing is saved until you confirm",
       body: (
         <>
-          <p>{BOT_NAME} replies with a card showing each item and its calories, protein, carbs and fat. It says <b>Not saved yet</b> until you choose:</p>
+          <p>{BOT_NAME} replies with a card that leads with the bottom line, <b>calories</b> and <b>protein</b>, and lists each item and amount so you can check it. <b>View details</b> shows the full carbs, fat and fiber breakdown. It says <b>Not saved yet</b> until you choose:</p>
           <ul>
             <li><b>Looks good</b> saves it.</li>
             <li><b>Needs changes</b> lets you type a correction, e.g. "the rice was 200g".</li>
@@ -74,7 +74,7 @@ function steps(name: string | null): Step[] {
       title: "4. Your day on the Dashboard",
       body: (
         <ul>
-          <li>Tiles in order: <b>macros</b> (the ring shows <b>eaten / target</b> calories and your <b>balance</b>, with bars for protein, fiber, carbs and fat), then <b>micronutrients</b>, then <b>water</b> (tap +250 ml or +500 ml).</li>
+          <li>Tiles in order: <b>macros</b> (the ring shows <b>eaten / target</b> calories and your <b>balance</b>, with bars for protein, fiber, carbs and fat; a bar glows once you hit its target), then <b>micronutrients</b> (folded; tap to open), then <b>water</b> (tap +250 ml or +500 ml).</li>
           <li>Meals are split into breakfast, snacks, lunch and dinner. Tap the <b>pencil</b> on an item to move, copy, change the amount or delete it, or <b>+ Add food</b> to add one without the chat.</li>
           <li>Use <b>‹ ›</b> to look at earlier days.</li>
         </ul>
@@ -87,12 +87,17 @@ function steps(name: string | null): Step[] {
     },
     {
       tab: "foods",
-      title: "6. My foods remembers for you",
-      body: <p>Every food you confirm is saved here with its macros and micronutrients, so the next time you log it (e.g. "40g pineapple") the numbers are exactly the same, straight from your library. Recipes you save show up here too. You can search, correct (micronutrients too) or delete any of them.</p>,
+      title: "6. Saved Food remembers for you",
+      body: <p>Every food you confirm is saved here with its macros and micronutrients, so the next time you log it (e.g. "40g pineapple") the numbers are exactly the same, straight from your library. Recipes you save show up here too. The list shows each name with its calories; tap <b>Additional info</b> for the other macros and micronutrients. You can search, correct or delete any of them.</p>,
+    },
+    {
+      tab: "explore",
+      title: "7. Explore (coming soon)",
+      body: <p>Ready-made recipe collections will live here, such as <b>high protein</b>, <b>non-veg quick &amp; easy</b> and <b>healthy desserts</b>, with the macros already worked out.</p>,
     },
     {
       tab: "body",
-      title: "7. Your Body",
+      title: "8. Your Body Profile",
       body: (
         <ul>
           <li>Your <b>weight</b>, <b>height</b> and <b>BMI</b>, and an estimated <b>body fat</b> once you add your neck and waist (and hips for women).</li>
@@ -103,10 +108,10 @@ function steps(name: string | null): Step[] {
     },
     {
       tab: "chat",
-      title: "8. Settings",
+      title: "9. Settings",
       body: (
         <>
-          <p>Open <b>⚙ Settings</b> to change your calorie and macro <b>targets</b>, switch <b>light or dark</b> theme, change your password, or delete your account.</p>
+          <p>Open <b>⚙ Settings</b> to change your calorie and macro <b>targets</b>, switch <b>light or dark</b> theme, change or set your password, download your data, or delete your account.</p>
           <p>That's it. Head to <b>Chat</b> and tell {BOT_NAME} what you had today!</p>
         </>
       ),
@@ -134,6 +139,8 @@ export default function GuideTour({ name, onTab, onClose }: Props) {
   }
 
   return (
+    // The tour panel is a dialog that handles its own keys (← → to step, Escape to close).
+    // oxlint-disable-next-line jsx-a11y/no-noninteractive-element-interactions
     <div className="guide card" role="dialog" aria-modal="false" aria-labelledby="guide-title"
          ref={panel} tabIndex={-1} onKeyDown={onKey}>
       <div className="guide-head">

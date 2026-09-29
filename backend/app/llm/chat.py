@@ -17,7 +17,7 @@ from app.llm.provider import LLMError
 from app.llm.router import ALL_TOOLS, SECTIONS, Route, escalate, route
 from app.llm.tools import TOOLS, ToolContext, ToolInputError, run_tool
 from app.models import ChatMessage, PendingAction, User, utcnow
-from app.services import cancel
+from app.services import allowance, cancel
 from app.services.actions import action_to_dict, expire_stale, open_actions, supersede_older
 from app.timeutil import local_day_bounds_utc, local_today, utc_to_local
 
@@ -175,12 +175,14 @@ def handle_user_message(
         usage.record(provider="fastpath", model=handler, tier="none", intent=handler, prompt_tokens=0,
                      completion_tokens=0, latency_ms=0, outcome="fastpath", escalated=False)
     else:
+        allowance.check(db, user)   # before any model call; raises AllowanceExceeded
         r = (route(text, feedback=feedback_on_action_id is not None) if LLM_ROUTING
              else Route("full", "large", ALL_TOOLS, SECTIONS["full"], "routing off"))
         todays = _todays_messages(db, user, LLM_SMALL_HISTORY_MESSAGES if r.tier == "small" else CHAT_HISTORY_MESSAGES)
         food_text = " ".join([text] + [m.content for m in todays if m.role == "user"][-3:]
                              + _open_proposal_food_names(db, user))
         reply_text = _run_tool_loop(db, user, _history_for_llm(todays), ctx, request_id, log_date, r, food_text)
+        allowance.record(db, user, "chat")   # committed with the reply below; failures don't count
 
     if not reply_text.strip():
         reply_text = FALLBACK_PROPOSAL_TEXT if ctx.created_actions else "Sorry, I didn't catch that. Could you rephrase?"
@@ -254,8 +256,12 @@ def _run_tool_loop(db: Session, user: User, messages: list[dict], ctx: ToolConte
 
         messages.append({"role": "assistant", "content": resp.assistant_content})
         results = []
+        offered = {t["name"] for t in _tools_for(r)}
         for call in resp.tool_calls:
             try:
+                # Only the tools offered for this message may run, even if the model names another one.
+                if call.name not in offered:
+                    raise ToolInputError(f"The tool '{call.name}' isn't available for this message")
                 content, is_error = run_tool(ctx, call.name, call.input), False
             except ToolInputError as e:
                 content, is_error = f"Error: {e}", True

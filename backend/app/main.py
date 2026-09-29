@@ -1,13 +1,14 @@
 from contextlib import asynccontextmanager
 from pathlib import Path
 
-from fastapi import FastAPI, HTTPException, Response
+from fastapi import FastAPI, HTTPException, Request, Response
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
-from app import config, models  # noqa: F401  (models registers tables)
+from app import config, models, observability  # noqa: F401  (models registers tables)
 from app.data_migrations import run_all as run_data_migrations
-from app.db import Base, SessionLocal, _is_sqlite, add_missing_columns, engine
+from app.db import SessionLocal, _is_sqlite, engine
+from app.migrate import migrate
 from app.routers import actions, admin, auth, chat, dashboard, entries, foods, profile, water
 
 
@@ -17,16 +18,59 @@ async def lifespan(_app: FastAPI):
         # A shared database means a real deployment: sessions must not be signed with the
         # well-known development key.
         raise RuntimeError("Set SECRET_KEY in the environment before using a Postgres database.")
-    # V1: create tables directly and add any new nullable columns. Switch to Alembic
-    # before making changes this can't handle (renames, NOT NULL columns, type changes).
-    Base.metadata.create_all(engine)
-    add_missing_columns()
+    migrate(engine)   # Alembic: see app/migrate.py
     with SessionLocal() as db:
         run_data_migrations(db)
     yield
 
 
-app = FastAPI(title=config.APP_NAME, lifespan=lifespan)
+observability.setup_logging()
+observability.setup_sentry()
+
+_docs = {} if config.API_DOCS else {"docs_url": None, "redoc_url": None, "openapi_url": None}
+app = FastAPI(title=config.APP_NAME, lifespan=lifespan, **_docs)
+
+# Browser security headers on every response (OWASP secure headers). The CSP allows only our own
+# files plus Google's sign-in button (the origins Google documents for Sign in with Google); inline
+# scripts are not allowed. React's style attributes need 'unsafe-inline' for styles only.
+_GSI = "https://accounts.google.com/gsi/"
+CONTENT_SECURITY_POLICY = "; ".join([
+    "default-src 'self'",
+    f"script-src 'self' {_GSI}client",
+    f"style-src 'self' 'unsafe-inline' {_GSI}style",
+    f"frame-src {_GSI}",
+    f"connect-src 'self' {_GSI}",
+    "img-src 'self' data:",
+    "font-src 'self'",
+    "object-src 'none'",
+    "base-uri 'self'",
+    "form-action 'self'",
+    "frame-ancestors 'none'",
+])
+SECURITY_HEADERS = {
+    "Content-Security-Policy": CONTENT_SECURITY_POLICY,
+    "X-Content-Type-Options": "nosniff",
+    "X-Frame-Options": "DENY",
+    "Referrer-Policy": "strict-origin-when-cross-origin",
+    # The mic is used for voice input on our own pages only.
+    "Permissions-Policy": "microphone=(self), camera=(), geolocation=(), payment=(), usb=()",
+    # Google's sign-in popup needs to talk back to this page.
+    "Cross-Origin-Opener-Policy": "same-origin-allow-popups",
+}
+
+
+observability.install(app)
+
+
+@app.middleware("http")
+async def security_headers(request: Request, call_next):
+    response = await call_next(request)
+    for name, value in SECURITY_HEADERS.items():
+        response.headers.setdefault(name, value)
+    if config.COOKIE_SECURE:   # only over HTTPS: browsers then refuse plain HTTP for a year
+        response.headers.setdefault("Strict-Transport-Security", "max-age=31536000")
+    return response
+
 app.include_router(auth.router)
 app.include_router(profile.router)
 app.include_router(chat.router)

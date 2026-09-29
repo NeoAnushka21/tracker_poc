@@ -36,6 +36,9 @@ export type User = {
   last_login_at: string | null;
   consented_at: string | null;
   guide_seen: boolean;
+  /** False for accounts created with Google that haven't set a password. */
+  has_password: boolean;
+  google_linked: boolean;
 };
 
 export type Item = Nutrients & {

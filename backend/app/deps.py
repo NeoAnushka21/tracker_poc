@@ -10,8 +10,11 @@ def current_user(
     session: str | None = Cookie(default=None, alias=COOKIE_NAME),
     db: Session = Depends(get_db),
 ) -> User:
-    user_id = decode_session_token(session) if session else None
-    user = db.get(User, user_id) if user_id else None
+    decoded = decode_session_token(session) if session else None
+    user = db.get(User, decoded[0]) if decoded else None
+    # A token from before the account's sessions were ended (password change, log out everywhere).
+    if user is not None and decoded[1] != (user.session_version or 0):
+        user = None
     if user is None:
         raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Not logged in")
     return user

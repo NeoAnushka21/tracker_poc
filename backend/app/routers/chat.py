@@ -12,7 +12,7 @@ from app.llm.chat import handle_user_message, message_to_dict, messages_for_day,
 from app.llm.provider import LLMError
 from app.models import User
 from app.schemas import CancelIn, ChatIn
-from app.services import cancel
+from app.services import allowance, cancel
 from app.services.actions import expire_stale
 from app.timeutil import local_today
 
@@ -47,6 +47,9 @@ def send(body: ChatIn, user: User = Depends(onboarded_user), db: Session = Depen
     except cancel.ChatCancelled:
         db.rollback()
         raise HTTPException(status.HTTP_409_CONFLICT, "cancelled")
+    except allowance.AllowanceExceeded as e:
+        db.rollback()   # the message isn't kept; the browser puts it back in the input box
+        raise HTTPException(status.HTTP_429_TOO_MANY_REQUESTS, str(e)) from e
     except LLMError as e:
         db.rollback()
         log.warning("LLM call failed for user %s: %s", user.id, e)
@@ -59,6 +62,12 @@ def send(body: ChatIn, user: User = Depends(onboarded_user), db: Session = Depen
         except Exception:  # never let bookkeeping break the chat
             log.exception("Couldn't save LLM usage")
             db.rollback()
+
+
+@router.get("/allowance")
+def ai_allowance(user: User = Depends(onboarded_user), db: Session = Depends(get_db)):
+    """Today's AI allowance: {limit, used, remaining, resets_at} (limit null = unlimited)."""
+    return allowance.status(db, user)
 
 
 @router.post("/cancel")

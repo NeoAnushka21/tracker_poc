@@ -1,4 +1,4 @@
-"""The user's food library and recipes (My foods tab). Edits here are direct user
+"""The user's food library and recipes (Saved Food tab). Edits here are direct user
 actions from the UI, so they apply immediately (the LLM can't reach these routes)."""
 from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel, Field, field_validator

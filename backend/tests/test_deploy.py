@@ -96,3 +96,79 @@ def test_health_is_readable_by_the_launcher(client):
     assert r.json() == {"ok": True}
     assert r.headers["access-control-allow-origin"] == "*"
     assert r.headers["cache-control"] == "no-store"
+
+
+# --- browser security headers and API docs ---------------------------------------------
+
+def test_security_headers_on_every_response(client):
+    for path in ("/api/health", "/api/auth/me"):
+        h = client.get(path).headers
+        csp = h["content-security-policy"]
+        assert "frame-ancestors 'none'" in csp and "object-src 'none'" in csp
+        assert "script-src 'self' https://accounts.google.com/gsi/client" in csp   # Google's button allowed
+        assert "'unsafe-inline'" not in csp.split("script-src")[1].split(";")[0]   # no inline scripts
+        assert h["x-content-type-options"] == "nosniff" and h["x-frame-options"] == "DENY"
+        assert "microphone=(self)" in h["permissions-policy"]
+        assert "strict-transport-security" not in h           # plain HTTP in tests: no HSTS
+
+
+def test_hsts_only_over_https(client, monkeypatch):
+    from app import config
+    monkeypatch.setattr(config, "COOKIE_SECURE", True)
+    assert client.get("/api/health").headers["strict-transport-security"] == "max-age=31536000"
+
+
+def test_api_docs_off_in_production(monkeypatch):
+    """Development serves /docs; with COOKIE_SECURE (HTTPS, production) the default is off."""
+    import importlib
+    from app import config, main
+    assert main.app.docs_url == "/docs"                       # tests run as development
+    monkeypatch.setenv("COOKIE_SECURE", "true")
+    monkeypatch.delenv("API_DOCS", raising=False)
+    try:
+        assert importlib.reload(config).API_DOCS is False
+        monkeypatch.setenv("API_DOCS", "true")
+        assert importlib.reload(config).API_DOCS is True      # can be switched back on
+    finally:
+        monkeypatch.undo()
+        importlib.reload(config)
+
+
+# --- request ids and unexpected errors ------------------------------------------------------
+
+def test_every_response_has_a_request_id(client):
+    rid = client.get("/api/health").headers["x-request-id"]
+    assert len(rid) == 8 and rid != client.get("/api/health").headers["x-request-id"]
+
+
+def test_unexpected_error_gives_a_reference_and_is_logged(client, caplog):
+    from app.main import app
+
+    def boom():
+        raise RuntimeError("secret internals")
+
+    app.add_api_route("/api/test-boom", boom, methods=["POST"])
+    try:
+        with caplog.at_level("ERROR", logger="omniai"):
+            r = client.post("/api/test-boom")
+    finally:
+        app.router.routes = [rt for rt in app.router.routes if getattr(rt, "path", "") != "/api/test-boom"]
+    rid = r.headers["x-request-id"]
+    assert r.status_code == 500
+    assert r.json() == {"detail": f"Something went wrong on our side (ref {rid}). Please try again."}
+    assert "secret internals" not in r.text                        # details stay in the log
+    assert "content-security-policy" in r.headers                  # still gets the security headers
+    assert any("Unhandled error on POST /api/test-boom" in rec.getMessage() for rec in caplog.records)
+
+
+def test_sentry_is_off_without_a_dsn_and_private_with_one(monkeypatch):
+    import sentry_sdk
+    from app import config, observability
+    monkeypatch.setattr(config, "SENTRY_DSN", "")
+    assert observability.setup_sentry() is False
+    seen = {}
+    monkeypatch.setattr(sentry_sdk, "init", lambda **kw: seen.update(kw))
+    monkeypatch.setattr(config, "SENTRY_DSN", "https://key@o0.ingest.sentry.io/0")
+    assert observability.setup_sentry() is True
+    assert seen["send_default_pii"] is False and seen["max_request_body_size"] == "never"
+    assert seen["include_local_variables"] is False and seen["traces_sample_rate"] == 0

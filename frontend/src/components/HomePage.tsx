@@ -1,7 +1,8 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { api } from "../api";
 import type { DailySummary, Streak, Streaks, User } from "../types";
 import { greeting } from "../format";
+import { haptic } from "../haptics";
 import { Bar, CalorieRing, Water } from "./Dashboard";
 import { AppLogo } from "./Avatar";
 
@@ -48,8 +49,9 @@ function ProteinIcon() {
 
 const plural = (n: number) => `${n} day${n === 1 ? "" : "s"}`;
 
-function StreakCard({ kind, s, days, rule }: {
+function StreakCard({ kind, s, days, rule, justDone, onCelebrated }: {
   kind: "logging" | "protein"; s: Streak; days: Streaks["last_7_days"]; rule: Streaks["rule"];
+  justDone?: boolean; onCelebrated?: () => void;
 }) {
   const logging = kind === "logging";
   const hit = (d: Streaks["last_7_days"][number]) => (logging ? d.logged : d.protein_hit);
@@ -60,7 +62,8 @@ function StreakCard({ kind, s, days, rule }: {
       : s.current > 0 ? `Reach ${rule.min_protein_pct}% of your protein today to extend it`
         : `Reach ${rule.min_protein_pct}% of your protein today to start a streak`;
   return (
-    <section className={`streak-card card ${kind} ${s.current > 0 ? "live" : ""}`} aria-labelledby={`streak-${kind}`}>
+    <section className={`streak-card card ${kind} ${s.current > 0 ? "live" : ""} ${justDone ? "celebrate" : ""}`}
+             onAnimationEnd={(e) => { if (e.target === e.currentTarget) onCelebrated?.(); }} aria-labelledby={`streak-${kind}`}>
       <div className="streak-top">
         <span className="streak-icon">{logging ? <FlameIcon /> : <ProteinIcon />}</span>
         <div>
@@ -96,10 +99,23 @@ export default function HomePage({ user, dataVersion, onDataChanged, onOpenChat,
   const [day, setDay] = useState<DailySummary | null>(null);
   const [streaks, setStreaks] = useState<Streaks | null>(null);
   const [error, setError] = useState<string | null>(null);
+  // Streaks that went from "not yet today" to done since the last load: they pop once, with a buzz.
+  const [justDone, setJustDone] = useState<{ logging: boolean; protein: boolean }>({ logging: false, protein: false });
+  const prevStreaks = useRef<Streaks | null>(null);
 
   useEffect(() => {
     api.daily().then(setDay).catch((e) => setError(e.message));
-    api.streaks().then(setStreaks).catch(() => setStreaks(null));
+    api.streaks().then((next) => {
+      const prev = prevStreaks.current;
+      const flipped = {
+        logging: !!prev && !prev.logging.today_done && next.logging.today_done,
+        protein: !!prev && !prev.protein.today_done && next.protein.today_done,
+      };
+      if (flipped.logging || flipped.protein) haptic("celebrate");
+      prevStreaks.current = next;
+      setJustDone(flipped);
+      setStreaks(next);
+    }).catch(() => setStreaks(null));
   }, [dataVersion]);
 
   const t = day?.targets;
@@ -142,11 +158,14 @@ export default function HomePage({ user, dataVersion, onDataChanged, onOpenChat,
         )}
         {streaks && (
           <div className="streaks">
-            <StreakCard kind="logging" s={streaks.logging} days={streaks.last_7_days} rule={streaks.rule} />
-            <StreakCard kind="protein" s={streaks.protein} days={streaks.last_7_days} rule={streaks.rule} />
+            <StreakCard kind="logging" s={streaks.logging} days={streaks.last_7_days} rule={streaks.rule} justDone={justDone.logging}
+                        onCelebrated={() => setJustDone((j) => ({ ...j, logging: false }))} />
+            <StreakCard kind="protein" s={streaks.protein} days={streaks.last_7_days} rule={streaks.rule} justDone={justDone.protein}
+                        onCelebrated={() => setJustDone((j) => ({ ...j, protein: false }))} />
           </div>
         )}
       </div>
+      <p className="muted small health-note">Calories, nutrients and targets are estimates to help you track, not medical advice. <a href="/privacy#health" target="_blank" rel="noopener">More</a></p>
     </div>
   );
 }

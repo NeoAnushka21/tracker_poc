@@ -21,7 +21,7 @@ function fatText(f: BodyFat): { value: string; sub: string } {
 
 type Props = { user: User; onUserChanged: (u: User) => void };
 
-/** Body tab: weight, height, BMI and body fat, plus a body diagram to add optional, dated measurements. */
+/** Body Profile tab: weight, height, BMI and body fat, plus a body diagram to add optional, dated measurements. */
 export default function BodyPage({ user, onUserChanged }: Props) {
   const imperial = user.unit_system === "imperial";
   const unit = imperial ? "in" : "cm";
@@ -135,7 +135,7 @@ export default function BodyPage({ user, onUserChanged }: Props) {
   return (
     <div className="body-page">
       <section className="card">
-        <h2>Body</h2>
+        <h2>Body Profile</h2>
         <p className="muted small">Your current numbers. Measurements are optional: add any you like, whenever you like.</p>
         <div className="body-stats-row">
           <div className="stat-tile">

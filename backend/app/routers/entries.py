@@ -17,6 +17,7 @@ from app.llm import usage
 from app.llm.estimate import estimate_food
 from app.llm.provider import LLMError
 from app.models import User
+from app.services import allowance
 from app.services.actions import action_to_dict
 from app.services.entries import (
     add_saved_food, check_target_date, delete_item, owned_item, record_event, set_item_quantity, transfer_items,
@@ -139,9 +140,14 @@ def add_food(body: AddFoodIn, user: User = Depends(onboarded_user), db: Session 
         db.commit()
         return {"status": "added", "entry_id": entry.id, "item": item_to_dict(item)}
 
+    try:
+        allowance.check(db, user)   # only new foods use the AI; saved ones above never count
+    except allowance.AllowanceExceeded as e:
+        raise HTTPException(status.HTTP_429_TOO_MANY_REQUESTS, str(e)) from e
     usage.begin()
     try:
         action, note = estimate_food(db, user, body.name, body.quantity, body.unit, body.meal_type, day)
+        allowance.record(db, user, "dashboard_add")
         db.commit()
     except LLMError as e:
         db.rollback()

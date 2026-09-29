@@ -1,0 +1,93 @@
+# Checks on every push and pull request. Render deploys main only after all of them pass
+# (render.yaml: autoDeployTrigger: checksPass). Uses the fake LLM only: no API keys, no quota.
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:                      # a newer push to the same branch cancels the older run
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  backend-sqlite:
+    name: Backend tests (SQLite)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version-file: .python-version
+          cache: pip
+          cache-dependency-path: backend/requirements.txt
+      - run: pip install -r backend/requirements.txt
+      - name: pytest
+        working-directory: backend
+        run: python -m pytest -q
+
+  backend-postgres:
+    name: Backend tests (Postgres, like production)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    services:
+      postgres:                   # throwaway database, gone when the job ends
+        image: postgres:17
+        env:
+          POSTGRES_PASSWORD: test
+          POSTGRES_DB: omniai
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U postgres" --health-interval 5s --health-timeout 5s --health-retries 10
+    env:
+      TEST_DATABASE_URL: postgresql://postgres:test@localhost:5432/omniai
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version-file: .python-version
+          cache: pip
+          cache-dependency-path: backend/requirements.txt
+      - run: pip install -r backend/requirements.txt
+      - name: pytest on Postgres
+        working-directory: backend
+        run: python -m pytest -q
+
+  frontend:
+    name: Frontend lint, type-check and build
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: "24"      # same as NODE_VERSION in render.yaml
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - name: npm ci + lint (bugs and accessibility) + build
+        working-directory: frontend
+        run: npm ci && npm run lint && npm run build
+
+  audit:
+    name: Dependency vulnerability audit
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version-file: .python-version
+      - uses: actions/setup-node@v5
+        with:
+          node-version: "24"
+      - name: Python packages (pip-audit)
+        run: pip install pip-audit && pip-audit -r backend/requirements.txt
+      - name: npm packages (high and critical, runtime only)
+        working-directory: frontend
+        run: npm audit --omit=dev --audit-level=high

@@ -206,13 +206,18 @@ export function StackedBar({ segments, ariaLabel }: { segments: Segment[]; ariaL
   const total = segments.reduce((s, x) => s + x.value, 0);
   if (total <= 0) return <p className="muted small">Nothing logged yet.</p>;
   return (
-    <div className="stacked" role="img" aria-label={ariaLabel}>
+    <div className="stacked" role="group" aria-label={ariaLabel}>
       <div className="stacked-bar">
         {segments.filter((s) => s.value > 0).map((s) => (
+          // Hover and focus only show the tooltip; the value is also in each segment's label.
+          // oxlint-disable-next-line jsx-a11y/no-noninteractive-element-interactions
           <div
             key={s.key}
             className={`stacked-seg ${hover && hover !== s.key ? "dim" : ""}`}
             style={{ flexGrow: s.value, background: s.color }}
+            role="img"
+            // Focusable on purpose: focus shows the same tooltip as hover, for keyboard users.
+            // oxlint-disable-next-line jsx-a11y/no-noninteractive-tabindex
             tabIndex={0}
             onMouseEnter={() => setHover(s.key)} onMouseLeave={() => setHover(null)}
             onFocus={() => setHover(s.key)} onBlur={() => setHover(null)}

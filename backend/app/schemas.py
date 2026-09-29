@@ -22,13 +22,49 @@ class Credentials(BaseModel):
         return v
 
 
+class AdminLoginIn(Credentials):
+    code: str | None = Field(default=None, max_length=10)   # from the authenticator app, once two-step is on
+
+
+class TotpCodeIn(BaseModel):
+    code: str = Field(min_length=6, max_length=10)
+
+
+class TotpDisableIn(BaseModel):
+    password: str = Field(min_length=1, max_length=200)
+    code: str = Field(min_length=6, max_length=10)
+
+
 class PasswordChangeIn(BaseModel):
-    current_password: str = Field(min_length=1, max_length=200)
+    # Empty for accounts without a password yet (created with Google): this sets the first one.
+    current_password: str = Field(default="", max_length=200)
     new_password: str = Field(min_length=8, max_length=200)
 
 
 class DeleteAccountIn(BaseModel):
-    password: str = Field(min_length=1, max_length=200)
+    # Accounts with a password confirm with it; Google-only accounts type their email instead.
+    password: str = Field(default="", max_length=200)
+    confirm_email: str = Field(default="", max_length=255)
+
+
+class ForgotPasswordIn(BaseModel):
+    email: str = Field(min_length=3, max_length=255)
+
+    @field_validator("email")
+    @classmethod
+    def normalize(cls, v: str) -> str:
+        return v.strip().lower()
+
+
+class ResetPasswordIn(BaseModel):
+    token: str = Field(min_length=20, max_length=200)
+    new_password: str = Field(min_length=8, max_length=200)
+
+
+class GoogleLoginIn(BaseModel):
+    credential: str = Field(min_length=20, max_length=5000)   # the ID token from Google's button
+    consent: bool = False      # data consent, needed when this creates a new account
+    link: bool = False         # the user agreed to link Google to their existing email account
 
 
 class RegisterIn(Credentials):
