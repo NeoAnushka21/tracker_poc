@@ -1,6 +1,6 @@
 # Open points
 
-> Last updated: 2026-09-29 (Body tab done; body follow-ups added). Until at least 2026-10-06 the app is used by one person (the owner), and the focus is the single-user experience, UI and features.
+> Last updated: 2026-09-29 (AI error reasons in the admin view added as an open item). Until at least 2026-10-06 the app is used by one person (the owner), and the focus is the single-user experience, UI and features.
 
 **How this doc works (standing rule, 2026-09-29):** every idea, option or follow-up that comes up in a discussion but isn't built goes here, in the same change as the discussion's work, so nothing gets lost. Each item is either **open** (may be built later), **on hold**, or **decided against** (kept with the reason, so it isn't re-discussed from scratch). When an item is built, it moves to **Done** at the bottom with the date, and the feature itself is documented in the relevant doc.
 
@@ -96,6 +96,7 @@ The launcher (live since 2026-09-29) replaces Render's waking page with our danc
 | Trend line per body measurement (and weight) on the Body tab | 2026-09-29 | Open | Today the tab shows the latest value and the change since the previous one; the dated history is stored, so a small chart per part is frontend-only work. |
 | Body-fat category labels (e.g. athletic / average) | 2026-09-29 | Open | Only the estimate is shown now. Category tables (e.g. ACE) vary by source, sex and age, so choose one deliberately before adding. |
 | Height history | 2026-09-29 | Open | Height is stored on the profile (latest only); weight and measurements keep full history. Rarely needed for adults. |
+| Record a short error reason for failed AI calls (e.g. "invalid key", "bad request") in the admin AI usage view | 2026-09-29 | Open | On 2026-09-29 live chat failed with "servers are down" because the Groq key saved in Render was wrong. `llm_usage` only says `error`, so finding the cause needed Render's logs. A sanitised reason (HTTP status + provider message, never the key) would show it in **Admin → AI usage**. |
 
 ## 6. Decided against (kept for the record)
 
