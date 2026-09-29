@@ -1,6 +1,6 @@
 # OmniAI technical overview
 
-> Last updated: 2026-09-29 (Body tab, BMI and US Navy body fat). Update this file in the same change as any code change it describes (see [docs/README.md](README.md)).
+> Last updated: 2026-09-29 (pool waits out short rate limits; nullable micronutrients in the tool schema).Update this file in the same change as any code change it describes (see [docs/README.md](README.md)).
 > Architecture diagrams: [hld.md](hld.md). End-user manual: [user-guide.md](user-guide.md).
 
 ## 1. Tech stack
@@ -129,7 +129,7 @@ When `frontend/dist` exists (`FRONTEND_DIST`), `main.mount_frontend` also serves
 | File | Role |
 |---|---|
 | `router.py` | Rule-based **routing**: intent (`query`, `edit`, `log`, `full`) and tier (`small` / `large`), plus the tools and prompt sections each intent gets. Leans towards `large` when unsure (vague dishes, 3+ foods, several meals, no amounts, recipes, feedback on a card, long messages). |
-| `pool.py` | **Model pool**: models per tier from config (+ optional `llm_pool.json` providers). Primary models first (this tier, rotating, then the other tier), **backup** (priority 2) models only after every primary is unavailable. Per-provider timeouts. Rotates within a tier, fails over on errors, puts a model on **cooldown** on a 429 (using the host's "try again in 14m16s") or after 3 errors in a row, then falls back to the other tier before the friendly error. **Open source only:** a model is used only if its licence is in `ALLOWED_MODEL_LICENSES` (Apache-2.0, MIT). Licences are looked up per model version in `config.MODEL_LICENSES` (longest name prefix wins, e.g. GLM-5.3 is blocked but GLM-5.3-Flash is MIT; Mistral Large and Codestral are blocked); Llama, Gemma, Nemotron and Minitron are caught anywhere in the name; unknown models are blocked. |
+| `pool.py` | **Model pool**: models per tier from config (+ optional `llm_pool.json` providers). Primary models first (this tier, rotating, then the other tier), **backup** (priority 2) models only after every primary is unavailable. Per-provider timeouts. Rotates within a tier, fails over on errors, puts a model on **cooldown** on a 429 (using the host's "try again in 14m16s") or after 3 errors in a row, then falls back to the other tier before the friendly error. **Short limits are waited out:** if no model answers only because of rate limits that end soon (Groq's per-minute token limit says e.g. "try again in 9.6s"), `complete()` sleeps until the soonest one and retries just those models, up to `LLM_RATE_LIMIT_MAX_WAIT_S` (20 s) per call; longer limits still fail fast. **Open source only:** a model is used only if its licence is in `ALLOWED_MODEL_LICENSES` (Apache-2.0, MIT). Licences are looked up per model version in `config.MODEL_LICENSES` (longest name prefix wins, e.g. GLM-5.3 is blocked but GLM-5.3-Flash is MIT; Mistral Large and Codestral are blocked); Llama, Gemma, Nemotron and Minitron are caught anywhere in the name; unknown models are blocked. |
 | `fastpath.py` | **No-LLM replies** for common messages, creating the same cards through the same tool handlers: water amounts, "yes"/"ok" while a card is pending (points to the button), today's summary / "how much protein is left", foods that are all in My foods ("had 3 eggs for breakfast"), and "same breakfast as yesterday". Strict: anything unusual goes to the model. |
 | `usage.py` | Collects one record per call during a turn; the chat router saves them after commit/rollback, so failed calls are counted. |
 | `provider.py` | `AnthropicProvider` and `OpenAICompatibleProvider` behind `LLMProvider`. `to_openai_tools` uses `_relax` so optional fields aren't strictly required on OpenAI-compatible hosts. Retries once on a tool-validation error. Maps errors to a friendly message. `set_provider` injects the fake one in tests. |
@@ -161,6 +161,8 @@ When `frontend/dist` exists (`FRONTEND_DIST`), `main.mount_frontend` also serves
 - **One call per meal:** proposals carry the reply in `note`, which ends the turn.
 
 **Failure handling:** a provider exception returns HTTP 503 with `LLM_UNAVAILABLE_MESSAGE` ("MacBro's servers are temporarily down…"). `SHOW_LLM_ERRORS=true` shows the raw error in development.
+
+**Tool schemas are enforced by the host.** Groq validates each tool call against its JSON schema and rejects the whole reply on a mismatch ("expected object, but got null"). A field the prompt allows to be null must be nullable in the schema too (e.g. an item's `micronutrients`, null for saved foods). `test_routing` checks this for micronutrients.
 
 ## 7. Frontend
 
@@ -225,6 +227,7 @@ The environment is set in `backend/.env` (template: `backend/.env.example`):
 | `LLM_SMALL_MODELS`, `LLM_LARGE_MODELS` | Models per tier (default `openai/gpt-oss-20b` / `openai/gpt-oss-120b` on Groq) |
 | `LLM_POOL_FILE` (`llm_pool.json`) + provider keys | Extra providers: per entry `tier`, `priority` (1 = rotates with the main models, 2 = backup only), `timeout_s`, `max_retries` (default 0). Currently NVIDIA `deepseek-v4.1-flash` as a large-tier backup, key `LLM_API_KEY_2`. Template: `backend/llm_pool.example.json` |
 | `ALLOWED_MODEL_LICENSES` | Default `Apache-2.0,MIT` (open source only) |
+| `LLM_RATE_LIMIT_MAX_WAIT_S` (config constant, 20) | Longest total wait per model call for short rate limits before giving up |
 | `LLM_ROUTING`, `LLM_FASTPATH` | Turn routing / rule-based replies off (both on by default) |
 | `ADMIN_EMAILS`, `ADMIN_INITIAL_PASSWORD` | Admin accounts (default admin: `mhatre.anushka.work@gmail.com`) |
 | `SHOW_LLM_ERRORS` | Development only |
@@ -243,7 +246,7 @@ Domain constants (`BODY_PARTS` with how-to-measure tips, `BMI_CATEGORIES`, `BODY
 
 ```bash
 cd backend
-.venv\Scripts\python -m pytest -q      # 214 tests (1 needs Postgres), fake LLM, no network
+.venv\Scripts\python -m pytest -q      # 218 tests (1 needs Postgres), fake LLM, no network
 cd ../frontend
 npm run build                          # type-check + production build
 ```

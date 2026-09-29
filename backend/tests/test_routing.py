@@ -295,3 +295,53 @@ def test_pool_file_backup_entries(tmp_path, monkeypatch):
     assert [(s.provider.model, s.priority) for s in slots] == [
         ("openai/gpt-oss-20b", 1), ("openai/gpt-oss-120b", 1), ("deepseek-ai/deepseek-v4.1-flash", 2)]
     assert slots[2].provider.timeout == 90 and slots[2].provider.provider_name == "nvidia"
+
+
+
+# --- short rate limits are waited out, not shown as "servers are down" -------------------
+
+class LimitedOnce(Named):
+    """Rate limited on the first call ("try again in a moment"), then answers."""
+    def __init__(self, model, script, retry_after):
+        super().__init__(model, script)
+        self.retry_after, self.limited = retry_after, False
+
+    def complete(self, **kw):
+        if not self.limited:
+            self.limited = True
+            self.calls.append(kw)
+            raise LLMRateLimited("Rate limit reached ... tokens per minute", retry_after=self.retry_after)
+        return super().complete(**kw)
+
+
+def test_short_rate_limit_is_waited_out(client, user, install_pool):
+    only = LimitedOnce("gpt-oss-120b", [text_reply("Which meal?")], retry_after=0.05)
+    install_pool(ModelSlot(only, "large"))
+    r = client.post("/api/chat", json={"message": "had 2 eggs"})
+    assert r.status_code == 200 and r.json()[-1]["content"] == "Which meal?"
+    assert [o for *_, o in usage_rows()] == ["rate_limited", "ok"]
+
+
+def test_model_still_cooling_from_the_last_message_is_waited_for(client, user, install_pool):
+    import time
+    slot = ModelSlot(Named("gpt-oss-120b", [text_reply("Which meal?")]), "large")
+    slot.cooldown_until = time.monotonic() + 0.05          # limited a moment ago
+    install_pool(slot)
+    assert client.post("/api/chat", json={"message": "had 2 eggs"}).status_code == 200
+
+
+def test_long_rate_limit_still_fails_fast(client, user, install_pool, monkeypatch):
+    import time
+    from app import config
+    monkeypatch.setattr(time, "sleep", lambda s: pytest.fail("must not wait for a long limit"))
+    only = Named("gpt-oss-120b", error=LLMRateLimited("daily quota used up", retry_after=config.LLM_RATE_LIMIT_MAX_WAIT_S + 60))
+    install_pool(ModelSlot(only, "large"))
+    assert client.post("/api/chat", json={"message": "had 2 eggs"}).status_code == 503
+
+
+def test_micronutrients_may_be_null_in_the_tool_schema():
+    """Groq rejects a whole reply whose tool call doesn't match the schema; saved foods send null."""
+    from app.llm.tools import _ITEM_SCHEMA
+    micros = _ITEM_SCHEMA["properties"]["micronutrients"]
+    assert {"type": "null"} in micros["anyOf"]
+    assert micros["anyOf"][0]["type"] == "object"

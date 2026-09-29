@@ -1,6 +1,6 @@
 # Open points
 
-> Last updated: 2026-09-29 (AI error reasons in the admin view added as an open item). Until at least 2026-10-06 the app is used by one person (the owner), and the focus is the single-user experience, UI and features.
+> Last updated: 2026-09-29 (wait-instead-of-failing done).Until at least 2026-10-06 the app is used by one person (the owner), and the focus is the single-user experience, UI and features.
 
 **How this doc works (standing rule, 2026-09-29):** every idea, option or follow-up that comes up in a discussion but isn't built goes here, in the same change as the discussion's work, so nothing gets lost. Each item is either **open** (may be built later), **on hold**, or **decided against** (kept with the reason, so it isn't re-discussed from scratch). When an item is built, it moves to **Done** at the bottom with the date, and the feature itself is documented in the relevant doc.
 
@@ -22,7 +22,7 @@ Check the real numbers in **Admin → AI usage** before deciding.
 *Before the first wave:*
 1. **Invite-only sign-up:** the admin creates invite codes, so the admin controls each wave.
 2. **Daily AI allowance per user** (e.g. 15 LLM messages a day, adjustable in Admin). Fast paths and dashboard actions stay unlimited.
-3. **Wait instead of failing:** when Groq asks to retry within a few seconds, wait and show "MacBro is busy…" instead of the error.
+3. ~~**Wait instead of failing**~~ **Done 2026-09-29** for solo use: the server now waits out short rate limits (see Done). Still open: a visible "MacBro is busy…" hint while it waits.
 4. **Keep-awake pinger** on `/api/health` (it doesn't touch the database), so new users don't wait 30–60 s.
 5. **Feedback button** and **per-user usage** in Admin.
 
@@ -118,5 +118,6 @@ The launcher (live since 2026-09-29) replaces Render's waking page with our danc
 | Own loading screen instead of Render's ("Option 2"): dancing MacBro, always-on launcher | 2026-09-29 | [deployment.md](deployment.md), user guide "Opening OmniAI" |
 | Water summary card after water logs; separate macro and water tiles; Dashboard order | 2026-09-29 | user guide §6, §4, §11 |
 | Micronutrients visible and editable in My foods | 2026-09-29 | user guide §9 |
+| Fix live chat failures: nullable micronutrients in the tool schema (Groq rejected replies for saved foods), and waiting out Groq's short per-minute limits (up to 20 s) instead of "servers are down" | 2026-09-29 | technical overview §6 |
 | Body tab: weight, height, BMI (WHO), US Navy body-fat estimate, male/female diagram with tap-to-measure, shoulders and wrist added, edit saved entries | 2026-09-29 | user guide §13 |
 | Open-source-only models, NVIDIA backup, consent wording | 2026-09-28 | [llm-routing-strategy.md](llm-routing-strategy.md) |

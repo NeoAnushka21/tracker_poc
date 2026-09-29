@@ -1,6 +1,6 @@
 # OmniAI high-level design (HLD)
 
-> Last updated: 2026-09-29 (Body tab). Update the diagrams whenever a component, data flow, table or external service changes (see [docs/README.md](README.md)).
+> Last updated: 2026-09-29 (model pool waits out short rate limits).Update the diagrams whenever a component, data flow, table or external service changes (see [docs/README.md](README.md)).
 > Diagrams are Mermaid. They render on GitHub and in VS Code with a Mermaid preview extension.
 
 ## 1. Purpose and principles
@@ -123,7 +123,7 @@ flowchart TD
     R -->|query · edit · simple log| S[Small tier<br/>gpt-oss-20b]
     R -->|vague dish · 3+ foods · recipe ·<br/>feedback · long| L[Large tier<br/>gpt-oss-120b]
     S -->|2 validation errors| L
-    S & L --> P[(Model pool<br/>rotation · cooldown on 429 ·<br/>failover · open-source licence gate)]
+    S & L --> P[(Model pool<br/>rotation · cooldown on 429 ·<br/>short limits waited out · failover ·<br/>open-source licence gate)]
     P -->|all unavailable| E[Friendly 'servers are down']
     P --> U[(llm_usage)]
 ```

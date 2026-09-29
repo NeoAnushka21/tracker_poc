@@ -93,11 +93,36 @@ class ModelPool:
         return sorted(ordered, key=lambda s: s.priority)   # stable: keeps rotation within a priority
 
     def complete(self, tier: str, intent: str = "", escalated: bool = False, **kwargs) -> LLMResponse:
+        """Try the tier's models in order. If none answers only because of short rate limits
+        ("try again in 9.6s"), wait for the soonest one and retry just those, up to
+        LLM_RATE_LIMIT_MAX_WAIT_S in total, rather than failing the user's message."""
+        candidates = self._order(tier)
+        waited = 0.0
+        while True:
+            resp, limited, last_error, tried = self._try(candidates, intent, escalated, kwargs)
+            if resp is not None:
+                return resp
+            if limited:
+                wait = max(0.0, min(s.cooldown_until for s in limited) - time.monotonic())
+                if waited + wait <= config.LLM_RATE_LIMIT_MAX_WAIT_S:
+                    log.info("All models briefly rate limited; waiting %.1fs before retrying", wait)
+                    time.sleep(wait)
+                    waited += wait
+                    candidates = limited      # models that failed for other reasons aren't retried
+                    continue
+            if last_error is not None:
+                raise last_error
+            raise LLMError("All models are cooling down" if not tried else "No model available")
+
+    def _try(self, candidates: list[ModelSlot], intent: str, escalated: bool, kwargs: dict):
+        """One pass over the candidates: (response or None, rate-limited slots, last error, tried)."""
         last_error: LLMError | None = None
+        limited: list[ModelSlot] = []
         tried = 0
-        for slot in self._order(tier):
+        for slot in candidates:
             now = time.monotonic()
             if not slot.available(now):
+                limited.append(slot)      # still cooling down; complete() may wait if it's short
                 continue
             tried += 1
             started = time.monotonic()
@@ -114,6 +139,7 @@ class ModelPool:
                 usage.record(**record, latency_ms=_ms(started), outcome="rate_limited",
                              prompt_tokens=None, completion_tokens=None)
                 last_error = e
+                limited.append(slot)
                 continue
             except LLMError as e:
                 slot.failures += 1
@@ -132,10 +158,8 @@ class ModelPool:
             slot.tokens += (u.get("prompt_tokens") or 0) + (u.get("completion_tokens") or 0)
             usage.record(**record, latency_ms=_ms(started), outcome="ok",
                          prompt_tokens=u.get("prompt_tokens"), completion_tokens=u.get("completion_tokens"))
-            return resp
-        if last_error is not None:
-            raise last_error
-        raise LLMError("All models are cooling down" if not tried else "No model available")
+            return resp, [], None, tried
+        return None, limited, last_error, tried
 
     def status(self) -> list[dict]:
         now = time.monotonic()

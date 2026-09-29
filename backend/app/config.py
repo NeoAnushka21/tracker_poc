@@ -73,6 +73,10 @@ LLM_FASTPATH = os.getenv("LLM_FASTPATH", "true").lower() == "true"     # rule-ba
 LLM_SMALL_HISTORY_MESSAGES = 6     # the small tier gets a shorter history
 LLM_ESCALATE_AFTER_ERRORS = 2      # validation errors on the small tier before switching to the large one
 LLM_RATE_LIMIT_COOLDOWN_S = 60     # when a 429 doesn't say how long to wait
+# When every model is rate limited but the host says "try again in a few seconds" (Groq's
+# per-minute token limit: ~8K tokens a minute, and one chat call is ~3-7K), wait and retry
+# instead of showing "servers are down". Total wait per model call is capped at this.
+LLM_RATE_LIMIT_MAX_WAIT_S = 20
 LLM_FAILURE_COOLDOWN_S = 300       # after LLM_FAILURES_BEFORE_COOLDOWN errors in a row
 LLM_FAILURES_BEFORE_COOLDOWN = 3
 
