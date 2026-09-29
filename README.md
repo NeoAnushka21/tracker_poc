@@ -90,7 +90,7 @@ user message ─► FastAPI /api/chat ─► LLM (Groq gpt-oss-120b or Claude) w
 
 ## Screens
 
-- **Home (default tab):** a time-of-day greeting, today's summary (calorie ring, macro bars, water), and two streaks: days in a row with a meal logged, and days in a row on target.
+- **Home (default tab):** a time-of-day greeting, today's summary (calorie ring, macro bars, water), and two streaks: days in a row with a meal logged, and days in a row with at least 85% of the protein target.
 - **Chat:** talk to MacBro (typing or voice). Proposals appear as cards you confirm.
 - **Dashboard:** today's calorie ring; protein, fiber, carbs and fat meters; calorie split; water tracker; micronutrients; five meal sections with per-meal macros.
 - **Analysis:** 7, 14 or 30-day trends: calories and protein vs target, macro lines, calorie split, calories by meal, water, and a data table. All charts have hover and keyboard tooltips.

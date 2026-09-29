@@ -70,15 +70,24 @@ def scale_factor(food: UserFood, qty: float, unit: str) -> float:
     ref_grams = _grams(food, food.ref_qty, ref_u)
     if grams is not None and ref_grams:
         return grams / ref_grams
-    known = [food.ref_unit] + (["g"] if ref_grams else [])
-    if food.grams_per_piece:
-        known.append("piece")
-    if food.grams_per_serving:
-        known.append("serving")
     raise FoodError(
         f"Can't convert '{unit}' for '{food.name}'. It can be measured in: "
-        f"{', '.join(dict.fromkeys(known))}. Ask the user for one of those, or estimate in grams."
+        f"{', '.join(measurable_units(food))}. Ask the user for one of those, or estimate in grams."
     )
+
+
+def measurable_units(food: UserFood) -> list[str]:
+    """Units this food can be logged in: its reference unit, grams when its weight is known,
+    and pieces/servings when their gram weights are saved."""
+    ref_u, _ = normalize_unit(food.ref_unit)
+    units = [ref_u]
+    if _grams(food, food.ref_qty, ref_u):
+        units.append("g")
+    if food.grams_per_piece:
+        units.append("piece")
+    if food.grams_per_serving:
+        units.append("serving")
+    return list(dict.fromkeys(units))
 
 
 def nutrients_for(food: UserFood, qty: float, unit: str) -> dict:
@@ -121,6 +130,42 @@ def list_foods(db: Session, user_id: int, limit: int | None = None) -> list[User
     return list(db.scalars(stmt))
 
 
+def _variants(name: str) -> set[str]:
+    n = re.sub(r"[^a-z0-9 ]", " ", name.lower())
+    n = re.sub(r"\s+", " ", n).strip()
+    out = {n}
+    out |= {n + "s", n + "es"}
+    if n.endswith("es"):
+        out.add(n[:-2])
+    if n.endswith("s"):
+        out.add(n[:-1])
+    return out
+
+
+def library_index(db: Session, user_id: int) -> dict[str, UserFood]:
+    """Lower-case name (and plural/singular variants) -> saved food. Names that could mean
+    two different foods are left out, so a lookup never picks the wrong one."""
+    index: dict[str, UserFood] = {}
+    ambiguous: set[str] = set()
+    for f in list_foods(db, user_id):
+        keys = _variants(f.name)
+        if "," in f.name:   # "eggs, large" can be called "eggs" if nothing else is
+            keys |= _variants(f.name.split(",")[0])
+        for k in keys:
+            if k in index and index[k] is not f:
+                ambiguous.add(k)
+            index[k] = f
+    for k in ambiguous:
+        index.pop(k, None)
+    return index
+
+
+def match_saved(db: Session, user_id: int, name: str) -> UserFood | None:
+    """The saved food a typed name clearly refers to, else None."""
+    key = re.sub(r"\s+", " ", re.sub(r"[^a-z0-9 ]", " ", name.lower())).strip()
+    return library_index(db, user_id).get(key)
+
+
 def recipes_using(db: Session, food_id: int) -> list[UserFood]:
     # A subquery instead of JOIN + DISTINCT: Postgres can't compare JSON columns for DISTINCT.
     stmt = select(UserFood).where(UserFood.id.in_(
@@ -154,6 +199,7 @@ def food_to_dict(food: UserFood, with_ingredients: bool = False) -> dict:
         "yield_servings": food.yield_servings,
         "cooked_weight_g": food.cooked_weight_g,
         "measures": _measures(food),
+        "units": measurable_units(food),
         "micronutrients": food.micronutrients,
         "last_used_at": food.last_used_at.isoformat() + "Z",
     }

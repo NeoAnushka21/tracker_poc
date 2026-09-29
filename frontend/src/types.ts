@@ -61,6 +61,8 @@ export type ActionPayload = {
   eaten_at?: string;
   meal_type?: string;
   meal_type_source?: "stated" | "inferred";
+  /** "dashboard": an AI estimate from the dashboard's Add food, not a chat card. */
+  origin?: "dashboard";
   items?: Item[];
   totals?: Nutrients;
   entry_id?: number;
@@ -175,6 +177,8 @@ export type Food = Nutrients & {
   yield_servings: number | null;
   cooked_weight_g: number | null;
   measures: string;
+  /** Units it can be logged in (reference unit, g when its weight is known, piece, serving). */
+  units: string[];
   last_used_at: string;
   /** Per the reference amount (`measures`), e.g. {"iron_mg": 0.4}; missing keys are unknown. */
   micronutrients: Record<string, number> | null;
@@ -238,9 +242,10 @@ export type Streak = { current: number; best: number; today_done: boolean };
 
 export type Streaks = {
   logging: Streak;
-  target: Streak;
-  last_7_days: { date: string; logged: boolean; on_target: boolean }[];
-  rule: { calorie_tolerance_pct: number; min_protein_pct: number };
+  /** Days in a row with protein at least `rule.min_protein_pct` % of the target. */
+  protein: Streak;
+  last_7_days: { date: string; logged: boolean; protein_hit: boolean }[];
+  rule: { min_protein_pct: number };
 };
 
 export type LlmUsageReport = {

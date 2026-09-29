@@ -1,16 +1,18 @@
-"""Item-level changes to confirmed log entries: move, copy, change quantity, delete.
+"""Item-level changes to confirmed log entries: add, move, copy, change quantity, delete.
 
 Shared by the chat (after the user confirms a proposal) and the dashboard (direct clicks).
 Move/copy happen in one step, so nothing is ever deleted before its copy exists.
 """
-from datetime import date, datetime
+from datetime import date, datetime, time
 
 from fastapi import HTTPException, status
 from sqlalchemy.orm import Session
 
-from app.models import ChatMessage, LogEntry, LogEntryItem, User, utcnow
+from app.config import MEAL_DEFAULT_TIMES
+from app.models import ChatMessage, LogEntry, LogEntryItem, User, UserFood, utcnow
 from app.services import micros
-from app.services.logs import NUTRIENTS, get_active_entry
+from app.services.foods import nutrients_for
+from app.services.logs import NUTRIENTS, entries_between, get_active_entry
 from app.timeutil import local_to_utc, local_today, utc_to_local
 
 
@@ -66,6 +68,33 @@ def transfer_items(db: Session, user: User, entry: LogEntry, items: list[LogEntr
         _soft_delete_if_empty(entry)
     db.flush()
     return new_entry
+
+
+def eaten_at_for_meal(db: Session, user: User, meal: str, day: date) -> datetime:
+    """Time for food added to a meal from the dashboard: the meal's latest entry that day, else
+    the meal's usual time, but never later than now (so today's dinner added at 3 pm is 3 pm)."""
+    same_meal = [e.eaten_at for e in entries_between(db, user, day, day) if e.meal_type == meal]
+    if same_meal:
+        return max(same_meal)
+    usual = local_to_utc(datetime.combine(day, time(*MEAL_DEFAULT_TIMES[meal])), user.timezone)
+    return min(usual, utcnow())
+
+
+def add_saved_food(db: Session, user: User, food: UserFood, quantity: float, unit: str,
+                   meal: str, day: date) -> LogEntry:
+    """Dashboard add of a saved food: its stored numbers, scaled in code (no model involved).
+    Raises FoodError if the unit can't be converted for this food."""
+    check_target_date(user, day)
+    nutrients = nutrients_for(food, quantity, unit)
+    entry = LogEntry(
+        user_id=user.id, meal_type=meal, eaten_at=eaten_at_for_meal(db, user, meal, day),
+        items=[LogEntryItem(ingredient_name=food.name, brand_name=food.brand_name, quantity=quantity,
+                            unit=unit, **nutrients)],
+    )
+    db.add(entry)
+    food.last_used_at = utcnow()
+    db.flush()
+    return entry
 
 
 def set_item_quantity(item: LogEntryItem, quantity: float) -> None:

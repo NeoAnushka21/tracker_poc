@@ -4,7 +4,9 @@ from datetime import date, timedelta
 
 from sqlalchemy.orm import Session
 
-from app.config import ADHERENCE_CALORIE_TOLERANCE, ADHERENCE_MIN_PROTEIN_SHARE, KCAL_PER_G, MEAL_TYPES
+from app.config import (
+    ADHERENCE_CALORIE_TOLERANCE, ADHERENCE_MIN_PROTEIN_SHARE, KCAL_PER_G, MEAL_TYPES, PROTEIN_STREAK_MIN_SHARE,
+)
 from app.models import User, UserTarget
 from app.services.logs import current_targets, current_weight, entries_between, sum_items, targets_to_dict
 from app.services.water import water_between_range, water_target_ml
@@ -20,6 +22,13 @@ def on_target(consumed: dict, targets: dict | None) -> bool | None:
     kcal_ok = abs(consumed["calories"] - targets["calories"]) <= ADHERENCE_CALORIE_TOLERANCE * targets["calories"]
     protein_ok = consumed["protein_g"] >= ADHERENCE_MIN_PROTEIN_SHARE * targets["protein_g"]
     return kcal_ok and protein_ok
+
+
+def protein_hit(consumed: dict, targets: dict | None) -> bool:
+    """Protein streak rule: protein at least PROTEIN_STREAK_MIN_SHARE (85%) of the day's target."""
+    if not targets or not targets["protein_g"]:
+        return False
+    return consumed["protein_g"] >= PROTEIN_STREAK_MIN_SHARE * targets["protein_g"]
 
 
 def _avg(values: list[float]) -> float | None:
@@ -123,8 +132,8 @@ def _streak(flags: list[bool]) -> dict:
 
 
 def streaks(db: Session, user: User, today: date) -> dict:
-    """Two streaks: days with at least one confirmed meal, and days that met the target
-    (same rule as Analysis: kcal within +/-10%, protein at least 90%)."""
+    """Two streaks: days with at least one confirmed meal, and days that reached at least 85%
+    of the protein target (calories don't count here; Analysis keeps its on-target rule)."""
     start = today - timedelta(days=STREAK_WINDOW_DAYS - 1)
     items_by_day: dict[date, list] = defaultdict(list)
     for e in entries_between(db, user, start, today):
@@ -146,19 +155,16 @@ def streaks(db: Session, user: User, today: date) -> dict:
     d = start
     while d <= today:
         items = items_by_day.get(d, [])
-        ok = bool(items) and bool(on_target(sum_items(items), targets_on(d)))
+        ok = bool(items) and protein_hit(sum_items(items), targets_on(d))
         logged.append(bool(items))
         hit.append(ok)
         if (today - d).days < 7:
-            last7.append({"date": d.isoformat(), "logged": bool(items), "on_target": ok})
+            last7.append({"date": d.isoformat(), "logged": bool(items), "protein_hit": ok})
         d += timedelta(days=1)
 
     return {
         "logging": _streak(logged),
-        "target": _streak(hit),
+        "protein": _streak(hit),
         "last_7_days": last7,
-        "rule": {
-            "calorie_tolerance_pct": round(ADHERENCE_CALORIE_TOLERANCE * 100),
-            "min_protein_pct": round(ADHERENCE_MIN_PROTEIN_SHARE * 100),
-        },
+        "rule": {"min_protein_pct": round(PROTEIN_STREAK_MIN_SHARE * 100)},
     }

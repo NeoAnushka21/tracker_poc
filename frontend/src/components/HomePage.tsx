@@ -36,10 +36,12 @@ function FlameIcon() {
   );
 }
 
-function TargetIcon() {
+/** A dumbbell, for the protein streak. */
+function ProteinIcon() {
   return (
-    <svg viewBox="0 0 24 24" width="26" height="26" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="2">
-      <circle cx="12" cy="12" r="9" /><circle cx="12" cy="12" r="5" /><circle cx="12" cy="12" r="1.5" fill="currentColor" />
+    <svg viewBox="0 0 24 24" width="26" height="26" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+      <path d="M8 12h8" /><rect x="4" y="7" width="4" height="10" rx="1.5" /><rect x="16" y="7" width="4" height="10" rx="1.5" />
+      <path d="M2 10v4M22 10v4" />
     </svg>
   );
 }
@@ -47,24 +49,25 @@ function TargetIcon() {
 const plural = (n: number) => `${n} day${n === 1 ? "" : "s"}`;
 
 function StreakCard({ kind, s, days, rule }: {
-  kind: "logging" | "target"; s: Streak; days: Streaks["last_7_days"]; rule: Streaks["rule"];
+  kind: "logging" | "protein"; s: Streak; days: Streaks["last_7_days"]; rule: Streaks["rule"];
 }) {
   const logging = kind === "logging";
-  const hit = (d: Streaks["last_7_days"][number]) => (logging ? d.logged : d.on_target);
+  const hit = (d: Streaks["last_7_days"][number]) => (logging ? d.logged : d.protein_hit);
   const status = s.today_done
     ? "Today counts ✓"
     : logging
       ? s.current > 0 ? "Log a meal today to keep it going" : "Log a meal today to start a streak"
-      : s.current > 0 ? "Hit today's target to extend it" : "Hit today's target to start a streak";
+      : s.current > 0 ? `Reach ${rule.min_protein_pct}% of your protein today to extend it`
+        : `Reach ${rule.min_protein_pct}% of your protein today to start a streak`;
   return (
     <section className={`streak-card card ${kind} ${s.current > 0 ? "live" : ""}`} aria-labelledby={`streak-${kind}`}>
       <div className="streak-top">
-        <span className="streak-icon">{logging ? <FlameIcon /> : <TargetIcon />}</span>
+        <span className="streak-icon">{logging ? <FlameIcon /> : <ProteinIcon />}</span>
         <div>
-          <h3 id={`streak-${kind}`}>{logging ? "Meal logging streak" : "Target streak"}</h3>
+          <h3 id={`streak-${kind}`}>{logging ? "Meal logging streak" : "Protein streak"}</h3>
           <p className="muted small">
             {logging ? "Days in a row with at least one meal logged"
-              : `Days in a row within ±${rule.calorie_tolerance_pct}% of calories with ≥${rule.min_protein_pct}% protein`}
+              : `Days in a row with at least ${rule.min_protein_pct}% of your protein target`}
           </p>
         </div>
       </div>
@@ -75,7 +78,7 @@ function StreakCard({ kind, s, days, rule }: {
           const on = hit(d);
           const label = new Date(`${d.date}T12:00:00`).toLocaleDateString(undefined, { weekday: "short" });
           return (
-            <li key={d.date} className={on ? "on" : ""} title={`${label}: ${on ? (logging ? "logged" : "on target") : (logging ? "no log" : "not on target")}`}>
+            <li key={d.date} className={on ? "on" : ""} title={`${label}: ${on ? (logging ? "logged" : "protein reached") : (logging ? "no log" : "protein short")}`}>
               <span className="dot" aria-hidden="true">{on ? "✓" : ""}</span>
               <span className="day">{label.slice(0, 2)}</span>
               <span className="sr-only">{on ? "yes" : "no"}</span>
@@ -140,7 +143,7 @@ export default function HomePage({ user, dataVersion, onDataChanged, onOpenChat,
         {streaks && (
           <div className="streaks">
             <StreakCard kind="logging" s={streaks.logging} days={streaks.last_7_days} rule={streaks.rule} />
-            <StreakCard kind="target" s={streaks.target} days={streaks.last_7_days} rule={streaks.rule} />
+            <StreakCard kind="protein" s={streaks.protein} days={streaks.last_7_days} rule={streaks.rule} />
           </div>
         )}
       </div>

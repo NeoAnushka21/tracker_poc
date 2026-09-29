@@ -141,6 +141,10 @@ MEAL_FALLBACK = "evening_snack"  # late night, 23:00-05:00
 MEAL_TYPES = ["breakfast", "morning_snack", "lunch", "evening_snack", "dinner"]
 SNACK_TYPES = ("morning_snack", "evening_snack")
 LEGACY_SNACK = "snack"           # older entries; relabelled at startup
+# Local time given to food added to an empty meal from the dashboard (same times the prompt uses
+# for a picked day). A meal that already has food keeps its time.
+MEAL_DEFAULT_TIMES = {"breakfast": (8, 0), "morning_snack": (11, 0), "lunch": (13, 0),
+                      "evening_snack": (17, 0), "dinner": (20, 0)}
 
 # --- Body profile (optional measurements, stored in cm) --------------------
 # key, label, how to measure. Neck, waist and hips follow the US Navy body-fat protocol, so the
@@ -215,3 +219,5 @@ MICRONUTRIENT_KEYS = [m[0] for m in MICRONUTRIENTS]
 # --- Dashboard adherence (used by weekly/monthly views, later phase) -----
 ADHERENCE_CALORIE_TOLERANCE = 0.10
 ADHERENCE_MIN_PROTEIN_SHARE = 0.90
+# Home tab protein streak: a day counts when protein reaches this share of the day's target.
+PROTEIN_STREAK_MIN_SHARE = 0.85

@@ -1,4 +1,4 @@
-"""Home tab streaks: consecutive days with a meal logged, and days on target."""
+"""Home tab streaks: consecutive days with a meal logged, and days with 85%+ of the protein target."""
 from datetime import datetime, time, timedelta
 
 from app.db import SessionLocal
@@ -31,18 +31,24 @@ def test_streaks_endpoint(client, user):
     with SessionLocal() as db:
         u = db.query(User).filter_by(email="me@example.com").one()
         uid, tz = u.id, u.timezone
-    on = (targets["calories"], targets["protein_g"])
-    for days_ago in (1, 2, 3):
-        _log(uid, tz, days_ago, *on)
-    _log(uid, tz, 4, targets["calories"] * 2, 5)     # logged but way over target
-    _log(uid, tz, 6, *on)
+    protein = targets["protein_g"]
+    _log(uid, tz, 1, targets["calories"] * 2, protein)       # calories way over: still counts
+    _log(uid, tz, 2, 500, protein * 0.85)                     # exactly 85% counts
+    _log(uid, tz, 3, targets["calories"], protein * 0.9)
+    _log(uid, tz, 4, targets["calories"], protein * 0.84)     # logged, protein just short
+    _log(uid, tz, 6, targets["calories"], protein)
 
     s = client.get("/api/dashboard/streaks").json()
     assert s["logging"] == {"current": 4, "best": 4, "today_done": False}
-    assert s["target"] == {"current": 3, "best": 3, "today_done": False}
+    assert s["protein"] == {"current": 3, "best": 3, "today_done": False}
+    assert s["rule"] == {"min_protein_pct": 85}
     assert len(s["last_7_days"]) == 7 and s["last_7_days"][-1]["logged"] is False
+    assert [d["protein_hit"] for d in s["last_7_days"]] == [True, False, False, True, True, True, False]
 
-    _log(uid, tz, 0, *on)                              # today on target extends both
+    _log(uid, tz, 0, 300, protein * 0.5)                      # today logged, protein not there yet
     s = client.get("/api/dashboard/streaks").json()
-    assert (s["logging"]["current"], s["target"]["current"]) == (5, 4)
-    assert s["logging"]["today_done"] and s["target"]["today_done"]
+    assert (s["logging"]["current"], s["protein"]["current"]) == (5, 3) and not s["protein"]["today_done"]
+
+    _log(uid, tz, 0, 300, protein * 0.5)                      # today reaches 100%: extends it
+    s = client.get("/api/dashboard/streaks").json()
+    assert s["protein"] == {"current": 4, "best": 4, "today_done": True}

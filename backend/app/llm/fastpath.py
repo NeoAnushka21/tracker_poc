@@ -14,7 +14,7 @@ from app.config import MEAL_TYPES
 from app.llm.tools import ToolContext, ToolInputError, run_tool
 from app.models import User
 from app.services.actions import open_actions
-from app.services.foods import FoodError, list_foods, normalize_unit, nutrients_for
+from app.services.foods import FoodError, library_index, normalize_unit, nutrients_for
 from app.services.logs import daily_summary, entries_between
 from app.timeutil import local_today
 
@@ -131,35 +131,6 @@ _ITEM = re.compile(_NUM + r"?\s*(?P<unit>g|gm|gms|grams?|kg|ml|l|pcs?|pieces?|se
 _SPLIT = re.compile(r"\s*(?:,|\band\b|&|\+|\bplus\b)\s*")
 
 
-def _variants(name: str) -> set[str]:
-    n = re.sub(r"[^a-z0-9 ]", " ", name.lower())
-    n = re.sub(r"\s+", " ", n).strip()
-    out = {n}
-    out |= {n + "s", n + "es"}
-    if n.endswith("es"):
-        out.add(n[:-2])
-    if n.endswith("s"):
-        out.add(n[:-1])
-    return out
-
-
-def _library_index(ctx: ToolContext) -> dict[str, object]:
-    foods = list_foods(ctx.db, ctx.user.id)
-    index: dict[str, object] = {}
-    ambiguous: set[str] = set()
-    for f in foods:
-        keys = _variants(f.name)
-        if "," in f.name:   # "eggs, large" can be called "eggs" if nothing else is
-            keys |= _variants(f.name.split(",")[0])
-        for k in keys:
-            if k in index and index[k] is not f:
-                ambiguous.add(k)
-            index[k] = f
-    for k in ambiguous:
-        index.pop(k, None)
-    return index
-
-
 def _library_log(ctx: ToolContext, text: str) -> str | None:
     meals = {_MEAL_WORDS[m] for m in _MEAL_RE.findall(text)}
     if len(meals) > 1:
@@ -170,7 +141,7 @@ def _library_log(ctx: ToolContext, text: str) -> str | None:
     body = _FILLER.sub("", without_meal.strip()).strip(" ,")
     if not body:
         return None
-    index = _library_index(ctx)
+    index = library_index(ctx.db, ctx.user.id)
     items = []
     for part in _SPLIT.split(body):
         part = part.strip()

@@ -23,7 +23,7 @@ def date_range(days: int = 7, user: User = Depends(onboarded_user), db: Session 
 
 @router.get("/streaks")
 def get_streaks(user: User = Depends(onboarded_user), db: Session = Depends(get_db)):
-    """Meal-logging and target-achievement streaks for the Home tab."""
+    """Meal-logging and protein streaks for the Home tab."""
     return streaks(db, user, local_today(user.timezone))
 
 

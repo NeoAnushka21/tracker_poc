@@ -21,7 +21,7 @@ function steps(name: string | null): Step[] {
         <ul>
           <li>A greeting and <b>today's summary</b>: calories eaten / target, your balance, and protein, fiber, carbs and fat.</li>
           <li>A separate <b>Water</b> tile with quick +250 ml / +500 ml buttons.</li>
-          <li>Two <b>streaks</b>: days in a row you logged a meal, and days in a row you hit your target.</li>
+          <li>Two <b>streaks</b>: days in a row you logged a meal, and days in a row you reached at least 85% of your protein target.</li>
         </ul>
       ),
     },
@@ -75,7 +75,7 @@ function steps(name: string | null): Step[] {
       body: (
         <ul>
           <li>Tiles in order: <b>macros</b> (the ring shows <b>eaten / target</b> calories and your <b>balance</b>, with bars for protein, fiber, carbs and fat), then <b>micronutrients</b>, then <b>water</b> (tap +250 ml or +500 ml).</li>
-          <li>Meals are split into breakfast, snacks, lunch and dinner. Tap the <b>pencil</b> on an item to move, copy, change the amount or delete it.</li>
+          <li>Meals are split into breakfast, snacks, lunch and dinner. Tap the <b>pencil</b> on an item to move, copy, change the amount or delete it, or <b>+ Add food</b> to add one without the chat.</li>
           <li>Use <b>‹ ›</b> to look at earlier days.</li>
         </ul>
       ),
@@ -83,7 +83,7 @@ function steps(name: string | null): Step[] {
     {
       tab: "analysis",
       title: "5. Trends in Analysis",
-      body: <p>Switch between <b>7, 14 or 30 days</b> to see calories and protein against target, macro trends, calories by meal, and water. Your target streak is on <b>Home</b>. Hover or tab onto any chart for exact numbers.</p>,
+      body: <p>Switch between <b>7, 14 or 30 days</b> to see calories and protein against target, macro trends, calories by meal, and water. Your streaks are on <b>Home</b>. Hover or tab onto any chart for exact numbers.</p>,
     },
     {
       tab: "foods",

@@ -822,7 +822,7 @@ button.danger { color: var(--error); }
 .home-summary .kcal-ring-wrap { margin-top: 4px; }
 .streaks { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px; }
 .streak-card { --tone: var(--carbs); display: flex; flex-direction: column; gap: 6px; }
-.streak-card.target { --tone: var(--accent); }
+.streak-card.protein { --tone: var(--accent); }
 .streak-top { display: flex; gap: 12px; align-items: flex-start; }
 .streak-top h3 { margin: 0 0 2px; }
 .streak-top p { margin: 0; }
@@ -842,7 +842,7 @@ button.danger { color: var(--error); }
   background: var(--surface-2); border: 2px dashed var(--border); color: #fff;
 }
 .streak-week li.on .dot { background: var(--tone); border: 2px solid var(--tone); }
-.streak-card.target .streak-week li.on .dot { color: var(--accent-text); }
+.streak-card.protein .streak-week li.on .dot { color: var(--accent-text); }
 .streak-week .day { font-size: 0.72rem; color: var(--muted); font-weight: 600; }
 .streak-best { margin: 4px 0 0; }
 @media (max-width: 860px) {
@@ -1023,3 +1023,17 @@ button.danger { color: var(--error); }
   .body-stats-row { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .measure-history li { grid-template-columns: 1fr; }
 }
+
+/* dashboard: add food to a meal */
+.add-food-btn { margin-top: 6px; padding: 4px 10px; color: var(--accent); font-weight: 650; font-size: 0.85rem; border-radius: 999px; }
+.add-food { display: grid; gap: 8px; margin-top: 8px; padding: 10px; background: var(--surface-2); border-radius: 8px; }
+.meal-card.empty .add-food { background: var(--surface); }
+.add-food-row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.add-name { flex: 1 1 180px; min-width: 0; padding: 7px 10px; }
+.add-unit { width: 96px; padding: 7px 10px; }
+.add-go { padding: 7px 16px; }
+.add-hint, .add-note { margin: 0; }
+.add-preview-head { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+.add-preview-items { list-style: none; margin: 0; padding: 0; font-size: 0.88rem; }
+.add-preview-items li { display: flex; justify-content: space-between; gap: 10px; padding: 3px 0; }
+.add-food .proposal-actions { margin-top: 2px; }

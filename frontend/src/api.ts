@@ -1,5 +1,5 @@
 import type {
-  Action, AdminUserDetail, AdminUserRow, AuditRow, ChatMessage, DailySummary, Food, RangeSummary, User,
+  Action, AdminUserDetail, AdminUserRow, AuditRow, ChatMessage, DailySummary, Food, Item, RangeSummary, User,
   Streaks, ChatDay, LlmUsageReport, MicroField,
 } from "./types";
 import { recoverServer, serverAwake, SLOW_REQUEST_MS } from "./wake";
@@ -70,6 +70,12 @@ export type TargetsInput = {
 };
 
 type ActionResult = { action: Action; event: ChatMessage; progress: ChatMessage | null };
+
+/** Dashboard Add food: a saved food is added at once; any other food comes back as an AI estimate to confirm. */
+export type AddFoodResult =
+  | { status: "added"; entry_id: number; item: Item }
+  | { status: "estimate"; action: Action; note: string }
+  | { status: "no_estimate"; message: string };
 
 /** BMI with WHO adult categories, or which inputs are missing. */
 export type Bmi =
@@ -148,6 +154,8 @@ export const api = {
   setItemQuantity: (itemId: number, quantity: number) =>
     request<{ ok: boolean }>("PATCH", `/api/entries/items/${itemId}`, { quantity }),
   deleteItem: (itemId: number) => request<{ ok: boolean }>("DELETE", `/api/entries/items/${itemId}`),
+  addFood: (body: { name: string; quantity: number; unit: string; meal_type: string; day: string; food_id: number | null }) =>
+    request<AddFoodResult>("POST", "/api/entries/add", body),
   confirm: (id: number) => request<ActionResult>("POST", `/api/actions/${id}/confirm`),
   reject: (id: number) => request<ActionResult>("POST", `/api/actions/${id}/reject`),
 

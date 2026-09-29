@@ -4,7 +4,7 @@ OmniAI is a chat-based calorie and macro tracker. In the Chat you talk to **MacB
 
 This guide walks a new user through the app from sign-up to daily use. The same walkthrough appears inside the app as a short tour the first time you log in. You can reopen it any time with the **? Guide** button at the top.
 
-> Last updated: 2026-09-29 (new Body tab: BMI, body-fat estimate, body diagram). Keep this file in step with the UI (see [docs/README.md](README.md)).
+> Last updated: 2026-09-29 (Protein streak replaces the Target streak on Home). Keep this file in step with the UI (see [docs/README.md](README.md)).
 
 ---
 
@@ -111,9 +111,9 @@ On very wide screens, content stays at a comfortable width (about 1,200 px) in t
 | Streak | Counts |
 |---|---|
 | **Meal logging streak** 🔥 | Days in a row with at least one confirmed meal |
-| **Target streak** 🎯 | Days in a row within ±10% of your calorie target with at least 90% of your protein target |
+| **Protein streak** 🏋️ | Days in a row where you reached at least **85% of your protein target**. Calories don't affect it. |
 
-Each card shows the current streak, your best streak, and the last 7 days as ticks. Today is still in progress, so it never breaks a streak. It is added as soon as it qualifies ("Today counts ✓"); otherwise the card nudges you, e.g. "Log a meal today to keep it going". A day is judged on its final numbers, so the target streak can drop back if you go well over your calories later in the day.
+Each card shows the current streak, your best streak, and the last 7 days as ticks. Today is still in progress, so it never breaks a streak. It is added as soon as it qualifies ("Today counts ✓"); otherwise the card nudges you, e.g. "Log a meal today to keep it going". A day is judged on its final numbers: once today reaches 85% of your protein it counts, and it only drops back if you delete or reduce food later that day.
 
 ## 5. Log food in the Chat
 
@@ -180,7 +180,16 @@ You can do this **in the chat** (with a confirmation card) or **on the Dashboard
 - `move the banana to morning snack`: a *Move* card shows *from → to*, and nothing is deleted.
 - `copy yesterday's breakfast to today`
 
-**On the Dashboard:** **+ Log food** (next to *Meals*) opens the chat set to the day you're viewing, which is handy for filling in a past day. For a single item, tap the **pencil** ✎ next to any item in a meal. A small panel opens:
+**On the Dashboard:** **+ Log food** (next to *Meals*) opens the chat set to the day you're viewing, which is handy for filling in a past day.
+
+**Add a food without the chat:** each meal has **+ Add food**. Type the food (your saved foods are suggested as you type), the quantity and the unit, then press **Add**. It goes into that meal on the day you're viewing.
+
+- **A saved food** (one in My foods) is added straight away with your saved numbers. The unit list shows only the units it can be measured in (e.g. g, piece).
+- **A new food** is estimated by the AI. You'll see its calories and macros marked **Not saved yet**, with any assumption it made. Press **Add it** to save it (it's also saved to My foods, so next time it's instant), **Change** to edit what you typed, or **Cancel**.
+- If the AI can't estimate it (for example, it isn't a food), you'll see why, with **Ask in chat instead**.
+- An empty meal gets its usual time (breakfast 08:00, morning snack 11:00, lunch 13:00, evening snack 17:00, dinner 20:00, or now if that's later today); a meal that already has food keeps its time.
+
+For a single item that's already logged, tap the **pencil** ✎ next to any item in a meal. A small panel opens:
 
 - **Move / Copy:** pick **Move** or **Copy**, choose the meal from the dropdown, and press the **→** button. Move lists only the other meals. When you're looking at a past day, Copy adds the item to *today's* meal.
 - **Quantity:** change the amount and press the **✓** button. Nutrients scale automatically.
@@ -204,7 +213,8 @@ Your water target is based on your weight and activity level. The bar shows litr
 
 1. The first time you log a new food (say, pineapple), MacBro's AI estimates it. When you confirm, it's saved to My foods per 100 g (or per piece or serving), micronutrients included.
 2. Later, a simple message like `had 40g pineapple` or `2 eggs for breakfast` is answered **straight from My foods, without the AI**. The saved numbers, micronutrients included, are scaled to your amount. The card says "All from your saved foods".
-3. This shortcut needs **an amount for every item** (`40g`, `2`, `1 serving`) and **every item already saved**. A count like `1 apple` also needs the food's **g per piece** (add it in **Edit** if it's missing). Otherwise the message goes to the AI, which still reuses your saved numbers for the foods it recognises.
+3. The Dashboard's **+ Add food** works the same way: a saved food is added from My foods without the AI, and a new one is estimated once and saved when you add it.
+4. This shortcut needs **an amount for every item** (`40g`, `2`, `1 serving`) and **every item already saved**. A count like `1 apple` also needs the food's **g per piece** (add it in **Edit** if it's missing). Otherwise the message goes to the AI, which still reuses your saved numbers for the foods it recognises.
 
 - **Search** by name or brand, and filter by **All / Foods / Recipes**.
 - Each food is a card showing its **calories in bold** and coloured chips for **P**rotein, **C**arbs, **F**at and **Fiber**. Tap **Micronutrients** on a card to see the saved values (iron, calcium, magnesium, potassium, zinc, vitamins C, B12 and D, and sodium) for the same amount.
@@ -241,7 +251,7 @@ Each part is its own tile, in this order: day navigation, **macros**, **addition
 | **Where today's calories came from** | A split bar of protein, carbs and fat calories (hover for numbers). |
 | **Additional micronutrients** | Iron, calcium, magnesium, potassium, zinc, vitamin C, vitamin B12 and vitamin D, against daily reference values for your age and sex. Sodium is shown as a limit to stay under. |
 | **Water** | Litres against target, quick-add buttons, undo. |
-| **Meals** | Breakfast, Morning snack, Lunch, Evening snack and Dinner, each with its own calories and macros. Tap a meal to expand it and the **pencil** on an item to move, copy, change or delete it. |
+| **Meals** | Breakfast, Morning snack, Lunch, Evening snack and Dinner, each with its own calories and macros. Tap a meal to expand it and the **pencil** on an item to move, copy, change or delete it. **+ Add food** adds a food to that meal without the chat (see §7). |
 
 Micronutrients are estimates. Treat them as a guide, not a lab result.
 
@@ -249,7 +259,7 @@ Micronutrients are estimates. Treat them as a guide, not a lab result.
 
 The **Analysis** tab shows trends over **7, 14 or 30 days**:
 
-- summary cards: average calories, average protein, average water (your target streak is on **Home**)
+- summary cards: average calories, average protein, average water (your streaks are on **Home**). Analysis's "on target" days still use calories within ±10% and at least 90% of protein; the Home protein streak only looks at protein.
 - calories per day and protein per day against target
 - macro trends
 - where your calories came from
@@ -312,6 +322,8 @@ Open **⚙ Settings** from the top bar.
 ## 16. Troubleshooting and FAQ
 
 **"MacBro's servers are temporarily down."** The AI model is unavailable or its free daily limit is used up. Your data is safe. Try again later. You can still use the Dashboard, water buttons and item actions, since they don't need the AI.
+
+**I don't want to use the chat.** Use **+ Add food** under any meal on the Dashboard. Saved foods don't need the AI at all; new foods need it once, for the estimate.
 
 **The mic button is missing.** Your browser doesn't support speech recognition. Use Chrome or Edge, or type instead.
 

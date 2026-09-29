@@ -1,6 +1,6 @@
 # OmniAI technical overview
 
-> Last updated: 2026-09-29 (pool waits out short rate limits; nullable micronutrients in the tool schema).Update this file in the same change as any code change it describes (see [docs/README.md](README.md)).
+> Last updated: 2026-09-29 (Home protein streak at 85% of the protein target; Dashboard Add food).Update this file in the same change as any code change it describes (see [docs/README.md](README.md)).
 > Architecture diagrams: [hld.md](hld.md). End-user manual: [user-guide.md](user-guide.md).
 
 ## 1. Tech stack
@@ -70,12 +70,12 @@ POC_new/
 
 | Module | Responsibility |
 |---|---|
-| `services/actions.py` | Pending-action lifecycle: `confirm_action` (the only writer for LLM proposals: create, edit, delete, move, copy, water, save_recipe), `reject_action`, `supersede_older`, `expire_stale` (24 h) |
+| `services/actions.py` | Pending-action lifecycle: `confirm_action` (the only writer for LLM proposals: create, edit, delete, move, copy, water, save_recipe), `reject_action`, `supersede_older`, `expire_stale` (24 h). `from_dashboard(a)` marks estimates from the Dashboard's Add food (`payload.origin == "dashboard"`): `open_actions` (what the chat and the model see) leaves them out, `supersede_older` never replaces them, and their confirm/reject events say "On the dashboard…". |
 | `services/logs.py` | Totals, `daily_summary` (macros, micros, water, targets), `logs_by_day`, current targets and weight |
-| `services/foods.py` | Food library: unit normalisation, `scale_factor`, `resolve_library_item`, `upsert_estimate` (teach on confirm, never overwrite user-edited foods), `compute_recipe`, `save_recipe` |
-| `services/entries.py` | Direct item operations: `transfer_items` (move/copy), `set_item_quantity`, `delete_item` (soft-deletes an empty entry), `record_event` (chat note so the model knows) |
+| `services/foods.py` | Food library: unit normalisation, `scale_factor`, `measurable_units` (units a saved food can be logged in; `units` in the food JSON), `library_index` / `match_saved` (typed name → saved food, plural-tolerant, ambiguous names left out; shared with the fast path), `resolve_library_item`, `upsert_estimate` (teach on confirm, never overwrite user-edited foods), `compute_recipe`, `save_recipe` |
+| `services/entries.py` | Direct item operations: `add_saved_food` (a saved food scaled in code, new entry in the meal), `eaten_at_for_meal` (the meal's latest time that day, else `MEAL_DEFAULT_TIMES`, capped at now), `transfer_items` (move/copy), `set_item_quantity`, `delete_item` (soft-deletes an empty entry), `record_event` (chat note so the model knows) |
 | `services/water.py` | Water target (35 ml/kg + activity extra), add/delete, daily summary |
-| `services/analysis.py` | `range_summary` for 7/14/30 days, `on_target` (±10% kcal, ≥90% protein); `streaks` (365-day window; today only counts once it qualifies, so it never breaks a streak) |
+| `services/analysis.py` | `range_summary` for 7/14/30 days, `on_target` (±10% kcal, ≥90% protein; Analysis only); `streaks` for Home: meal logging and **protein** (`protein_hit`: protein ≥ `PROTEIN_STREAK_MIN_SHARE`, 85%, of that day's target; calories ignored), 365-day window; today only counts once it qualifies, so it never breaks a streak. Response keys: `logging`, `protein`, `last_7_days[].protein_hit`, `rule.min_protein_pct` |
 | `services/body.py` | `bmi()` (WHO categories on the displayed one-decimal value) and `body_fat_navy()` (US Navy equations, Hodgdon & Beckett 1984; men: height, neck, waist; women: + hips). Returns `missing` or `implausible` (non-positive log argument, or outside `BODY_FAT_PLAUSIBLE`) instead of a number; `routers/profile.body_profile` adds a warning when the inputs are more than 30 days apart. |
 | `services/progress.py` | Card after a confirm, for the day the change landed on (`routers/actions._action_day`: `drank_at_utc` / `eaten_at_utc` / `to_date`, else today). Water confirms get `build_water_progress` (`focus: "water"`: litres, % of goal, hydration line); food changes get `build_progress` (`focus: "macros"`: calories, macro %, motivational line). Both carry `date` and `is_today`. |
 | `services/micros.py` | Clean, scale and total the micronutrient JSON |
@@ -92,8 +92,8 @@ All endpoints are JSON under `/api`, authenticated by the session cookie. Every 
 | `profile` | `POST onboarding` · `GET preview-targets` · `PUT targets` · `POST weight` · `GET body` (weight, height, sex, `bmi`, `body_fat`, latest value/change/tip per part, history) · `POST height` · `POST measurements` (a new dated set; any subset) · `PUT measurements/{id}` (correct a saved set; the body is the whole set, nulls clear) · `DELETE measurements/{id}` |
 | `chat` | `GET day?day=` (one local day of chat, default today, plus `prev_day`, the latest earlier day with messages) · `GET history` (legacy, last N) · `POST ""` (send; body may include `log_date`, a past day picked in the UI; 503 with friendly text if the LLM fails) · `POST cancel` |
 | `actions` | `POST {id}/confirm` (returns the action + progress card) · `POST {id}/reject` |
-| `dashboard` | `GET daily?date=` · `GET range?days=&end=` · `GET streaks` (logging and target streaks, best, last 7 days) |
-| `entries` | `POST items/{id}/transfer` (move/copy) · `PATCH items/{id}` (quantity) · `DELETE items/{id}` |
+| `dashboard` | `GET daily?date=` · `GET range?days=&end=` · `GET streaks` (logging and protein streaks, best, last 7 days) |
+| `entries` | `POST add` (name, quantity, unit, meal_type, optional `day` and `food_id`; returns `added` for a saved food, `estimate` with a pending action + note for a new food, or `no_estimate` with the model's reason; 422 for a future day or an unconvertible unit, 503 if the AI is down) · `POST items/{id}/transfer` (move/copy) · `PATCH items/{id}` (quantity) · `DELETE items/{id}` |
 | `foods` | `GET ""` · `GET micronutrients` (keys, labels, units for the edit form, from `config.MICRONUTRIENTS`) · `GET {id}` · `PUT {id}` (optional `micronutrients` per the reference amount: known keys, non-negative; blank/missing = unknown; omitting the field keeps the stored values; recipes ignore it) · `DELETE {id}` |
 | `water` | `POST ""` · `DELETE {id}` |
 | `admin` | `GET users` (admins excluded) · `GET users/{id}` · `GET users/{id}/chat` · `GET audit` · `GET llm-usage?hours=` (model calls, tokens, fast-path share, pool state; aggregate only, not audited). Every read of user data is audited. |
@@ -135,6 +135,7 @@ When `frontend/dist` exists (`FRONTEND_DIST`), `main.mount_frontend` also serves
 | `provider.py` | `AnthropicProvider` and `OpenAICompatibleProvider` behind `LLMProvider`. `to_openai_tools` uses `_relax` so optional fields aren't strictly required on OpenAI-compatible hosts. Retries once on a tool-validation error. Maps errors to a friendly message. `set_provider` injects the fake one in tests. |
 | `prompt.py` | `SYSTEM_STABLE`: the MacBro persona and all logging rules (stable, so it can be cached). `build_dynamic_context`: local date and time, the picked day (`selected_date` with that day's entries and item ids) when set, meal window, targets, today's totals, recent entries with item ids, and the user's library foods. |
 | `tools.py` | Tool schemas and handlers (below). Proposal handlers validate, scale library foods, run the energy check, then insert a `PendingAction`. |
+| `estimate.py` | Dashboard **Add food** for a food that isn't saved: one call with only `propose_entry`, the logging + library prompt sections plus a "Dashboard add" rule (no questions: assume and say so), and my_foods limited to names matching the food. Tier from the router, escalation after 2 validation errors, usage intent `dashboard_add`. The pending action gets `origin: "dashboard"` and the user's meal and time. Nothing goes into the chat history; the confirm posts no progress card. |
 | `chat.py` | `handle_user_message`: saves the user message (with `data.log_date` when a past day is picked), tries the **fast paths**, otherwise **routes** the message and runs the tool loop on that tier with only the routed tools and prompt sections, and `my_foods` limited to saved foods named in the message (or on a pending card). After `LLM_ESCALATE_AFTER_ERRORS` (2) validation errors on the small tier it **escalates** to the large tier with every tool. It builds history from **today's chat only** plus a `CHAT_DAY_GRACE_HOURS` (3 h) window before midnight (capped at `CHAT_HISTORY_MESSAGES`), runs the tool loop, applies the nudges, saves the reply, and checks for a cancel before committing. |
 
 **Tools**
@@ -175,8 +176,8 @@ When `frontend/dist` exists (`FRONTEND_DIST`), `main.mount_frontend` also serves
 | `GuideTour` | First-run walkthrough docked at the bottom. It switches tabs per step and calls `POST /auth/guide-seen` when closed. The **? Guide** button reopens it. **Its steps must match `docs/user-guide.md`.** |
 | `Chat` | Progress cards: `ProgressCard` (macros) or `WaterProgressCard` (`data.focus === "water"`); older cards without `focus` render as macros. Today's chat (fresh each day) with **Show earlier chat** loading previous days above a date divider; jumps to the latest message whenever the tab opens (`active` prop); **Logging for** date picker (sends `log_date`, tags the message); example chips, mic, Stop, feedback mode, progress card |
 | `ProposalCard` | Renders each action type with Looks good / Needs changes / Cancel |
-| `HomePage` | Default tab: time-of-day greeting, today's summary tile (macros) and a separate water tile (reuses `CalorieRing`, `Bar`, `Water` from `Dashboard`), and the two streak cards |
-| `Dashboard` | Separate tiles (cards): day navigation, then macros (calorie ring, macro bars, calorie split), micronutrients, water, and meals; water, micronutrients, meal sections; each item has a pencil that opens an edit panel (Move/Copy toggle + meal dropdown, quantity, and icon buttons for edit in chat, delete, close). Shared icons live in `components/icons.tsx` |
+| `HomePage` | Default tab: time-of-day greeting, today's summary tile (macros) and a separate water tile (reuses `CalorieRing`, `Bar`, `Water` from `Dashboard`), and the two streak cards (Meal logging, Protein) |
+| `Dashboard` | Separate tiles (cards): day navigation, then macros (calorie ring, macro bars, calorie split), micronutrients, water, and meals; water, micronutrients, meal sections; each item has a pencil that opens an edit panel (Move/Copy toggle + meal dropdown, quantity, and icon buttons for edit in chat, delete, close). Each meal has **+ Add food** (`AddFoodPanel`): name with saved-food suggestions (a `datalist` from `GET /api/foods`), quantity, unit (a select of the saved food's `units`, else free text with suggestions); a new food shows the AI estimate (`MacroChips`, note) with Add it (`POST /actions/{id}/confirm`) / Change / Cancel (reject). Shared icons live in `components/icons.tsx` |
 | `AnalysisPage` + `charts.tsx` | 7/14/30-day range: stat tiles, line, bar and stacked charts with hover/keyboard tooltips and data tables |
 | `FoodsPage` | Library search, filter, edit and delete. Cards fold out the saved micronutrients (`FoodMicros`); the edit form has an **Additional nutrients** section (blank = unknown). |
 | `SettingsDialog` | Account (and appearance), Targets (`TargetsEditor`), Password, Delete account |
@@ -228,6 +229,8 @@ The environment is set in `backend/.env` (template: `backend/.env.example`):
 | `LLM_POOL_FILE` (`llm_pool.json`) + provider keys | Extra providers: per entry `tier`, `priority` (1 = rotates with the main models, 2 = backup only), `timeout_s`, `max_retries` (default 0). Currently NVIDIA `deepseek-v4.1-flash` as a large-tier backup, key `LLM_API_KEY_2`. Template: `backend/llm_pool.example.json` |
 | `ALLOWED_MODEL_LICENSES` | Default `Apache-2.0,MIT` (open source only) |
 | `LLM_RATE_LIMIT_MAX_WAIT_S` (config constant, 20) | Longest total wait per model call for short rate limits before giving up |
+| `PROTEIN_STREAK_MIN_SHARE` (config constant, 0.85) | Share of the protein target a day needs for the Home protein streak |
+| `MEAL_DEFAULT_TIMES` (config constant) | Time for food added to an empty meal from the Dashboard |
 | `LLM_ROUTING`, `LLM_FASTPATH` | Turn routing / rule-based replies off (both on by default) |
 | `ADMIN_EMAILS`, `ADMIN_INITIAL_PASSWORD` | Admin accounts (default admin: `mhatre.anushka.work@gmail.com`) |
 | `SHOW_LLM_ERRORS` | Development only |
@@ -246,7 +249,7 @@ Domain constants (`BODY_PARTS` with how-to-measure tips, `BMI_CATEGORIES`, `BODY
 
 ```bash
 cd backend
-.venv\Scripts\python -m pytest -q      # 218 tests (1 needs Postgres), fake LLM, no network
+.venv\Scripts\python -m pytest -q      # 228 tests (1 needs Postgres), fake LLM, no network
 cd ../frontend
 npm run build                          # type-check + production build
 ```
@@ -262,7 +265,7 @@ npm run build                          # type-check + production build
 
   Never point `TEST_DATABASE_URL` at real data: tables are dropped per test.
 - `tests/conftest.py` gives each test a fresh database and a scripted `FakeProvider`. It also pins `ADMIN_EMAILS` and blanks `ADMIN_INITIAL_PASSWORD` so the local `.env` can't leak into tests.
-- Coverage by file: `test_flow` (confirm loop, auth, guide flag), `test_foods` (library, recipes, micronutrients learned on first log, repeat logs from the library without the model, editing micronutrients), `test_micros`, `test_water_meals`, `test_admin`, `test_analysis`, `test_entries` (move/copy/quantity/delete, progress cards: macros vs water, logged day), `test_body` (BMI bands, US Navy equations, missing/implausible inputs, edits), `test_openai_provider`, `test_nutrition`, `test_streaks`, `test_chat_days`, `test_deploy` (URL handling, frontend serving, health CORS for the launcher, SQLite → Postgres copy), `test_routing` (router, fast paths, pool failover and cooldowns, licence gate, escalation, usage report).
+- Coverage by file: `test_flow` (confirm loop, auth, guide flag), `test_foods` (library, recipes, micronutrients learned on first log, repeat logs from the library without the model, editing micronutrients), `test_micros`, `test_water_meals`, `test_admin`, `test_analysis`, `test_entries` (move/copy/quantity/delete, progress cards: macros vs water, logged day), `test_dashboard_add` (saved food without the model, units, meal time, past/future days, estimate saved only on confirm and learned into My foods, kept apart from chat proposals, energy check, not-a-food, AI down), `test_body` (BMI bands, US Navy equations, missing/implausible inputs, edits), `test_openai_provider`, `test_nutrition`, `test_streaks` (protein streak at 85%, calories ignored, today in progress), `test_chat_days`, `test_deploy` (URL handling, frontend serving, health CORS for the launcher, SQLite → Postgres copy), `test_routing` (router, fast paths, pool failover and cooldowns, licence gate, escalation, usage report).
 - **Policy:** development and tests use the fake model. Don't use the real LLM API for routine testing, because the free-tier quota is shared with real users.
 
 ## 11. Known limitations and next steps

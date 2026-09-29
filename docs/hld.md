@@ -1,6 +1,6 @@
 # OmniAI high-level design (HLD)
 
-> Last updated: 2026-09-29 (model pool waits out short rate limits).Update the diagrams whenever a component, data flow, table or external service changes (see [docs/README.md](README.md)).
+> Last updated: 2026-09-29 (Dashboard Add food; Home protein streak).Update the diagrams whenever a component, data flow, table or external service changes (see [docs/README.md](README.md)).
 > Diagrams are Mermaid. They render on GitHub and in VS Code with a Mermaid preview extension.
 
 ## 1. Purpose and principles
@@ -27,7 +27,7 @@ flowchart LR
 
 | Actor | Uses |
 |---|---|
-| **User** | Home (summary and streaks), Chat logging, Dashboard, Analysis, My foods, Settings |
+| **User** | Home (summary, meal-logging and protein streaks), Chat logging, Dashboard, Analysis, My foods, Settings |
 | **Admin** (emails in `ADMIN_EMAILS`) | Admin console only: user list, per-user read-only data, audit log |
 | **LLM provider** | Nutrition estimation, clarifying questions, choosing tools. It never writes data. |
 
@@ -133,6 +133,7 @@ flowchart TD
 ```mermaid
 flowchart LR
     D[Dashboard item edit panel] -->|POST /api/entries/items/id/transfer<br/>move or copy| E[services/entries]
+    AF[Meal: + Add food] -->|POST /api/entries/add<br/>saved food| E
     D -->|PATCH /api/entries/items/id<br/>quantity| E
     D -->|DELETE /api/entries/items/id| E
     W[Water buttons<br/>Home and Dashboard] -->|POST · DELETE /api/water| WS[services/water]
@@ -163,6 +164,22 @@ flowchart TD
 
 Admin emails can't register or use the normal login. Admin accounts are hidden from the admin user list, and every admin view of a user's data is written to `admin_audit`.
 
+### 4.4 Adding food from the Dashboard
+
+```mermaid
+flowchart TD
+    A[+ Add food: name, quantity, unit] --> M{Saved in My foods?<br/>picked, or name matches}
+    M -->|yes| S[Scale saved numbers in code<br/>add to the meal at once]
+    M -->|no| L[One AI call: propose_entry only<br/>same guards as the chat]
+    L --> P[(pending action<br/>origin = dashboard)]
+    P --> C{User: Add it?}
+    C -->|Add it| W[confirm_action: log entry +<br/>learn the food into My foods]
+    C -->|Change / Cancel| R[reject: nothing saved]
+    L -->|not a food| Q[Reason + Ask in chat instead]
+```
+
+The AI estimate follows principle 1: it is a pending action, written only by `confirm_action` after **Add it**. It is kept apart from the chat: it isn't shown there or sent to the model as an open proposal, chat proposals don't replace it, and confirming it posts no progress card. Saved foods follow principle 3: the user's own click on their own numbers, applied directly.
+
 ## 5. Data model (overview)
 
 ```mermaid
@@ -187,7 +204,7 @@ Column-level detail is in [technical-overview.md](technical-overview.md#5-data-m
 | Aspect | Design |
 |---|---|
 | Models | **Open-source only** (Apache 2.0 / MIT licences enforced in code). Two tiers on Groq's free tier: `gpt-oss-20b` (small) and `gpt-oss-120b` (large), in a quota-aware pool with cooldowns and failover; NVIDIA-hosted `deepseek-v4.1-flash` (MIT) as a slow backup used only when Groq is unavailable |
-| Routing | L0 rule-based fast paths (no model) → rules pick intent + tier → small model, escalating to large on repeated validation errors |
+| Routing | L0 rule-based fast paths (no model) → rules pick intent + tier → small model, escalating to large on repeated validation errors. The Dashboard's Add food makes one `propose_entry`-only call for foods that aren't saved (`llm/estimate.py`). |
 | Tools | Read: `get_food`, `get_logs`, `get_daily_summary`. Propose: `propose_entry`, `propose_edit`, `propose_delete`, `propose_move`, `propose_recipe`, `propose_water` |
 | Prompt | Stable system prompt (MacBro persona and rules, cacheable) plus per-turn dynamic context (date, time, targets, today's totals, my foods, item ids) |
 | History | Today's chat only (+3 h grace): last 6 messages on the small tier, 12 on the large |

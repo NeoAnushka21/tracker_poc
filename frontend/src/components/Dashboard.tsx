@@ -1,8 +1,9 @@
 import { useEffect, useState } from "react";
 import { api } from "../api";
-import type { DailySummary, Entry, Item, MicroSummary, WaterSummary } from "../types";
+import type { Action, DailySummary, Entry, Food, Item, MicroSummary, WaterSummary } from "../types";
 import { MEAL_LABEL, MEAL_ORDER, friendlyDate, grams, kcal, litres, shiftDay } from "../format";
 import { StackedBar } from "./charts";
+import MacroChips from "./MacroChips";
 import { ArrowRightIcon, ChatIcon, CheckIcon, CloseIcon, PencilIcon, TrashIcon, WaterDrop } from "./icons";
 
 /** A meter: one macro against its target. Identity comes from the label; the fill hue repeats it. */
@@ -253,11 +254,152 @@ function ItemActions({ day, item, meal, isToday, onChanged, onAskMacBro, onClose
   );
 }
 
+const UNIT_SUGGESTIONS = ["g", "ml", "piece", "serving", "cup", "bowl", "slice", "tbsp", "tsp", "glass"];
+
+/** Add a food to a meal without the chat. A saved food (from My foods) is added at once with its
+ *  saved numbers; any other food gets an AI estimate that is only saved after "Add it". */
+function AddFoodPanel({ day, meal, onChanged, onAskMacBro, onClose }: {
+  day: string; meal: string; onChanged: () => void; onAskMacBro: (text: string, date?: string) => void; onClose: () => void;
+}) {
+  const [foods, setFoods] = useState<Food[]>([]);
+  const [name, setName] = useState("");
+  const [qty, setQty] = useState("");
+  const [unit, setUnit] = useState("g");
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [estimate, setEstimate] = useState<{ action: Action; note: string } | null>(null);
+  const [noEstimate, setNoEstimate] = useState<string | null>(null);
+
+  useEffect(() => { api.foods().then(setFoods).catch(() => setFoods([])); }, []);
+
+  const saved = foods.find((f) => f.name.toLowerCase() === name.trim().toLowerCase());
+  const unitValid = saved ? (saved.units.includes(unit) ? unit : saved.units[0]) : unit;
+  const described = `${qty} ${unitValid} ${name.trim()}`;
+  const ready = name.trim() !== "" && Number(qty) > 0 && unitValid.trim() !== "";
+  const mealLabel = MEAL_LABEL[meal].toLowerCase();
+
+  async function submit(e: React.FormEvent) {
+    e.preventDefault();
+    if (!ready) return;
+    setBusy(true);
+    setError(null);
+    setNoEstimate(null);
+    try {
+      const r = await api.addFood({ name: name.trim(), quantity: Number(qty), unit: unitValid.trim(), meal_type: meal,
+                                    day, food_id: saved?.id ?? null });
+      if (r.status === "added") { onClose(); onChanged(); return; }
+      if (r.status === "estimate") setEstimate({ action: r.action, note: r.note });
+      else setNoEstimate(r.message);
+    } catch (err) {
+      setError((err as Error).message);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function confirm() {
+    if (!estimate) return;
+    setBusy(true);
+    setError(null);
+    try {
+      await api.confirm(estimate.action.id);
+      onClose();
+      onChanged();
+    } catch (err) {
+      setError((err as Error).message);
+      setBusy(false);
+    }
+  }
+
+  /** Drop the estimate (nothing is saved); `close` also closes the panel. */
+  function discard(close: boolean) {
+    if (estimate) void api.reject(estimate.action.id).catch(() => undefined);
+    setEstimate(null);
+    if (close) onClose();
+  }
+
+  if (estimate) {
+    const p = estimate.action.payload;
+    return (
+      <div className="add-food" role="group" aria-label={`Add to ${mealLabel}`}>
+        <div className="add-preview-head">
+          <b>AI estimate</b><span className="badge pending">Not saved yet</span>
+        </div>
+        <ul className="add-preview-items">
+          {(p.items ?? []).map((it, i) => (
+            <li key={i}>
+              <span>{it.ingredient_name}{it.brand_name && <span className="muted"> · {it.brand_name}</span>}</span>
+              <span className="muted">{it.quantity} {it.unit}</span>
+            </li>
+          ))}
+        </ul>
+        {p.totals && <MacroChips n={p.totals} />}
+        {estimate.note && <p className="small add-note">{estimate.note}</p>}
+        <p className="muted small">Adding it also saves the food to My foods, so next time it's instant.</p>
+        <div className="proposal-actions">
+          <button className="primary" onClick={confirm} disabled={busy}>Add it</button>
+          <button onClick={() => discard(false)} disabled={busy}>Change</button>
+          <button className="ghost" onClick={() => discard(true)} disabled={busy}>Cancel</button>
+        </div>
+        {error && <p className="error small">{error}</p>}
+      </div>
+    );
+  }
+
+  const listId = `saved-foods-${meal}`;
+  return (
+    <form className="add-food" onSubmit={submit} aria-label={`Add to ${mealLabel}`}>
+      <div className="add-food-row">
+        <label className="sr-only" htmlFor={`add-name-${meal}`}>Food</label>
+        <input id={`add-name-${meal}`} className="add-name" list={listId} value={name} autoFocus autoComplete="off"
+               placeholder="Food, e.g. paneer" onChange={(e) => setName(e.target.value)} maxLength={200} />
+        <datalist id={listId}>
+          {foods.map((f) => (
+            <option key={f.id} value={f.name}>{`${Math.round(f.calories)} kcal per ${f.ref_qty} ${f.ref_unit}${f.brand_name ? ` · ${f.brand_name}` : ""}`}</option>
+          ))}
+        </datalist>
+        <label className="sr-only" htmlFor={`add-qty-${meal}`}>Quantity</label>
+        <input id={`add-qty-${meal}`} className="ia-qty" type="number" step="any" min="0.01" placeholder="Qty"
+               value={qty} onChange={(e) => setQty(e.target.value)} />
+        <label className="sr-only" htmlFor={`add-unit-${meal}`}>Unit</label>
+        {saved ? (
+          <select id={`add-unit-${meal}`} className="add-unit" value={unitValid} onChange={(e) => setUnit(e.target.value)}>
+            {saved.units.map((u) => <option key={u} value={u}>{u}</option>)}
+          </select>
+        ) : (
+          <>
+            <input id={`add-unit-${meal}`} className="add-unit" list={`units-${meal}`} value={unit}
+                   onChange={(e) => setUnit(e.target.value)} maxLength={32} />
+            <datalist id={`units-${meal}`}>{UNIT_SUGGESTIONS.map((u) => <option key={u} value={u} />)}</datalist>
+          </>
+        )}
+        <button className="primary add-go" disabled={busy || !ready}>{busy ? "Estimating…" : "Add"}</button>
+        <button type="button" className="ghost icon-btn" onClick={onClose} aria-label="Close" title="Close"><CloseIcon /></button>
+      </div>
+      <p className="muted small add-hint">
+        {!name.trim() ? "Pick one of your saved foods or type any food."
+          : saved ? `Saved food: added straight away with your numbers (${saved.measures}).`
+          : "New food: the AI estimates it and you check it before it's added."}
+      </p>
+      {noEstimate && (
+        <p className="small">
+          {noEstimate}{" "}
+          <button type="button" className="link" onClick={() => { onClose(); onAskMacBro(`${described} for ${mealLabel}`, day); }}>
+            Ask in chat instead
+          </button>
+        </p>
+      )}
+      {error && <p className="error small">{error}</p>}
+    </form>
+  );
+}
+
 /** One meal: its own macro breakdown, then each food on its own line. */
 function MealSection({ day, meal, entries, isToday, onChanged, onAskMacBro }: {
   day: string; meal: string; entries: Entry[]; isToday: boolean; onChanged: () => void; onAskMacBro: (text: string, date?: string) => void;
 }) {
   const [menuFor, setMenuFor] = useState<number | null>(null);
+  const [adding, setAdding] = useState(false);
   const items = entries.flatMap((e) => e.items);
   const t = sumItems(items);
   const [open, setOpen] = useState(true);
@@ -306,6 +448,13 @@ function MealSection({ day, meal, entries, isToday, onChanged, onAskMacBro }: {
         </>
       ) : (
         <p className="muted small">Nothing logged</p>
+      )}
+      {adding ? (
+        <AddFoodPanel day={day} meal={meal} onChanged={onChanged} onAskMacBro={onAskMacBro} onClose={() => setAdding(false)} />
+      ) : (
+        <button type="button" className="ghost add-food-btn" onClick={() => { setMenuFor(null); setAdding(true); }}>
+          + Add food
+        </button>
       )}
     </div>
   );

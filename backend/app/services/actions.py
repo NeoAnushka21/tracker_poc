@@ -33,24 +33,29 @@ def expire_stale(db: Session, user_id: int) -> None:
     )
 
 
+def from_dashboard(a: PendingAction) -> bool:
+    """An AI estimate made by the dashboard's Add food. It lives in the dashboard, not the chat:
+    the chat neither shows it, sends it to the model, nor replaces it."""
+    return (a.payload or {}).get("origin") == "dashboard"
+
+
 def supersede_older(db: Session, user_id: int, before_id: int) -> None:
-    """A new proposal replaces any still-open proposals from earlier turns."""
-    db.execute(
-        update(PendingAction)
-        .where(
-            PendingAction.user_id == user_id,
-            PendingAction.status == "pending",
-            PendingAction.id < before_id,
-        )
-        .values(status="superseded", resolved_at=utcnow())
-    )
+    """A new chat proposal replaces any still-open chat proposals from earlier turns."""
+    for a in _pending(db, user_id):
+        if a.id < before_id and not from_dashboard(a):
+            a.status, a.resolved_at = "superseded", utcnow()
 
 
-def open_actions(db: Session, user_id: int) -> list[PendingAction]:
+def _pending(db: Session, user_id: int) -> list[PendingAction]:
     stmt = select(PendingAction).where(
         PendingAction.user_id == user_id, PendingAction.status == "pending"
     ).order_by(PendingAction.id)
     return list(db.scalars(stmt))
+
+
+def open_actions(db: Session, user_id: int) -> list[PendingAction]:
+    """Open chat proposals (dashboard estimates excluded)."""
+    return [a for a in _pending(db, user_id) if not from_dashboard(a)]
 
 
 def action_to_dict(a: PendingAction) -> dict:
@@ -140,7 +145,12 @@ def confirm_action(db: Session, user: User, action_id: int) -> tuple[PendingActi
         db.add(entry)
         db.flush()
         record_confirmed_items(db, user, p["items"])
-        event_text = f"User confirmed proposal #{action.id}; saved as log entry #{entry.id}."
+        if from_dashboard(action):
+            what = ", ".join(f"{i['quantity']:g} {i['unit']} {i['ingredient_name']}" for i in p["items"])
+            event_text = (f"On the dashboard the user added {what} to {entry.meal_type.replace('_', ' ')} "
+                          f"(AI estimate, confirmed; entry #{entry.id}).")
+        else:
+            event_text = f"User confirmed proposal #{action.id}; saved as log entry #{entry.id}."
 
     else:
         entry = get_active_entry(db, user.id, action.target_entry_id)
@@ -187,6 +197,8 @@ def reject_action(db: Session, user: User, action_id: int) -> tuple[PendingActio
     action = _get_open_action(db, user, action_id)
     action.status = "rejected"
     action.resolved_at = utcnow()
-    event = _log_event(db, user.id, f"User cancelled proposal #{action.id}; nothing was saved.")
+    text = ("On the dashboard the user discarded an AI estimate; nothing was saved." if from_dashboard(action)
+            else f"User cancelled proposal #{action.id}; nothing was saved.")
+    event = _log_event(db, user.id, text)
     db.commit()
     return action, event
