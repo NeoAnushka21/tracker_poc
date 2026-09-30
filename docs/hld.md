@@ -1,6 +1,6 @@
 # OmniAI high-level design (HLD)
 
-> Last updated: 2026-09-30 (database hardening phase 1: public user UUIDs, items linked to foods, ON DELETE rules, timestamptz, composite indexes; built-in general food list (USDA) between Saved Food and the AI; raw/cooked asked, never assumed; typo-tolerant saved-food and meal-word matching, Dashboard "Did you mean …?"; earlier: tabs: Saved Food, Explore, Body Profile; admin two-step sign-in; tool allow-list; terms page; earlier: health notes, Alembic, forgot password…).Update the diagrams whenever a component, data flow, table or external service changes (see [docs/README.md](README.md)).
+> Last updated: 2026-09-30 (optional "About you" answers: targets, meal times, MacBro context; country/region step in the sign-in flow; database hardening phase 1: public user UUIDs, items linked to foods, ON DELETE rules, timestamptz, composite indexes; built-in general food list (USDA) between Saved Food and the AI; raw/cooked asked, never assumed; typo-tolerant saved-food and meal-word matching, Dashboard "Did you mean …?"; earlier: tabs: Saved Food, Explore, Body Profile; admin two-step sign-in; tool allow-list; terms page; earlier: health notes, Alembic, forgot password…).Update the diagrams whenever a component, data flow, table or external service changes (see [docs/README.md](README.md)).
 > Diagrams are Mermaid. They render on GitHub and in VS Code with a Mermaid preview extension.
 
 ## 1. Purpose and principles
@@ -167,8 +167,12 @@ flowchart TD
     Me -->|is_admin| Admin
     Me -->|consent outdated| Consent[Consent gate]
     Consent --> Me
-    Me -->|not onboarded| Onb[Onboarding → targets]
+    Me -->|not onboarded| Onb[Onboarding incl. country + region → targets]
     Onb --> Me
+    Me -->|no country yet: older account| Loc[Where do you live? once]
+    Loc --> Me
+    Me -->|About you not answered or skipped| About[A bit more about you: optional, Skip for now]
+    About --> Me
     Me -->|guide not seen| Guide[First-run guide tour]
     Me --> Tabs[Home default · Chat · Dashboard · Analysis · Saved Food]
     Guide --> Tabs
@@ -224,6 +228,7 @@ erDiagram
     users ||--o{ admin_audit : "viewed by admin"
     users ||--o{ ai_requests : "daily AI allowance"
     users ||--o{ password_resets : "forgot-password links"
+    users ||--o| user_preferences : "optional about-you answers"
 ```
 
 **Identity and integrity (migration 0003, 2026-09-30):** `users.id` is the internal key every table joins on; `users.public_id` (UUID v7) is what the API and admin screens show. Every foreign key has an ON DELETE rule, so deleting a user row removes everything they own in the database itself (model-usage and admin-audit rows are kept, unlinked). Logged items point at the saved food they came from, so "most eaten" is a count. Timestamps are `timestamptz` (UTC); per-user tables are indexed on (user_id, date) or (user_id, status).

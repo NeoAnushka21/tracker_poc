@@ -28,6 +28,16 @@ export type User = {
   weight_kg: number | null;
   unit_system: "metric" | "imperial";
   timezone: string;
+  /** ISO country code ("IN") and its name; region by name. Picked from dropdowns. */
+  country: string | null;
+  country_name: string | null;
+  region: string | null;
+  /** An account from before country was asked: show the one-time "Where do you live?" screen. */
+  needs_location: boolean;
+  /** The optional "about you" questions haven't been answered or skipped yet. */
+  needs_preferences: boolean;
+  /** Worked out from the date of birth. */
+  age: number | null;
   goal_type: string | null;
   activity_level: string | null;
   targets: Targets | null;

@@ -45,19 +45,30 @@ def local_day_bounds_utc(day: date, tz_name: str) -> tuple[datetime, datetime]:
     return start, end
 
 
-def infer_meal_type(local_dt: datetime) -> str:
-    hour = local_dt.hour
-    for meal, start, end in MEAL_WINDOWS:
+def meal_windows(times: dict[str, float] | None = None) -> list[tuple[str, float, float]]:
+    """(meal, start hour, end hour). Default MEAL_WINDOWS; with the user's usual meal times
+    ("about you"), windows around them: breakfast B-3h..B+2h, lunch L-1h..L+2h, dinner D-1h..D+3h,
+    snacks in between. The first matching window wins."""
+    if not times:
+        return [(m, float(s), float(e)) for m, s, e in MEAL_WINDOWS]
+    b, l, d = times.get("breakfast", 8.0), times.get("lunch", 13.0), times.get("dinner", 20.0)
+    return [("breakfast", b - 3, b + 2), ("morning_snack", b + 2, l - 1), ("lunch", l - 1, l + 2),
+            ("evening_snack", l + 2, d - 1), ("dinner", d - 1, d + 3)]
+
+
+def infer_meal_type(local_dt: datetime, times: dict[str, float] | None = None) -> str:
+    hour = local_dt.hour + local_dt.minute / 60
+    for meal, start, end in meal_windows(times):
         if start <= hour < end:
             return meal
     return MEAL_FALLBACK
 
 
-def resolve_meal_type(stated: str | None, local_dt: datetime) -> str:
+def resolve_meal_type(stated: str | None, local_dt: datetime, times: dict[str, float] | None = None) -> str:
     """The user's stated meal wins. A plain 'snack' becomes morning or evening snack by time."""
     if stated == LEGACY_SNACK:
-        inferred = infer_meal_type(local_dt)
+        inferred = infer_meal_type(local_dt, times)
         if inferred in SNACK_TYPES:
             return inferred
         return "morning_snack" if 5 <= local_dt.hour < 12 else "evening_snack"
-    return stated or infer_meal_type(local_dt)
+    return stated or infer_meal_type(local_dt, times)

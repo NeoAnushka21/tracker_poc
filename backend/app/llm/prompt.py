@@ -7,6 +7,7 @@ from sqlalchemy.orm import Session
 from app.models import User
 from app.services.actions import open_actions
 from app.services.foods import library_context
+from app.services import preferences
 from app.services.general_foods import context_lines
 from app.services.logs import current_weight, daily_summary
 from app.timeutil import local_now
@@ -80,6 +81,11 @@ item is one of them (same food, same raw/cooked state) and isn't in my_foods, se
 general_id, keep the user's quantity and unit, and send 0 for the nutrients and null \
 micronutrients; the app computes them. For another unit (e.g. a bowl), also set \
 unit_weight_g. Prefer my_foods when both have it.
+- "about_user" in the context is what the user chose to share (diet, allergies, pace, \
+training, meal times, health). Respect it: suggest foods that fit their diet, and if a \
+logged food likely contains one of their allergens, mention it briefly in the note. \
+Health conditions and pregnancy are for context only: keep to general nutrition facts, \
+don't give medical advice, and suggest their doctor or a dietitian for anything clinical.
 - If the user corrects the nutrition of a saved food ("your chicken numbers are wrong, it's \
 31 g protein per 100 g"), send that item with food_id null and the corrected numbers; the \
 confirmed values replace the saved ones.
@@ -228,6 +234,7 @@ def build_dynamic_context(db: Session, user: User, selected_date: date | None = 
         "timezone": user.timezone,
         "preferred_name": user.preferred_name,
         "goal": user.goal_type,
+        "about_user": preferences.prompt_lines(user) or "(not shared)",
         "current_weight_kg": weight.weight_kg if weight else None,
         "daily_targets": today["targets"],
         "today_consumed": today["consumed"],

@@ -75,6 +75,8 @@ ONBOARDING = {
     "timezone": "Asia/Kolkata",
     "goal_type": "weight_loss",
     "activity_level": "moderate",
+    "country": "IN",
+    "region": "Maharashtra",
 }
 
 

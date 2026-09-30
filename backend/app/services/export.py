@@ -55,5 +55,6 @@ def export_user_data(db: Session, user: User) -> dict:
         "proposals": [_row(a, {"user_id"}) for a in _all(db, PendingAction, uid, PendingAction.id)],
         "ai_requests": [_row(r, {"user_id"}) for r in _all(db, AiRequest, uid, AiRequest.id)],
         "ai_model_calls": [_row(u, {"user_id"}) for u in _all(db, LlmUsage, uid, LlmUsage.id)],
+        "about_you": _row(user.preferences, {"user_id"}) if user.preferences else None,
         "admin_views_of_your_data": [{"at": _value(v.created_at), "action": v.action} for v in views],
     }

@@ -2,6 +2,8 @@ import { useState, type FormEvent } from "react";
 import { api } from "../api";
 import { ACTIVITY, GOALS } from "../format";
 import type { User } from "../types";
+import { AboutYouForm } from "./AboutYou";
+import { LocationFields } from "./LocationFields";
 import TargetsEditor from "./TargetsEditor";
 
 const LB_PER_KG = 2.20462;
@@ -26,9 +28,18 @@ export default function Onboarding({ onDone, initialName }: { onDone: (u: User) 
   const [timezone, setTimezone] = useState(Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC");
   const [goal, setGoal] = useState("weight_loss");
   const [activity, setActivity] = useState("moderate");
+  const [country, setCountry] = useState("");
+  const [region, setRegion] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [result, setResult] = useState<(User & { calculation: { bmr: number; tdee: number } }) | null>(null);
+  // After the required form: the optional questions, then the targets (recalculated if the answers change them).
+  const [aboutYou, setAboutYou] = useState(false);
+
+  async function afterAboutYou(changesTargets: boolean) {
+    if (changesTargets) setResult(await api.recalculateTargets());
+    setAboutYou(false);
+  }
 
   async function submit(e: FormEvent) {
     e.preventDefault();
@@ -48,13 +59,30 @@ export default function Onboarding({ onDone, initialName }: { onDone: (u: User) 
         timezone: timezone.trim(),
         goal_type: goal,
         activity_level: activity,
+        country,
+        region: region || null,
       });
       setResult(res);
+      setAboutYou(true);
     } catch (err) {
       setError((err as Error).message);
     } finally {
       setBusy(false);
     }
+  }
+
+  if (result && aboutYou) {
+    return (
+      <div className="center">
+        <div className="card onboarding-card">
+          <h1>A bit more about you</h1>
+          <p className="muted">All optional. Answer what you like, skip the rest, and change it any time in Settings → About you.</p>
+          <AboutYouForm user={result} saveLabel="Save and see my targets"
+                        onSaved={(_, suggested) => void afterAboutYou(suggested !== null)}
+                        onSkip={async () => { await api.skipPreferences(); await afterAboutYou(false); }} />
+        </div>
+      </div>
+    );
   }
 
   if (result) {
@@ -97,6 +125,8 @@ export default function Onboarding({ onDone, initialName }: { onDone: (u: User) 
             </select>
           </label>
         </div>
+
+        <LocationFields country={country} region={region} onChange={(c, r) => { setCountry(c); setRegion(r); }} />
 
         <div className="segmented" role="radiogroup" aria-label="Units">
           {(["metric", "imperial"] as const).map((u) => (

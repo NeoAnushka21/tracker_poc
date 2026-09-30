@@ -56,6 +56,11 @@ class User(Base):
     height_cm: Mapped[float | None] = mapped_column(Float)
     unit_system: Mapped[str] = mapped_column(String(10), default="metric")
     timezone: Mapped[str] = mapped_column(String(64), default="UTC")
+    # Where the user lives (2026-09-30), picked from dropdowns (services/places.py): ISO 3166-1
+    # alpha-2 country code, required from onboarding on; region by name, optional. Accounts from
+    # before this are asked once after sign-in.
+    country: Mapped[str | None] = mapped_column(String(2))
+    region: Mapped[str | None] = mapped_column(String(80))
     goal_type: Mapped[str | None] = mapped_column(String(32))
     activity_level: Mapped[str | None] = mapped_column(String(32))
     created_at: Mapped[datetime] = mapped_column(UTCDateTime, default=utcnow)
@@ -64,6 +69,9 @@ class User(Base):
     last_login_at: Mapped[datetime | None] = mapped_column(UTCDateTime)
     login_count: Mapped[int | None] = mapped_column(Integer, default=0)
     guide_seen_at: Mapped[datetime | None] = mapped_column(UTCDateTime)   # first-run tour finished or skipped
+
+    preferences: Mapped["UserPreferences | None"] = relationship(lazy="select", uselist=False,
+                                                                 passive_deletes=True)
 
     @property
     def onboarded(self) -> bool:
@@ -322,3 +330,27 @@ class PasswordReset(Base):
     created_at: Mapped[datetime] = mapped_column(UTCDateTime, default=utcnow)
     expires_at: Mapped[datetime] = mapped_column(UTCDateTime)
     used_at: Mapped[datetime | None] = mapped_column(UTCDateTime)
+
+
+class UserPreferences(Base):
+    """Optional "about you" answers (2026-09-30), one row per user; every field can stay empty.
+    A row with only `skipped_at` means the user pressed Skip, so they aren't asked again.
+    Choices are the keys in config (DIET_TYPES, ALLERGENS, ...); services/preferences.py uses them.
+    Health answers (conditions, pregnancy) need `health_consent_at`: sensitive data, explicit OK."""
+    __tablename__ = "user_preferences"
+
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), primary_key=True)
+    diet_type: Mapped[str | None] = mapped_column(String(16))
+    allergies: Mapped[list | None] = mapped_column(JSON)            # ["milk", "peanut", ...]
+    allergy_notes: Mapped[str | None] = mapped_column(String(200))   # anything not on the list
+    pace_kg_per_week: Mapped[float | None] = mapped_column(Float)
+    breakfast_time: Mapped[str | None] = mapped_column(String(5))    # "08:30", local time
+    lunch_time: Mapped[str | None] = mapped_column(String(5))
+    dinner_time: Mapped[str | None] = mapped_column(String(5))
+    training_days: Mapped[list | None] = mapped_column(JSON)         # 0 = Monday ... 6 = Sunday
+    training_type: Mapped[str | None] = mapped_column(String(16))
+    health_conditions: Mapped[list | None] = mapped_column(JSON)
+    pregnancy: Mapped[str | None] = mapped_column(String(16))        # pregnant | breastfeeding
+    health_consent_at: Mapped[datetime | None] = mapped_column(UTCDateTime)
+    skipped_at: Mapped[datetime | None] = mapped_column(UTCDateTime)
+    updated_at: Mapped[datetime] = mapped_column(UTCDateTime, default=utcnow, onupdate=utcnow)

@@ -17,6 +17,7 @@ from app.services.foods import FoodError, record_confirmed_items, save_recipe
 from app.services.entries import transfer_items
 from app.services.logs import get_active_entry
 from app.services.water import add_water
+from app.services.preferences import meal_times
 from app.timeutil import resolve_meal_type, utc_to_local
 
 
@@ -88,7 +89,7 @@ def _log_event(db: Session, user_id: int, text: str, entry_id: int | None = None
 def _meal_type(payload: dict, user: User) -> str:
     """Proposals made before morning/evening snacks existed may still say 'snack'."""
     local = utc_to_local(datetime.fromisoformat(payload["eaten_at_utc"]), user.timezone)
-    return resolve_meal_type(payload["meal_type"], local)
+    return resolve_meal_type(payload["meal_type"], local, meal_times(user))
 
 
 def _items_from_payload(payload: dict) -> list[LogEntryItem]:

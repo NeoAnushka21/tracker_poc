@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Response, status
 from fastapi.responses import JSONResponse
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -10,7 +10,8 @@ from app.deps import current_user, is_admin, onboarded_user
 from app.config import BODY_PARTS, BODY_PART_KEYS
 from app.models import BodyMeasurement, User, UserTarget, WeightLog
 from app.nutrition import age_on, calculate_targets
-from app.schemas import HeightIn, MeasurementsIn, OnboardingIn, TargetsIn, WeightIn
+from app.schemas import HeightIn, LocationIn, MeasurementsIn, OnboardingIn, TargetsIn, WeightIn
+from app.services import places, preferences
 from app.services.export import export_user_data
 from app.services.body import SAME_SESSION_DAYS, bmi, body_fat_navy
 from app.services.logs import current_targets, current_weight, targets_to_dict
@@ -32,6 +33,14 @@ def user_to_dict(db: Session, user: User) -> dict:
         "weight_kg": weight.weight_kg if weight else None,
         "unit_system": user.unit_system,
         "timezone": user.timezone,
+        "country": user.country,
+        "country_name": places.country_name(user.country),
+        "region": user.region,
+        # Accounts from before country was asked: shown a one-time "where do you live?" screen.
+        "needs_location": user.country is None and user.onboarded and not is_admin(user),
+        # Optional "about you" questions: offered once (answered or skipped), then only in Settings.
+        "needs_preferences": user.preferences is None and user.onboarded and not is_admin(user),
+        "age": age_on(user.date_of_birth, local_today(user.timezone)) if user.date_of_birth else None,
         "goal_type": user.goal_type,
         "activity_level": user.activity_level,
         "targets": targets_to_dict(current_targets(db, user.id)),
@@ -54,6 +63,7 @@ def _calculated_targets(user: User, weight_kg: float):
         sex=user.sex,
         activity_level=user.activity_level,
         goal_type=user.goal_type,
+        **preferences.target_options(user),
     )
 
 
@@ -90,6 +100,10 @@ def onboarding(body: OnboardingIn, user: User = Depends(current_user), db: Sessi
         raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT,
                             f"{config.APP_NAME} is for adults ({config.MIN_USER_AGE} and over), so we can't set up "
                             "your profile. You can delete this account in Settings.")
+    try:
+        user.country, user.region = places.check(body.country, body.region)
+    except ValueError as e:
+        raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT, str(e)) from e
     for field in ("preferred_name", "date_of_birth", "sex", "height_cm", "unit_system",
                   "timezone", "goal_type", "activity_level"):
         setattr(user, field, getattr(body, field))
@@ -100,6 +114,70 @@ def onboarding(body: OnboardingIn, user: User = Depends(current_user), db: Sessi
     calc = _save_calculated_targets(db, user, body.weight_kg)
     db.commit()
     return {**user_to_dict(db, user), "calculation": calc}
+
+
+@router.get("/countries")
+def countries(response: Response):
+    """Countries and their regions for the dropdowns. Public reference data (no login needed)."""
+    response.headers["Cache-Control"] = "public, max-age=86400"
+    return places.countries()
+
+
+@router.put("/location")
+def set_location(body: LocationIn, user: User = Depends(current_user), db: Session = Depends(get_db)):
+    """Country (required) and region (optional), from the dropdowns: onboarding for accounts from
+    before they were asked, and Settings."""
+    try:
+        user.country, user.region = places.check(body.country, body.region)
+    except ValueError as e:
+        raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT, str(e)) from e
+    db.commit()
+    return user_to_dict(db, user)
+
+
+@router.get("/preferences")
+def get_preferences(user: User = Depends(current_user)):
+    """The optional "about you" answers, and the choices for each question."""
+    return {"preferences": preferences.to_dict(user.preferences), "options": preferences.options()}
+
+
+@router.put("/preferences")
+def save_preferences(body: dict, user: User = Depends(current_user), db: Session = Depends(get_db)):
+    """Save the optional answers (any subset; empty = not answered). When they change the calculated
+    targets (pace, pregnancy), `suggested_targets` is returned so the UI can offer to use them."""
+    try:
+        preferences.save(db, user, body)
+    except ValueError as e:
+        raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT, str(e)) from e
+    db.commit()
+    out = {"user": user_to_dict(db, user), "preferences": preferences.to_dict(user.preferences),
+           "suggested_targets": None}
+    weight, current = current_weight(db, user.id), current_targets(db, user.id)
+    if user.onboarded and weight and current:
+        t = _calculated_targets(user, weight.weight_kg)
+        if abs(t.daily_calorie_target - current.daily_calorie_target) >= 50:
+            out["suggested_targets"] = t.__dict__
+    return out
+
+
+@router.post("/recalculate-targets")
+def recalculate_targets(user: User = Depends(onboarded_user), db: Session = Depends(get_db)):
+    """Replace the targets with the formula's (incl. pace and pregnancy): after the optional
+    questions in onboarding, and when the user accepts `suggested_targets`."""
+    weight = current_weight(db, user.id)
+    if weight is None:
+        raise HTTPException(status.HTTP_409_CONFLICT, "Log your weight first")
+    calc = _save_calculated_targets(db, user, weight.weight_kg)
+    db.commit()
+    return {**user_to_dict(db, user), "calculation": calc}
+
+
+@router.post("/preferences/skip")
+def skip_preferences(user: User = Depends(current_user), db: Session = Depends(get_db)):
+    """Skip the optional questions for now; they stay in Settings."""
+    preferences.skip(db, user)
+    db.commit()
+    return user_to_dict(db, user)
 
 
 @router.put("/targets")

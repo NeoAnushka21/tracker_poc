@@ -6,8 +6,28 @@ import TargetsEditor from "./TargetsEditor";
 import ThemeToggle from "./ThemeToggle";
 import { UserAvatar } from "./Avatar";
 import { APP_NAME } from "../brand";
+import { LocationFields } from "./LocationFields";
+import { AboutYouForm, SuggestedTargets } from "./AboutYou";
 
-type Section = "account" | "targets" | "security" | "delete";
+/** Settings → About you: the optional answers, with the new-target offer when they change it. */
+function AboutSection({ user, onSaved }: { user: User; onSaved: (u: User) => void }) {
+  const [note, setNote] = useState<string | null>(null);
+  const [suggested, setSuggested] = useState<{ daily_calorie_target: number } | null>(null);
+  return (
+    <div className="settings-form">
+      <p className="muted small">All optional. Used for your targets (pace, pregnancy), meal times in the chat, and MacBro's suggestions.</p>
+      {suggested && (
+        <SuggestedTargets suggested={suggested} user={user}
+                          onDone={(u) => { if (u) onSaved(u); setSuggested(null); setNote(u ? "Targets updated." : null); }} />
+      )}
+      <AboutYouForm user={user} saveLabel="Save"
+                    onSaved={(u, s) => { onSaved(u); setSuggested(s); setNote(s ? null : "Saved."); }} />
+      {note && <p className="muted small" role="status">{note}</p>}
+    </div>
+  );
+}
+
+type Section = "account" | "about" | "targets" | "security" | "delete";
 
 type Props = {
   user: User;
@@ -22,7 +42,59 @@ function when(iso: string | null): string {
   return new Date(iso).toLocaleString(undefined, { day: "numeric", month: "long", year: "numeric", hour: "2-digit", minute: "2-digit" });
 }
 
-function AccountSection({ user }: { user: User }) {
+/** Country (required) and region (optional): shown as text, with Change opening the dropdowns. */
+function WhereYouLive({ user, onSaved }: { user: User; onSaved: (u: User) => void }) {
+  const [editing, setEditing] = useState(false);
+  const [country, setCountry] = useState(user.country ?? "");
+  const [region, setRegion] = useState(user.region ?? "");
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  async function save(e: FormEvent) {
+    e.preventDefault();
+    setBusy(true);
+    setError(null);
+    try {
+      onSaved(await api.setLocation(country, region || null));
+      setEditing(false);
+    } catch (err) {
+      setError((err as Error).message);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  if (!editing) {
+    return (
+      <div>
+        <dt>Country / region</dt>
+        <dd>
+          {[user.country_name, user.region].filter(Boolean).join(" · ") || "–"}{" "}
+          <button type="button" className="link" onClick={() => setEditing(true)}>Change</button>
+        </dd>
+      </div>
+    );
+  }
+  return (
+    <div>
+      <dt>Country / region</dt>
+      <dd>
+        <form className="settings-location" onSubmit={save}>
+          <LocationFields country={country} region={region} onChange={(c, r) => { setCountry(c); setRegion(r); }} />
+          {error && <p className="error small">{error}</p>}
+          <div className="proposal-actions">
+            <button className="primary" disabled={!country || busy}>{busy ? "Saving…" : "Save"}</button>
+            <button type="button" onClick={() => { setEditing(false); setCountry(user.country ?? ""); setRegion(user.region ?? ""); }}>
+              Cancel
+            </button>
+          </div>
+        </form>
+      </dd>
+    </div>
+  );
+}
+
+function AccountSection({ user, onSaved }: { user: User; onSaved: (u: User) => void }) {
   return (
     <>
       <div className="account-card">
@@ -42,6 +114,8 @@ function AccountSection({ user }: { user: User }) {
         <div><dt>Data consent given</dt><dd>{when(user.consented_at)}</dd></div>
         {!user.is_admin && (
           <>
+            <div><dt>Age</dt><dd>{user.age ?? "–"} <span className="muted small">(from your date of birth)</span></dd></div>
+            <WhereYouLive user={user} onSaved={onSaved} />
             <div><dt>Goal</dt><dd>{user.goal_type ? GOALS[user.goal_type] ?? user.goal_type : "–"}</dd></div>
             <div><dt>Time zone</dt><dd>{user.timezone}</dd></div>
           </>
@@ -226,6 +300,7 @@ export default function SettingsDialog({ user, onClose, onSaved, onSignedOut }: 
   const sections: { id: Section; label: string }[] = [
     { id: "account", label: "Account" },
     ...(!user.is_admin ? [
+      { id: "about" as const, label: "About you" },
       { id: "targets" as const, label: "Targets" },
     ] : []),
     { id: "security", label: user.has_password ? "Password" : "Set password" },
@@ -258,7 +333,8 @@ export default function SettingsDialog({ user, onClose, onSaved, onSignedOut }: 
             ))}
           </div>
           <div className="settings-panel" role="tabpanel">
-            {section === "account" && <AccountSection user={user} />}
+            {section === "account" && <AccountSection user={user} onSaved={onSaved} />}
+            {section === "about" && <AboutSection user={user} onSaved={onSaved} />}
             {section === "targets" && <TargetsSection user={user} onSaved={onSaved} />}
             {section === "security" && (
               <>

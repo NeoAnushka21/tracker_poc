@@ -234,6 +234,40 @@ FAT_CALORIE_SHARE = 0.25
 KCAL_PER_G = {"protein": 4, "carbs": 4, "fat": 9}
 FIBER_G_PER_1000_KCAL = 14       # dietary guideline: 14 g fiber per 1,000 kcal
 
+# --- Optional "about you" questions (2026-09-30) -----------------------------
+# All optional and skippable; each is used somewhere (see services/preferences.py).
+DIET_TYPES = {"vegetarian": "Vegetarian", "eggetarian": "Eggetarian (vegetarian + eggs)",
+              "non_vegetarian": "Non-vegetarian", "vegan": "Vegan", "jain": "Jain"}
+# key: (label, words in a food name that suggest it contains it; used to flag cards)
+ALLERGENS = {
+    "milk": ("Milk / dairy (lactose)", ("milk", "curd", "dahi", "paneer", "cheese", "butter", "ghee", "cream",
+                                        "yogurt", "yoghurt", "whey", "khoa", "lassi", "buttermilk", "chaas",
+                                        "ice cream", "malai", "raita", "kheer")),
+    "egg": ("Egg", ("egg", "eggs", "omelette", "omelet", "anda", "mayo", "mayonnaise", "bhurji")),
+    "peanut": ("Peanut", ("peanut", "peanuts", "groundnut", "moongfali", "mungfali")),
+    "tree_nut": ("Tree nuts", ("almond", "almonds", "badam", "cashew", "cashews", "kaju", "walnut", "walnuts",
+                               "akhrot", "pistachio", "pistachios", "pista", "hazelnut", "pecan", "macadamia")),
+    "gluten": ("Gluten (wheat, barley)", ("wheat", "atta", "maida", "roti", "chapati", "phulka", "bread",
+                                          "naan", "paratha", "pasta", "noodle", "noodles", "semolina", "sooji",
+                                          "suji", "rava", "barley", "dalia", "bulgur", "biscuit", "crackers")),
+    "soy": ("Soy", ("soy", "soya", "tofu", "edamame", "soybean", "soybeans")),
+    "fish": ("Fish", ("fish", "salmon", "tuna", "cod", "tilapia", "mackerel", "pomfret", "sardine", "sardines",
+                      "bangda", "rohu", "surmai")),
+    "shellfish": ("Shellfish", ("prawn", "prawns", "shrimp", "crab", "lobster", "jhinga", "kolambi")),
+    "sesame": ("Sesame", ("sesame", "til", "tahini", "gingelly")),
+}
+# Weight change per week; 1 kg of body weight is taken as ~7,700 kcal (1,100 kcal/day per kg/week).
+PACE_OPTIONS = {"weight_loss": [0.25, 0.5, 0.75, 1.0], "muscle_gain": [0.25, 0.5], "weight_gain": [0.25, 0.5]}
+KCAL_PER_KG_PER_WEEK = 1100
+MAX_DEFICIT_SHARE = 0.25          # a chosen pace never cuts more than 25% below maintenance
+TRAINING_TYPES = {"strength": "Strength / weights", "cardio": "Cardio (running, cycling…)",
+                  "mixed": "Mixed", "sports": "Sports", "yoga": "Yoga / mobility"}
+HEALTH_CONDITIONS = {"diabetes": "Diabetes (type 1 or 2)", "prediabetes": "Prediabetes", "pcos": "PCOS / PCOD",
+                     "hypothyroidism": "Hypothyroidism", "hyperthyroidism": "Hyperthyroidism",
+                     "high_blood_pressure": "High blood pressure", "high_cholesterol": "High cholesterol",
+                     "kidney_disease": "Kidney disease"}
+PREGNANCY_STATES = {"pregnant": "Pregnant", "breastfeeding": "Breastfeeding"}
+
 # --- Micronutrients ------------------------------------------------------
 # Daily reference values for adults (US Dietary Reference Intakes: RDA, or AI where no
 # RDA exists). Values by sex and age band: [(max_age_inclusive, male, female), ...].

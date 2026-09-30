@@ -15,6 +15,7 @@ from app.config import LEGACY_SNACK, MEAL_TYPES, MICRONUTRIENTS, WATER_MAX_LOG_M
 from app.models import PendingAction, User, utcnow
 from app.schemas import ItemIn
 from app.services import general_foods
+from app.services.preferences import meal_times
 from app.services.foods import (
     FoodError, compute_recipe, find_by_name, food_to_dict, get_user_food, resolve_library_item,
 )
@@ -407,7 +408,7 @@ def _propose_entry(ctx: ToolContext, args: dict) -> dict:
         "summary": args.get("summary") or "Food log",
         "eaten_at": eaten_local.strftime("%Y-%m-%dT%H:%M"),
         "eaten_at_utc": eaten_utc.isoformat(),
-        "meal_type": resolve_meal_type(stated, eaten_local),
+        "meal_type": resolve_meal_type(stated, eaten_local, meal_times(ctx.user)),
         "meal_type_source": "stated" if stated else "inferred",
         "items": items,
         "totals": sum_items(items),
@@ -426,9 +427,9 @@ def _propose_edit(ctx: ToolContext, args: dict) -> dict:
         eaten_utc = entry.eaten_at
     eaten_local = utc_to_local(eaten_utc, tz)
     if args.get("meal_type"):
-        meal_type = resolve_meal_type(args["meal_type"], eaten_local)
+        meal_type = resolve_meal_type(args["meal_type"], eaten_local, meal_times(ctx.user))
     elif args.get("eaten_at"):
-        meal_type = infer_meal_type(eaten_local)
+        meal_type = infer_meal_type(eaten_local, meal_times(ctx.user))
     else:
         meal_type = entry.meal_type
     payload = {

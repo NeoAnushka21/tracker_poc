@@ -60,7 +60,38 @@ export type OnboardingInput = {
   timezone: string;
   goal_type: string;
   activity_level: string;
+  country: string;
+  region: string | null;
 };
+
+/** Optional "about you" answers (every field may be empty). */
+export type Preferences = {
+  diet_type: string | null;
+  allergies: string[];
+  allergy_notes: string | null;
+  pace_kg_per_week: number | null;
+  breakfast_time: string | null;
+  lunch_time: string | null;
+  dinner_time: string | null;
+  training_days: number[];
+  training_type: string | null;
+  health_conditions: string[];
+  pregnancy: string | null;
+  health_consent: boolean;
+  answered?: boolean;
+};
+export type PreferenceOptions = {
+  diet_types: Record<string, string>;
+  allergens: Record<string, string>;
+  pace: Record<string, number[]>;
+  training_types: Record<string, string>;
+  weekdays: string[];
+  health_conditions: Record<string, string>;
+  pregnancy: Record<string, string>;
+};
+
+/** A country for the dropdowns, with its regions (by name). */
+export type Country = { code: string; name: string; regions: string[] };
 
 export type TargetsInput = {
   daily_calorie_target: number;
@@ -158,6 +189,16 @@ export const api = {
   /** Ends every session of the account, on all devices (this one too). */
   logoutEverywhere: () => request<{ ok: boolean }>("POST", "/api/auth/logout-everywhere"),
 
+  countries: () => request<Country[]>("GET", "/api/profile/countries"),
+  preferences: () => request<{ preferences: Preferences; options: PreferenceOptions }>("GET", "/api/profile/preferences"),
+  savePreferences: (p: Preferences) =>
+    request<{ user: User; preferences: Preferences; suggested_targets: { daily_calorie_target: number } | null }>(
+      "PUT", "/api/profile/preferences", p),
+  skipPreferences: () => request<User>("POST", "/api/profile/preferences/skip"),
+  recalculateTargets: () =>
+    request<User & { calculation: { bmr: number; tdee: number } }>("POST", "/api/profile/recalculate-targets"),
+  setLocation: (country: string, region: string | null) =>
+    request<User>("PUT", "/api/profile/location", { country, region }),
   onboarding: (data: OnboardingInput) =>
     request<User & { calculation: { bmr: number; tdee: number } }>("POST", "/api/profile/onboarding", data),
   updateTargets: (data: TargetsInput) => request<User>("PUT", "/api/profile/targets", data),

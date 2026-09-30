@@ -3,6 +3,8 @@ import { api, ApiError } from "./api";
 import type { User } from "./types";
 import AuthScreen from "./components/AuthScreen";
 import Onboarding from "./components/Onboarding";
+import { LocationGate } from "./components/LocationFields";
+import { AboutYouGate } from "./components/AboutYou";
 import Chat from "./components/Chat";
 import Dashboard from "./components/Dashboard";
 import SettingsDialog from "./components/SettingsDialog";
@@ -136,6 +138,8 @@ export default function App() {
 
   if (!user.consented) return <ConsentGate onAccepted={setUser} onLogout={logout} />;
   if (!user.onboarded) return <Onboarding onDone={setUser} initialName={user.preferred_name} />;
+  if (user.needs_location) return <LocationGate user={user} onSaved={setUser} onLogout={logout} />;
+  if (user.needs_preferences) return <AboutYouGate user={user} onDone={setUser} onLogout={logout} />;
 
   const tabs = TABS;
   const current = tabs.some((t) => t.id === tab) ? tab : "home";

@@ -9,6 +9,7 @@ from fastapi import HTTPException, status
 from sqlalchemy.orm import Session
 
 from app.config import MEAL_DEFAULT_TIMES
+from app.services.preferences import meal_times
 from app.models import ChatMessage, LogEntry, LogEntryItem, User, UserFood, utcnow
 from app.services import micros
 from app.services.foods import nutrients_for
@@ -77,7 +78,9 @@ def eaten_at_for_meal(db: Session, user: User, meal: str, day: date) -> datetime
     same_meal = [e.eaten_at for e in entries_between(db, user, day, day) if e.meal_type == meal]
     if same_meal:
         return max(same_meal)
-    usual = local_to_utc(datetime.combine(day, time(*MEAL_DEFAULT_TIMES[meal])), user.timezone)
+    at = (meal_times(user) or {}).get(meal)             # the user's usual time, if they gave one
+    hm = (int(at), round(at % 1 * 60)) if at is not None else MEAL_DEFAULT_TIMES[meal]
+    usual = local_to_utc(datetime.combine(day, time(*hm)), user.timezone)
     return min(usual, utcnow())
 
 

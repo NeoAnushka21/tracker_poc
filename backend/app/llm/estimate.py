@@ -16,7 +16,7 @@ from app.llm.provider import LLMError
 from app.llm.router import route
 from app.llm.tools import TOOLS, ToolContext, ToolInputError, run_tool
 from app.models import PendingAction, User, utcnow
-from app.services import general_foods
+from app.services import general_foods, preferences
 from app.services.entries import eaten_at_for_meal
 from app.services.foods import library_context
 from app.timeutil import local_now, utc_to_local
@@ -88,6 +88,8 @@ def general_food_action(db: Session, user: User, entry: dict, quantity: float, u
         return None
     note = (f"From the general food list ({general_foods.SOURCE_NOTE}), plain food with no oil or salt. "
             "Adding it also saves it to Saved Food.")
+    if heads_up := preferences.allergen_note(user, [general_foods.display_name(entry)]):
+        note += " " + heads_up
     ctx = ToolContext(db=db, user=user, raw_user_message=f"{quantity:g} {unit} {entry['name']}")
     item = {"ingredient_name": general_foods.display_name(entry), "brand_name": None, "quantity": quantity,
             "unit": unit, "calories": 0, "protein_g": 0, "carbs_g": 0, "fat_g": 0, "fiber_g": 0, "food_id": None,

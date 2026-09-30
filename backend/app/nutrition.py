@@ -7,7 +7,8 @@ from dataclasses import dataclass
 from datetime import date
 
 from app.config import (
-    ACTIVITY_FACTORS, FAT_CALORIE_SHARE, FIBER_G_PER_1000_KCAL, GOAL_SETTINGS, KCAL_PER_G, MICRONUTRIENTS,
+    ACTIVITY_FACTORS, FAT_CALORIE_SHARE, FIBER_G_PER_1000_KCAL, GOAL_SETTINGS, KCAL_PER_G, KCAL_PER_KG_PER_WEEK,
+    MAX_DEFICIT_SHARE, MICRONUTRIENTS,
 )
 
 
@@ -46,12 +47,22 @@ def mifflin_st_jeor(weight_kg: float, height_cm: float, age: int, sex: str) -> f
 
 
 def calculate_targets(
-    *, weight_kg: float, height_cm: float, age: int, sex: str, activity_level: str, goal_type: str
+    *, weight_kg: float, height_cm: float, age: int, sex: str, activity_level: str, goal_type: str,
+    pace_kg_per_week: float | None = None, no_deficit: bool = False,
 ) -> Targets:
+    """`pace_kg_per_week` (optional, "about you"): calories = maintenance -/+ 1,100 kcal per kg a
+    week instead of the goal's percentage; a deficit is capped at MAX_DEFICIT_SHARE.
+    `no_deficit` (pregnant or breastfeeding): never below maintenance."""
     bmr = mifflin_st_jeor(weight_kg, height_cm, age, sex)
     tdee = bmr * ACTIVITY_FACTORS[activity_level]
     calorie_multiplier, protein_per_kg = GOAL_SETTINGS[goal_type]
-    calories = round(tdee * calorie_multiplier / 10) * 10
+    calories = tdee * calorie_multiplier
+    if pace_kg_per_week:
+        change = pace_kg_per_week * KCAL_PER_KG_PER_WEEK
+        calories = tdee - min(change, tdee * MAX_DEFICIT_SHARE) if calorie_multiplier < 1 else tdee + change
+    if no_deficit:
+        calories = max(calories, tdee)
+    calories = round(calories / 10) * 10
 
     protein_g = round(weight_kg * protein_per_kg)
     fat_g = round(calories * FAT_CALORIE_SHARE / KCAL_PER_G["fat"])

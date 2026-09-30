@@ -81,6 +81,8 @@ class OnboardingIn(BaseModel):
     timezone: str
     goal_type: str
     activity_level: str
+    country: str = Field(min_length=2, max_length=2)      # ISO code from the dropdown
+    region: str | None = Field(default=None, max_length=80)
 
     @field_validator("goal_type")
     @classmethod
@@ -95,6 +97,11 @@ class OnboardingIn(BaseModel):
         if v not in ACTIVITY_FACTORS:
             raise ValueError(f"activity_level must be one of {list(ACTIVITY_FACTORS)}")
         return v
+
+
+class LocationIn(BaseModel):
+    country: str = Field(min_length=2, max_length=2)
+    region: str | None = Field(default=None, max_length=80)
 
 
 class TargetsIn(BaseModel):

@@ -2,7 +2,7 @@ import { APP_NAME, PRIVACY_CONTACT } from "../brand";
 import { AppLogo } from "./Avatar";
 import ThemeToggle from "./ThemeToggle";
 
-const UPDATED = "29 September 2026";
+const UPDATED = "30 September 2026";
 
 /** Public privacy notice at /privacy (no login needed). Keep it in step with what the app really does:
  *  the consent text (backend config.py), the export (services/export.py) and deletion (services/accounts.py). */
@@ -27,7 +27,8 @@ export default function PrivacyPage() {
         <h2>What we store</h2>
         <ul>
           <li><b>Account:</b> your email, and either a scrambled (hashed) password or a link to your Google account. We never see your Google password.</li>
-          <li><b>Profile:</b> name (optional), date of birth, sex, height, weight, goal, activity level, time zone, units.</li>
+          <li><b>Profile:</b> name (optional), date of birth (your age is worked out from it), sex, height, weight, goal, activity level, country and region (optional), time zone, units.</li>
+          <li><b>About you (optional, only if you fill it in):</b> diet type, allergies and intolerances, weight-change pace, usual meal times, training days and type. <b>Health details</b> (health conditions, pregnancy or breastfeeding) are stored only after you tick a separate box agreeing to it; they're used only to set your targets and to give MacBro context, and are sent with your chat messages to the AI service. Remove them any time in Settings → About you.</li>
           <li><b>What you log:</b> meals and their nutrients, water, saved foods and recipes, targets, body measurements.</li>
           <li><b>Chat:</b> your messages and the assistant's replies, and the suggestions you confirmed or cancelled.</li>
           <li><b>Usage:</b> when you sign in, how many AI requests you made each day, and technical details of each AI call (model, size, timing), used to share the free AI allowance fairly.</li>

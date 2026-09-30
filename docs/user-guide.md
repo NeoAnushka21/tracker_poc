@@ -4,7 +4,7 @@ OmniAI is a chat-based calorie and macro tracker. In the Chat you talk to **MacB
 
 This guide walks a new user through the app from sign-up to daily use. The same walkthrough appears inside the app as a short tour the first time you log in. You can reopen it any time with the **? Guide** button at the top.
 
-> Last updated: 2026-09-30 (built-in general food list of ~300 common foods (USDA) used without the AI; "raw or cooked?" asked, never assumed; small typos in saved-food names and meal words are understood without the AI; Dashboard asks "Did you mean …?"; earlier: Saved Food renamed Saved Food, a list with Additional info; Body renamed Body Profile; new Explore tab, coming soon; terms page; earlier: health notes and low-target warning, forgot password…). Keep this file in step with the UI (see [docs/README.md](README.md)).
+> Last updated: 2026-09-30 (optional "About you" questions: diet, allergies, pace, meal times, training, health; country and region in the profile, age in Settings; built-in general food list of ~300 common foods (USDA) used without the AI; "raw or cooked?" asked, never assumed; small typos in saved-food names and meal words are understood without the AI; Dashboard asks "Did you mean …?"; earlier: Saved Food renamed Saved Food, a list with Additional info; Body renamed Body Profile; new Explore tab, coming soon; terms page; earlier: health notes and low-target warning, forgot password…). Keep this file in step with the UI (see [docs/README.md](README.md)).
 
 ---
 
@@ -71,12 +71,29 @@ OmniAI needs a few details to work out your daily targets:
 | Field | Notes |
 |---|---|
 | What should I call you? | Optional. Used in the Home greeting and by MacBro in the chat. |
-| Date of birth, sex | Used in the calorie formula and for micronutrient reference values. You need to be **18 or over** to use OmniAI; a date of birth under 18 (or in the future) isn't accepted. |
+| Date of birth, sex | Used in the calorie formula and for micronutrient reference values; your **age** is worked out from the date of birth (shown in **Settings → Account**). You need to be **18 or over** to use OmniAI; a date of birth under 18 (or in the future) isn't accepted. |
+| Country | **Required.** Pick it from the list (you can't type your own). |
+| State / region | Optional. Pick it from the list for your country, or leave it as *Not specified*. |
 | Units | Metric (kg, cm) or Imperial (lb, ft/in). |
 | Height, weight | Required. |
 | Goal | Lose weight, Build muscle, Gain weight, Recomposition, or Maintain weight. |
 | Activity level | From *Sedentary* to *Very active*. |
 | Time zone | Detected automatically. It decides where "today" starts and ends. |
+
+**A bit more about you (optional).** After the required details, OmniAI offers a few optional questions. Answer any of them, or press **Skip for now**; everything can be filled in or changed later in **Settings → About you**. Each answer is used:
+
+| Question | What it changes |
+|---|---|
+| Diet (vegetarian, eggetarian, non-vegetarian, vegan, Jain) | MacBro suggests foods that fit it |
+| Allergies or intolerances (pick from the list, plus "anything else") | Cards say **Heads-up** when a food usually contains one, e.g. "curd usually contains milk / dairy" |
+| How fast? (weight loss 0.25–1 kg a week; gain 0.25–0.5 kg) | Your calorie target: about 1,100 kcal a day per kg a week, below or above maintenance. A loss is never set more than 25% below maintenance. |
+| Usual breakfast, lunch and dinner times | Which meal a message counts as (with breakfast at 10:30, food at noon is breakfast), and the time used when you add food to an empty meal on the Dashboard |
+| Training (type and days) | MacBro knows when you train |
+| **Health** (optional, sensitive): conditions such as diabetes, PCOS or thyroid, and for a female profile pregnancy or breastfeeding | Context for MacBro, which still gives no medical advice. While pregnant or breastfeeding, no calorie deficit is set. Saving these needs an extra tick: you agree they're used only for this. Clearing them removes that agreement too. |
+
+If your answers change the calculated calories (a pace, or pregnancy), you see the new targets before starting; later, in Settings, OmniAI asks **Use the new target** or **Keep mine**.
+
+**Already had an account?** If you joined before country and region were added, OmniAI asks once after you sign in: **Where do you live?** Pick your country (required) and region (optional), then **Save and continue**. You can change both later in **Settings → Account**. The optional **A bit more about you** questions are offered once too (after the country), with **Skip for now**.
 
 After you submit, **Your daily targets** shows the calories, protein, carbs, fat and fiber OmniAI suggests. Change any number you like, then continue. You can change them later in **Settings → Targets**. If the calorie target is below **1,200 kcal (women) or 1,500 kcal (men)**, a heads-up explains that such low targets are usually only advised with a doctor or dietitian involved. It's a warning, not a block.
 
@@ -349,7 +366,8 @@ Open **⚙ Settings** from the top bar.
 
 | Tab | What you can do |
 |---|---|
-| **Account** | See your email, registration date, last login, when you gave data consent, your goal and time zone. Switch the **Appearance** between light, dark or system. **Download my data** saves a file with everything OmniAI stores about you (profile, logs, foods, chat, usage, and any admin views of your account). **How we use your data** opens the privacy page. |
+| **Account** | See your email, registration date, last login, when you gave data consent, your **age** (from your date of birth), your goal and time zone. **Country / region → Change** lets you pick another country or region from the lists. Switch the **Appearance** between light, dark or system. **Download my data** saves a file with everything OmniAI stores about you (profile, logs, foods, chat, usage, and any admin views of your account). **How we use your data** opens the privacy page. |
+| **About you** | The optional answers (diet, allergies, pace, meal times, training, health). Change or clear any of them and press **Save**. If that changes your calculated calories, choose **Use the new target** or **Keep mine**. |
 | **Targets** | Edit daily calories, protein, carbs, fat and fiber. |
 | **Password** | Change your password (needs the current one). Changing (or setting) your password signs you out on every other device; this one stays logged in. **Log out of all devices** (same tab) signs you out everywhere, including here, e.g. after using a shared computer or losing your phone. If you signed up with Google, this tab is **Set password**: add one to also log in with your email. **Account** shows how you sign in (email and password, Google, or both). |
 | **Delete account** | Permanently removes your account and **all** your data. Needs your password (or, for Google-only accounts, your email typed out) and can't be undone. |

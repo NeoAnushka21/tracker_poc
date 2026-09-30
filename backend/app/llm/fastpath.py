@@ -13,7 +13,7 @@ from sqlalchemy.orm import Session
 from app.config import MEAL_TYPES
 from app.llm.tools import ToolContext, ToolInputError, run_tool
 from app.models import ChatMessage, User
-from app.services import general_foods
+from app.services import general_foods, preferences
 from app.services.actions import open_actions
 from app.services.foods import FoodError, closest_saved, edit_distance, library_index, normalize_unit, nutrients_for, typo_limit
 from app.services.logs import daily_summary, entries_between
@@ -286,7 +286,9 @@ def _library_log(ctx: ToolContext, text: str) -> str | None:
     try:
         run_tool(ctx, "propose_entry", {
             "summary": names[:80], "meal_type": meal, "eaten_at": None, "items": items,
-            "note": (f"I read {', '.join(read_as)}. " if read_as else "") + source + " Confirm if it looks right.",
+            "note": (f"I read {', '.join(read_as)}. " if read_as else "") + source + " Confirm if it looks right."
+                    + (f" {h}" if (h := preferences.allergen_note(ctx.user, [i["ingredient_name"] for i in items]))
+                       else ""),
         })
     except ToolInputError:
         return None

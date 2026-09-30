@@ -746,7 +746,8 @@ button.danger { color: var(--error); }
 .account-card { display: flex; gap: 14px; align-items: center; margin-bottom: 12px; }
 .account-name { font-weight: 650; font-size: 1.05rem; }
 .settings-facts { display: grid; gap: 10px; margin: 0 0 8px; }
-.settings-facts div { display: grid; grid-template-columns: 150px 1fr; gap: 10px; }
+.settings-facts > div { display: grid; grid-template-columns: 150px 1fr; gap: 10px; }
+.settings-location { display: grid; gap: 8px; }
 .settings-facts dt { color: var(--muted); font-size: 0.88rem; }
 .settings-facts dd { margin: 0; overflow-wrap: anywhere; }
 .settings-form { max-width: 420px; }
@@ -756,7 +757,7 @@ button.danger { color: var(--error); }
 @media (max-width: 860px) {
   .settings-body { grid-template-columns: 1fr; }
   .settings-nav { flex-direction: row; flex-wrap: wrap; }
-  .settings-facts div { grid-template-columns: 1fr; gap: 0; }
+  .settings-facts > div { grid-template-columns: 1fr; gap: 0; }
   .settings-label { display: none; }
 }
 
@@ -1224,3 +1225,11 @@ button.danger { color: var(--error); }
 .explore-accent { position: absolute; inset: 0 0 auto; height: 4px; background: var(--tone); }
 .explore-title { font-weight: 700; font-size: 1rem; }
 .explore-tile p { margin: 4px 0 10px; }
+
+/* ---------- optional "about you" questions ---------- */
+.about-you { display: grid; gap: 14px; }
+.about-you fieldset { border: 0; padding: 0; margin: 0; display: grid; gap: 8px; }
+.about-you legend { font-weight: 600; margin-bottom: 6px; padding: 0; }
+.chip-choices { display: flex; flex-wrap: wrap; gap: 8px; }
+.chip-choices .chip.on { background: color-mix(in srgb, var(--accent) 10%, var(--surface)); color: var(--accent); box-shadow: inset 0 0 0 1.5px var(--accent); font-weight: 600; }
+.suggest-targets { display: grid; gap: 8px; margin-bottom: 12px; }

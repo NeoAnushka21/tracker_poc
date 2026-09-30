@@ -111,7 +111,7 @@ function steps(name: string | null): Step[] {
       title: "9. Settings",
       body: (
         <>
-          <p>Open <b>⚙ Settings</b> to change your calorie and macro <b>targets</b>, switch <b>light or dark</b> theme, change or set your password, download your data, or delete your account.</p>
+          <p>Open <b>⚙ Settings</b> to change your calorie and macro <b>targets</b>, fill in or change the optional <b>About you</b> answers (diet, allergies, pace, meal times, training, health), switch <b>light or dark</b> theme, change or set your password, download your data, or delete your account.</p>
           <p>That's it. Head to <b>Chat</b> and tell {BOT_NAME} what you had today!</p>
         </>
       ),
