@@ -42,6 +42,10 @@
 }
 
 * { box-sizing: border-box; }
+/* Page defaults the design preview supplied: `hidden` always wins (the status note, spinners), images fit. */
+[hidden] { display: none !important; }
+img { max-width: 100%; }
+:root { color-scheme: light; }
 html { scroll-behavior: smooth; scroll-padding-top: 76px; }
 body { background: var(--bg); color: var(--text); font-family: var(--font); font-size: 16px; line-height: 1.6; margin: 0; }
 .wrap { max-width: 1120px; margin: 0 auto; padding-inline: clamp(16px, 4vw, 32px); }
