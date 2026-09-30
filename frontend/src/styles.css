@@ -953,11 +953,20 @@ button.danger { color: var(--error); }
 .ia-mode { margin: 0; }
 .ia-mode button { padding: 5px 14px; font-size: 0.85rem; }
 .ia-select { width: auto; flex: 1; min-width: 150px; max-width: 260px; padding: 7px 10px; font-size: 0.88rem; }
-.ia-go { color: var(--accent-text); width: 36px; height: 36px; }
-.ia-bottom { justify-content: space-between; }
-.ia-qty-form { display: flex; align-items: center; gap: 6px; }
+/* Item edit panel: 1. amount in this meal (own Save), 2. move / copy (secondary), 3. icons */
+.ia-section { display: grid; gap: 6px; padding: 10px 12px; border-radius: 12px; background: var(--surface); border: 1px solid var(--border); }
+.ia-label { font-size: 0.78rem; font-weight: 700; color: var(--muted); }
+.ia-go {
+  display: inline-flex; align-items: center; gap: 6px; padding: 7px 14px; border-radius: 999px; font-weight: 650; font-size: 0.85rem;
+  background: var(--surface-2); color: var(--text); border: 1px solid var(--border);
+}
+.ia-go:hover:not(:disabled) { border-color: var(--accent); color: var(--accent); }
+.ia-bottom { justify-content: flex-end; }
 .ia-qty { width: 90px; padding: 6px 10px; }
-.ia-save:not(:disabled) { color: var(--accent); background: var(--accent-soft); }
+.ia-preview { color: var(--muted); }
+.ia-preview.changed { color: var(--accent); }
+.ia-preview b { color: var(--text); }
+.ia-save { margin-left: auto; padding: 7px 18px; border-radius: 999px; }
 .ia-icons { display: flex; gap: 2px; margin-left: auto; }
 
 /* ---------- body profile ---------- */

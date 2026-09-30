@@ -8,7 +8,7 @@ import AnalysisPage from "./AnalysisPage";
 import MacBroInvite from "./MacBroInvite";
 import MacroChips from "./MacroChips";
 import {
-  AppleIcon, ArrowRightIcon, BowlIcon, ChatIcon, CheckIcon, ChevronDownIcon, CloseIcon, CupIcon, MoonIcon, PencilIcon,
+  AppleIcon, ArrowRightIcon, BowlIcon, ChatIcon, ChevronDownIcon, CloseIcon, CupIcon, MoonIcon, PencilIcon,
   SunriseIcon, TrashIcon, TrendIcon, WaterDrop,
 } from "./icons";
 
@@ -268,37 +268,49 @@ function ItemActions({ day, item, meal, isToday, onChanged, onAskMacBro, onClose
   const qtyChanged = Number(qty) > 0 && Number(qty) !== item.quantity;
   const id = item.id!;
 
+  // Live preview of the new amount: nutrients scale with it (as the server does on save).
+  const factor = Number(qty) > 0 ? Number(qty) / item.quantity : 1;
+
   return (
     <div className="item-actions" role="group" aria-label={`Actions for ${item.ingredient_name}`}>
-      <form className="ia-row" onSubmit={(e) => {
+      {/* 1. Change the amount in this meal: its own Save, so it's never confused with Move. */}
+      <form className="ia-section ia-amount" onSubmit={(e) => { e.preventDefault(); if (qtyChanged) run(() => api.setItemQuantity(id, Number(qty))); }}>
+        <label className="ia-label" htmlFor={`qty-${id}`}>Amount in {MEAL_LABEL[meal] ?? meal}</label>
+        <div className="ia-row">
+          <input id={`qty-${id}`} type="number" step="any" min="0.01" value={qty} onChange={(e) => setQty(e.target.value)}
+                 className="ia-qty" />
+          <span className="muted small">{item.unit}</span>
+          <span className={`ia-preview small${qtyChanged ? " changed" : ""}`} aria-live="polite">
+            <b className="num">{Math.round(item.calories * factor)}</b> kcal · <b className="num">{grams(item.protein_g * factor)}</b> protein
+          </span>
+          <button className="primary ia-save" disabled={busy || !qtyChanged}>Save</button>
+        </div>
+      </form>
+
+      {/* 2. Move or copy the food to another meal. */}
+      <form className="ia-section" onSubmit={(e) => {
         e.preventDefault();
         run(() => api.transferItem(id, destValid, mode, mode === "copy" && !isToday ? todayIso : undefined));
       }}>
-        <div className="segmented ia-mode" role="radiogroup" aria-label="Move or copy">
-          {(["move", "copy"] as const).map((m) => (
-            <button key={m} type="button" role="radio" aria-checked={mode === m} className={mode === m ? "on" : ""}
-                    onClick={() => setMode(m)}>{m === "move" ? "Move" : "Copy"}</button>
-          ))}
-        </div>
-        <label className="sr-only" htmlFor={`dest-${id}`}>{mode === "move" ? "Move to" : "Copy to"}</label>
-        <select id={`dest-${id}`} className="ia-select" value={destValid} onChange={(e) => setDest(e.target.value)}>
-          {targets.map((m) => <option key={m} value={m}>{mode === "copy" && !isToday ? `Today's ${MEAL_LABEL[m].toLowerCase()}` : MEAL_LABEL[m]}</option>)}
-        </select>
-        <button className="primary icon-btn ia-go" disabled={busy}
-                aria-label={`${mode === "move" ? "Move" : "Copy"} to ${MEAL_LABEL[destValid]}`} title={mode === "move" ? "Move" : "Copy"}>
-          <ArrowRightIcon />
-        </button>
-      </form>
-      <div className="ia-row ia-bottom">
-        <form className="ia-qty-form" onSubmit={(e) => { e.preventDefault(); if (qtyChanged) run(() => api.setItemQuantity(id, Number(qty))); }}>
-          <label className="sr-only" htmlFor={`qty-${id}`}>Quantity</label>
-          <input id={`qty-${id}`} type="number" step="any" min="0.01" value={qty} onChange={(e) => setQty(e.target.value)}
-                 className="ia-qty" title="Quantity (nutrients scale with the amount)" />
-          <span className="muted small">{item.unit}</span>
-          <button className="ghost icon-btn ia-save" disabled={busy || !qtyChanged} aria-label="Save quantity" title="Save quantity">
-            <CheckIcon />
+        <span className="ia-label" id={`transfer-${id}`}>Move or copy to another meal</span>
+        <div className="ia-row" role="group" aria-labelledby={`transfer-${id}`}>
+          <div className="segmented ia-mode" role="radiogroup" aria-label="Move or copy">
+            {(["move", "copy"] as const).map((m) => (
+              <button key={m} type="button" role="radio" aria-checked={mode === m} className={mode === m ? "on" : ""}
+                      onClick={() => setMode(m)}>{m === "move" ? "Move" : "Copy"}</button>
+            ))}
+          </div>
+          <label className="sr-only" htmlFor={`dest-${id}`}>{mode === "move" ? "Move to" : "Copy to"}</label>
+          <select id={`dest-${id}`} className="ia-select" value={destValid} onChange={(e) => setDest(e.target.value)}>
+            {targets.map((m) => <option key={m} value={m}>{mode === "copy" && !isToday ? `Today's ${MEAL_LABEL[m].toLowerCase()}` : MEAL_LABEL[m]}</option>)}
+          </select>
+          <button className="ia-go" disabled={busy} title={`${mode === "move" ? "Move" : "Copy"} to ${MEAL_LABEL[destValid]}`}>
+            {mode === "move" ? "Move" : "Copy"} <ArrowRightIcon />
           </button>
-        </form>
+        </div>
+      </form>
+
+      <div className="ia-row ia-bottom">
         <div className="ia-icons">
           <button type="button" className="ghost icon-btn" disabled={busy} aria-label="Edit in chat" title="Edit in chat"
                   onClick={() => { onClose(); onAskMacBro(`Edit the ${item.ingredient_name} in my ${MEAL_LABEL[meal].toLowerCase()}: `, day); }}>
