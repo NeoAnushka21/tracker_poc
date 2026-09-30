@@ -1,8 +1,9 @@
 # Render Blueprint (guide: docs/deployment.md). Secrets are entered in the Render dashboard, never here.
 # - omniai: free web service; builds the React app and runs FastAPI, which serves the site and /api.
 #   The database is Neon Postgres (external). Free web services sleep after ~15 min idle.
-# - omniai-app: free static site (never sleeps) with only the launcher page: it shows the dancing
-#   MacBro while omniai wakes up, then opens it, so visitors never see Render's own waking page.
+# - omniai-app: free static site (never sleeps) whose start page is the welcome page: it shows at once,
+#   wakes omniai in the background, and Join / Log in open the app when it answers, so visitors never
+#   see Render's own waking page. Old links to an app tab (#dashboard...) are forwarded.
 services:
   - type: web
     name: omniai
@@ -53,18 +54,18 @@ services:
   - type: web
     name: omniai-app
     runtime: static
-    # The launcher becomes the site's start page; the app's own index.html isn't published here.
+    # The welcome page becomes the site's start page; the app's own index.html isn't published here.
     buildCommand: >-
       cd frontend && npm ci --include=dev && npm run build &&
-      mv dist/launcher.html dist/index.html
+      mv dist/welcome.html dist/index.html
     staticPublishPath: frontend/dist
     autoDeployTrigger: checksPass
     routes:
-      - type: rewrite            # any path (e.g. an old bookmark) shows the launcher
+      - type: rewrite            # any path (e.g. an old bookmark) shows the welcome page
         source: /*
         destination: /index.html
     envVars:
       - key: NODE_VERSION
         value: "24"
-      - key: VITE_APP_URL        # where the launcher sends people once the app is awake
+      - key: VITE_APP_URL        # the app the welcome page wakes and sends people to
         value: https://omniai-hkv2.onrender.com

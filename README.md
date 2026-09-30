@@ -112,7 +112,7 @@ npm install
 npm run dev
 ```
 
-Open http://omniai.localhost:5173 (any `*.localhost` name reaches your machine; the hostname is `APP_DEV_HOST` in `frontend/src/brand.ts`, still named after the app's earlier name). The dev server proxies `/api` to the backend on port 8000. The launcher page (the dancing-MacBro wake screen used in production) is at http://omniai.localhost:5173/launcher.html.
+Open http://omniai.localhost:5173 (any `*.localhost` name reaches your machine; the hostname is `APP_DEV_HOST` in `frontend/src/brand.ts`, still named after the app's earlier name). The dev server proxies `/api` to the backend on port 8000. The welcome page (where everyone who isn't signed in starts) is at http://omniai.localhost:5173/welcome.
 
 **Tests**
 
@@ -156,7 +156,7 @@ Keep these in sync with every code or UI change. See the checklist in [docs/READ
 
 ## Deployment
 
-Production runs on free tiers: an always-on launcher page (Render static site `omniai-app`) shows a dancing-MacBro screen while the app (Render free web service, https://omniai-hkv2.onrender.com) wakes up, with data in Neon (free Postgres). Pushes to `main` deploy after CI passes. The web addresses still use the app's earlier name, OmniAI. See [docs/deployment.md](docs/deployment.md).
+Production runs on free tiers: the always-on **welcome page** (Render static site `omniai-app`, https://omniai-app.onrender.com) shows at once and wakes the app (Render free web service, https://omniai-hkv2.onrender.com) in the background, so Join and Log in open it without Render's waiting page; with data in Neon (free Postgres). Pushes to `main` deploy after CI passes. The web addresses still use the app's earlier name, OmniAI. See [docs/deployment.md](docs/deployment.md).
 
 **Admin console:** reached through **Admin login** on the sign-in page, only for the configured admin email, with optional two-step sign-in. It shows users and activity with read-only access, and every view is written to an audit log.
 

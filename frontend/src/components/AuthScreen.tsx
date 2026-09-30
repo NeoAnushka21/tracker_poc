@@ -6,8 +6,20 @@ import { APP_NAME, APP_TAGLINE } from "../brand";
 import ThemeToggle from "./ThemeToggle";
 import GoogleButton from "./GoogleButton";
 
-export default function AuthScreen({ onAuthed }: { onAuthed: (u: User) => void }) {
-  const [mode, setMode] = useState<"login" | "register" | "admin" | "forgot">("login");
+type Mode = "login" | "register" | "admin" | "forgot";
+
+export default function AuthScreen({ onAuthed, initialMode = "login" }: {
+  onAuthed: (u: User) => void;
+  /** From the link that opened it: #login or #signup (the welcome page's Log in / Join). */
+  initialMode?: "login" | "register";
+}) {
+  const [mode, setModeState] = useState<Mode>(initialMode);
+  /** Switching between Log in and Create account keeps the address in step (#login / #signup),
+   *  so a refresh stays on the same form; other modes keep the current address. */
+  const setMode = (m: Mode) => {
+    setModeState(m);
+    if (m === "login" || m === "register") window.history.replaceState(null, "", m === "login" ? "#login" : "#signup");
+  };
   const [resetAvailable, setResetAvailable] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);   // e.g. "a reset link is on its way"
   const [needCode, setNeedCode] = useState(false);   // admin with two-step sign-in on
@@ -128,6 +140,7 @@ export default function AuthScreen({ onAuthed }: { onAuthed: (u: User) => void }
 
   return (
     <div className="center auth-page">
+      <a className="auth-back" href="/welcome">‹ {APP_NAME} home</a>
       <div className="auth-theme"><ThemeToggle /></div>
       <form className={`card auth-card ${mode === "admin" ? "admin-auth" : ""}`} onSubmit={submit}>
         <div className="auth-brand">

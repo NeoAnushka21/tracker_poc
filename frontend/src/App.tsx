@@ -37,6 +37,18 @@ function tabFromHash(): TabId {
 
 const analysisFromHash = () => window.location.hash === "#analysis";
 
+/** Signed out: #login / #signup open the sign-in page in that mode; anything else goes to the
+ *  welcome page (/welcome), the start point for everyone who isn't signed in. */
+function authModeFromHash(): "login" | "register" | null {
+  const h = window.location.hash;
+  return h === "#login" ? "login" : h === "#signup" ? "register" : null;
+}
+
+function GoToWelcome() {
+  useEffect(() => { window.location.replace("/welcome"); }, []);
+  return null;
+}
+
 /** Chat was a tab until 2026-09-30; an old #chat link opens the chat window on Home. */
 const chatFromHash = () => window.location.hash === "#chat";
 
@@ -110,7 +122,10 @@ export default function App() {
 
   if (loading) return waking ? null : <DelayedWakeScreen />;
   if (error) return <WakeScreen stalled onRetry={() => window.location.reload()} />;
-  if (!user) return <AuthScreen onAuthed={setUser} />;
+  if (!user) {
+    const mode = authModeFromHash();
+    return mode ? <AuthScreen onAuthed={setUser} initialMode={mode} /> : <GoToWelcome />;
+  }
 
   const settingsButton = (
     <button className="ghost settings-btn" onClick={() => setShowSettings(true)} aria-label="Settings" title="Settings">

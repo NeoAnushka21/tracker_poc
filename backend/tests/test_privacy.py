@@ -1,5 +1,5 @@
 """Privacy: adults only (date of birth checked), and Download my data."""
-from datetime import date, timedelta
+from datetime import datetime, timedelta, timezone
 
 from tests.conftest import ONBOARDING, tool_reply
 from tests.test_foods import CHICKEN, log_and_confirm
@@ -11,7 +11,9 @@ def register(client, email="me@example.com"):
 
 
 def years_ago(n: int, extra_days: int = 0) -> str:
-    today = date.today()
+    # The onboarding below says timezone "UTC", so "today" is the UTC date (the computer's local date
+    # differs from it for part of the day, e.g. 00:00-05:30 in India).
+    today = datetime.now(timezone.utc).date()
     try:
         d = today.replace(year=today.year - n)
     except ValueError:        # 29 February
@@ -33,7 +35,7 @@ def test_adults_only(client):
 
 def test_impossible_dates(client):
     register(client)
-    tomorrow = (date.today() + timedelta(days=2)).isoformat()
+    tomorrow = (datetime.now(timezone.utc).date() + timedelta(days=2)).isoformat()
     for dob in (tomorrow, years_ago(121)):
         r = onboard(client, dob)
         assert r.status_code == 422 and r.json()["detail"] == "Please check your date of birth"

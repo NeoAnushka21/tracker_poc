@@ -2,7 +2,7 @@
  * The free Render server sleeps after ~15 minutes idle and takes ~30–60 s to wake. While it's
  * waking, requests hang or get Render's own HTML page instead of our JSON. This module detects
  * that, tells the UI to show the WakeScreen, and waits until /api/health answers again.
- * The launcher page (launcher.html) uses the same check against the app's address.
+ * The welcome page (welcome.ts) uses the same check against the app's address.
  */
 import { useSyncExternalStore } from "react";
 

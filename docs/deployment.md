@@ -1,8 +1,8 @@
 # Deploying Tandurust (Render + Neon)
 
-> Last updated: 2026-09-30 (UptimeRobot monitor live, server kept awake; keep-awake monitor steps, `/api/health` answers HEAD; monthly USDA food list check; earlier: always-on launcher page).
+> Last updated: 2026-10-01 (the static site's start page is now the welcome page, not the launcher; the app serves it at /welcome; 2026-09-30: UptimeRobot monitor live, server kept awake; keep-awake monitor steps, `/api/health` answers HEAD; monthly USDA food list check; earlier: always-on launcher page).
 
-**Open the app from the launcher:** https://omniai-app.onrender.com (static site `omniai-app`, never sleeps; the exact address is shown on its Render page). **App:** https://omniai-hkv2.onrender.com (Render service `omniai`, Singapore) · Neon project `young-star-73873699` (AWS Singapore). Local data was copied into Neon on 2026-09-29 (159 rows, 13 tables); Neon is now the real database. The NVIDIA backup is off in production. An UptimeRobot monitor (free, since 2026-09-30) pings `/api/health` every 5 minutes, so the app stays awake and down alerts go by email. Update this file whenever the deployment setup changes (see [README.md](README.md)).
+**Open the app from the welcome page:** https://omniai-app.onrender.com (static site `omniai-app`, never sleeps; the exact address is shown on its Render page). **App:** https://omniai-hkv2.onrender.com (Render service `omniai`, Singapore) · Neon project `young-star-73873699` (AWS Singapore). Local data was copied into Neon on 2026-09-29 (159 rows, 13 tables); Neon is now the real database. The NVIDIA backup is off in production. An UptimeRobot monitor (free, since 2026-09-30) pings `/api/health` every 5 minutes, so the app stays awake and down alerts go by email. Update this file whenever the deployment setup changes (see [README.md](README.md)).
 
 > The app is shown as **Tandurust** (renamed from OmniAI on 2026-09-30, display only). Everything named below keeps its "OmniAI" / "omniai" name: the Render services and Blueprint, the live URL, the Google Cloud project, sign-in client and consent-screen app name, and the uptime monitor.
 
@@ -90,13 +90,19 @@ Optional: the NVIDIA backup is **off** in production, because its free tier is f
 
 ---
 
-## The launcher: no Render "waking up" page
+## The welcome page: no Render "waking up" page
 
-The free web service sleeps after about 15 minutes idle, and Render shows its own black "waking up" page to browsers while it starts. That page can't be customised. So the Blueprint also creates **`omniai-app`**, a free **static site** that never sleeps and contains only our launcher page:
+The free web service sleeps after about 15 minutes idle, and Render shows its own black "waking up" page to browsers while it starts. That page can't be customised. So the Blueprint also creates **`omniai-app`**, a free **static site** that never sleeps. Since 2026-10-01 its start page is the **welcome page** (`frontend/welcome.html`; before, a "launcher" wake screen):
 
-1. You open the launcher address (bookmark this one, not the app's).
-2. If the app is awake, it opens almost instantly. If not, the **dancing MacBro** screen shows ("MacBro is warming up the kitchen…") while the launcher polls `/api/health`; it opens the app as soon as it answers, usually 30–60 s. It keeps the tab in the link (e.g. `#dashboard`).
-3. If the app falls asleep while it's open in a tab, the next action shows the same screen as an overlay and continues by itself once the server is back.
+1. You open the static site's address (bookmark and share this one, not the app's).
+2. The welcome page shows at once and starts waking the app in the background (it polls `/api/health`, which allows other origins).
+3. **Join** / **Log in** open the app's sign-up / login page (`#signup` / `#login`) as soon as it answers; until then the button shows a spinner and a note, and it moves on by itself (usually 30–60 s).
+4. Old links with an app tab (e.g. `…/#dashboard`) are forwarded into the app the same way.
+5. If the app falls asleep while it's open in a tab, the next action shows the dancing-MacBro wake screen as an overlay and continues by itself once the server is back.
+
+The app serves the same welcome page at **`/welcome`** and sends everyone who isn't signed in there, so the app's own address starts at the welcome page too.
+
+**After this change is pushed (You):** the static site's build command in `render.yaml` changed (`mv dist/welcome.html dist/index.html`). If Render doesn't pick it up by itself, open Render → **Blueprints** → the OmniAI Blueprint → **Sync** / **Apply**, or set the build command on the `omniai-app` service by hand.
 
 **Adding it the first time (You):** after this change is pushed, Render → **Blueprints** → the OmniAI Blueprint → it shows the new `omniai-app` service → **Sync** / **Apply**. No secrets are needed. If the app's address ever changes, update `VITE_APP_URL` in `render.yaml`.
 
@@ -132,7 +138,7 @@ Reports carry the error and stack trace only: no request bodies (chat, food, pas
 2. **+ New monitor**:
    - Monitor type: **HTTP(s)**
    - Friendly name: `OmniAI app`
-   - URL: `https://omniai-hkv2.onrender.com/api/health` (the **app** address, not the launcher: the launcher is a static site that never sleeps)
+   - URL: `https://omniai-hkv2.onrender.com/api/health` (the **app** address, not the static site: that one never sleeps)
    - Monitoring interval: **5 minutes**
    - Alert contact: your email
    - **Create monitor.**
@@ -165,7 +171,7 @@ The app sends a Content-Security-Policy and other security headers itself (see t
 
 | What | Why | Effect |
 |---|---|---|
-| First visit after about 15 min idle takes **30–60 s** | Render's free service sleeps when idle | The launcher shows the dancing-MacBro wake screen instead of Render's page. Later requests are fast. Rare since 2026-09-30: the UptimeRobot monitor keeps it awake; it can still happen right after a redeploy. |
+| First visit after about 15 min idle takes **30–60 s** | Render's free service sleeps when idle | The welcome page shows at once and wakes it; Join / Log in wait with a spinner. Inside the app, the dancing-MacBro wake screen instead of Render's page. Later requests are fast. Rare since 2026-09-30: the UptimeRobot monitor keeps it awake; it can still happen right after a redeploy. |
 | Database wakes in about a second after 5 min idle | Neon scales to zero | Barely noticeable. `/api/health` doesn't touch the database, so pingers don't keep Neon awake. |
 | Limits | Render: 750 hours and 5 GB bandwidth a month. Neon: 0.5 GB storage, 100 compute hours a month. | Plenty for a beta |
 | A push to `main` deploys **after CI passes** | `autoDeployTrigger: checksPass` (both services) | CI takes a few minutes, then the deploy about 3–6 min. A failed check means no deploy: the live app stays on the last good version. Tables and new columns are created on startup; data is kept. |

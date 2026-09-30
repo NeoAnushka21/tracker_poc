@@ -1,0 +1,469 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <title>%APP_NAME% · %APP_TAGLINE%</title>
+    <meta name="description" content="%APP_NAME%: %APP_TAGLINE%. Log meals by just saying what you ate. Free to use." />
+    <meta name="theme-color" content="#2e7d32" />
+    <link rel="icon" type="image/png" sizes="32x32" href="/brand/favicon-32.png" />
+    <link rel="icon" type="image/png" sizes="64x64" href="/brand/favicon-64.png" />
+    <link rel="apple-touch-icon" href="/brand/apple-touch-icon.png" />
+    <script src="/theme-init.js"></script>
+    <script type="module" src="/src/welcome.ts"></script>
+  </head>
+  <body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">
+  <defs><clipPath id="mb-clip"><circle cx="32" cy="32" r="32"/></clipPath></defs>
+  <symbol id="macbro" viewBox="0 0 64 64">
+    <g clip-path="url(#mb-clip)">
+      <circle cx="32" cy="32" r="32" class="mb-bg"/>
+      <path d="M6 64c0-11 7-18 15-20l5-2h12l5 2c8 2 15 9 15 20z" class="mb-shirt"/>
+      <image href="/brand/emblem-96.png" x="25" y="47.5" width="14" height="14" preserveAspectRatio="xMidYMid meet"/>
+      <rect x="28" y="36" width="8" height="8" rx="3" class="mb-skin"/>
+      <circle cx="18.5" cy="27" r="3.2" class="mb-skin"/>
+      <circle cx="45.5" cy="27" r="3.2" class="mb-skin"/>
+      <circle cx="32" cy="26" r="13.5" class="mb-skin"/>
+      <path d="M18.5 25c-.5-8.5 5.5-14 13.5-14 8.5 0 14 5.5 13.5 13.5-2.5-4-6-6-10.5-6.3 1 1.3 1.3 2.8.8 4-3-2.8-7.8-4-12.3-2.6-2.6.8-4 2.6-5 5.4z" class="mb-hair"/>
+      <circle cx="26.8" cy="27.5" r="1.7" class="mb-ink"/>
+      <circle cx="37.2" cy="27.5" r="1.7" class="mb-ink"/>
+      <path d="M27 32.5c2.8 3 7.2 3 10 0" class="mb-smile"/>
+      <circle cx="23.5" cy="31.5" r="1.8" class="mb-cheek"/>
+      <circle cx="40.5" cy="31.5" r="1.8" class="mb-cheek"/>
+    </g>
+  </symbol>
+</svg>
+
+<header class="topbar">
+  <div class="wrap">
+    <a class="brand" href="#top" aria-label="Tandurust, back to top"><span class="emblem" aria-hidden="true"></span>Tandurust</a>
+    <nav class="topnav" aria-label="Sections">
+      <a href="#meet">MacBro</a>
+      <a href="#ways">How you log</a>
+      <a href="#pantry">My Foods</a>
+      <a href="#about">About</a>
+    </nav>
+    <button type="button" class="btn btn-ghost btn-small" data-go="login" id="login-top">Log in</button>
+  </div>
+</header>
+
+<main id="top">
+  <!-- ======================= hero ======================= -->
+  <section class="hero" aria-labelledby="hero-title">
+    <div class="wrap">
+      <div class="hero-copy">
+        <p class="eyebrow">AI meal &amp; wellness tracker</p>
+        <h1 id="hero-title">Track your food by just <span class="hl">saying</span> what you ate.</h1>
+        <p class="lede">Tell MacBro, your Tandurust assistant, what you ate and how much, typed or spoken. He works out the calories and protein, asks when something is missing, and logs it when you tap once. Prefer to add food yourself? You can do that too.</p>
+        <div class="join">
+          <p class="join-label" id="join-label">
+            Join the Tandurust community
+            <svg class="join-arrow" viewBox="0 0 54 44" fill="none" aria-hidden="true">
+              <path d="M4 6c16-2 30 4 32 18 1 6-1 10-4 14" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"/>
+              <path d="M24 32l8 7 5-10" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+          </p>
+          <div class="join-row">
+            <button type="button" class="btn btn-primary" data-go="signup" id="join-hero" aria-describedby="join-label">Join</button>
+            <p class="fine">Already a member? <a href="/#login" data-go="login">Log in</a></p>
+          </div>
+        </div>
+        <p class="fine">Free to use. India only for now, for adults (18+).</p>
+      </div>
+
+      <div class="demo">
+        <div class="demo-card">
+          <div class="demo-head">
+            <span class="mb" aria-hidden="true"><svg><use href="#macbro"/></svg></span>
+            <div><b>MacBro</b><span class="sub">Nutrition assistant</span></div>
+            <button type="button" class="play" id="play" aria-label="Pause the examples" title="Pause">
+              <svg id="play-icon" viewBox="0 0 12 12" aria-hidden="true"><rect x="2" y="1.5" width="2.8" height="9" rx="1" fill="currentColor"/><rect x="7.2" y="1.5" width="2.8" height="9" rx="1" fill="currentColor"/></svg>
+            </button>
+          </div>
+
+          <div class="tabs" role="tablist" aria-label="Example chats with MacBro">
+            <button type="button" role="tab" id="tab-1" aria-controls="chat-1" aria-selected="true" tabindex="0"><span class="num" aria-hidden="true">1</span>Amounts given<span class="prog" aria-hidden="true"><i></i></span></button>
+            <button type="button" role="tab" id="tab-2" aria-controls="chat-2" aria-selected="false" tabindex="-1"><span class="num" aria-hidden="true">2</span>Amounts missing<span class="prog" aria-hidden="true"><i></i></span></button>
+            <button type="button" role="tab" id="tab-3" aria-controls="chat-3" aria-selected="false" tabindex="-1"><span class="num" aria-hidden="true">3</span>Raw or cooked?<span class="prog" aria-hidden="true"><i></i></span></button>
+          </div>
+
+          <div class="panels">
+            <!-- 1: everything given, logged straight away -->
+            <div class="panel" role="tabpanel" id="chat-1" aria-labelledby="tab-1">
+              <p class="msg-user">2 rotis, 100 g dal and 150 g cooked rice for lunch</p>
+              <div class="msg-bot">
+                <span class="mb" aria-hidden="true"><svg><use href="#macbro"/></svg></span>
+                <div class="msg-bot-body">
+                  <p class="bubble-bot">Proper lunch! Here it is. Check it and tap Looks good.</p>
+                  <div class="proposal">
+                    <div class="proposal-head"><b>Lunch · 1:15 PM</b><span class="pill-warn">Not saved yet</span></div>
+                    <div class="bottom-line">
+                      <div><strong>548</strong><span>kcal</span></div>
+                      <div><strong>18 g</strong><span>protein</span></div>
+                    </div>
+                    <ul class="items">
+                      <li><span>Roti, whole wheat</span><span class="qty">2 pieces</span><span class="kcal">240</span></li>
+                      <li><span>Toor dal, cooked</span><span class="qty">100 g</span><span class="kcal">113</span></li>
+                      <li><span>White rice, cooked</span><span class="qty">150 g</span><span class="kcal">195</span></li>
+                    </ul>
+                    <div class="chips"><span class="chip p"><i></i>P 18 g</span><span class="chip c"><i></i>C 102 g</span><span class="chip f"><i></i>F 8 g</span></div>
+                    <div class="proposal-actions" aria-hidden="true"><span class="fake-btn primary">Looks good</span><span class="fake-btn">Needs changes</span><span class="fake-btn">Cancel</span></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- 2: amounts missing: MacBro asks instead of guessing -->
+            <div class="panel is-off" role="tabpanel" id="chat-2" aria-labelledby="tab-2" inert>
+              <p class="msg-user">had roti and dal for dinner</p>
+              <div class="msg-bot">
+                <span class="mb" aria-hidden="true"><svg><use href="#macbro"/></svg></span>
+                <div class="msg-bot-body">
+                  <p class="bubble-bot">How many rotis, and about how much dal? A katori is around 150 g.</p>
+                  <div class="quick" aria-hidden="true"><span class="picked">2 rotis, 1 katori</span><span>3 rotis, 1 katori</span><span>2 rotis, ½ katori</span></div>
+                </div>
+              </div>
+              <p class="msg-user">2 rotis, 1 katori</p>
+              <div class="msg-bot">
+                <span class="mb" aria-hidden="true"><svg><use href="#macbro"/></svg></span>
+                <div class="msg-bot-body">
+                  <div class="proposal">
+                    <div class="proposal-head"><b>Dinner · 8:40 PM</b><span class="pill-warn">Not saved yet</span></div>
+                    <div class="bottom-line">
+                      <div><strong>410</strong><span>kcal</span></div>
+                      <div><strong>17 g</strong><span>protein</span></div>
+                    </div>
+                    <ul class="items">
+                      <li><span>Roti, whole wheat</span><span class="qty">2 pieces</span><span class="kcal">240</span></li>
+                      <li><span>Toor dal, cooked</span><span class="qty">150 g</span><span class="kcal">170</span></li>
+                    </ul>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- 3: raw or cooked is never assumed -->
+            <div class="panel is-off" role="tabpanel" id="chat-3" aria-labelledby="tab-3" inert>
+              <p class="msg-user">200 g rice at lunch</p>
+              <div class="msg-bot">
+                <span class="mb" aria-hidden="true"><svg><use href="#macbro"/></svg></span>
+                <div class="msg-bot-body">
+                  <p class="bubble-bot">Was the rice weighed raw or cooked? Raw rice has almost 3 times the calories of cooked, so I won't guess.</p>
+                  <div class="quick" aria-hidden="true"><span>Raw</span><span class="picked">Cooked</span></div>
+                </div>
+              </div>
+              <p class="msg-user">Cooked</p>
+              <div class="msg-bot">
+                <span class="mb" aria-hidden="true"><svg><use href="#macbro"/></svg></span>
+                <div class="msg-bot-body">
+                  <div class="proposal">
+                    <div class="proposal-head"><b>Lunch · 1:20 PM</b><span class="pill-warn">Not saved yet</span></div>
+                    <div class="bottom-line">
+                      <div><strong>260</strong><span>kcal</span></div>
+                      <div><strong>5 g</strong><span>protein</span></div>
+                    </div>
+                    <ul class="items">
+                      <li><span>White rice, cooked</span><span class="qty">200 g</span><span class="kcal">260</span></li>
+                    </ul>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <p class="chat-caption"><span class="slide-count" id="slide-count">Example 1 of 3</span> · MacBro never guesses an amount. If it's missing, he asks.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ======================= why ======================= -->
+  <section class="band alt" aria-labelledby="why-title">
+    <div class="wrap">
+      <div class="section-head">
+        <p class="kicker">Why Tandurust</p>
+        <h2 id="why-title">Tracking works. Typing every food is why people stop.</h2>
+        <p>Most trackers make you search, pick and size each food separately. A home-cooked lunch turns into six entries, and after a few days most of us give up. Tandurust is for people who want to track and stay consistent without the chore.</p>
+      </div>
+      <div class="compare">
+        <div class="way old">
+          <h3>The usual way</h3>
+          <ol>
+            <li>Search "roti", scroll past 40 results, pick one</li>
+            <li>Choose a serving size, change it to 2</li>
+            <li>Search "dal", guess which of the dals it was</li>
+            <li>Search "rice", raw or cooked, which bowl size</li>
+            <li>Repeat at breakfast, snacks and dinner</li>
+          </ol>
+          <p class="tally">About a dozen taps for one lunch</p>
+        </div>
+        <div class="way new">
+          <h3>With Tandurust</h3>
+          <p class="say">"2 rotis, 100 g dal and 150 g cooked rice for lunch"</p>
+          <p>MacBro splits the meal into foods and works out calories, protein, carbs, fat and fiber. Foods you've logged before come straight from your own saved numbers.</p>
+          <p class="tally">One sentence, one tap</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ======================= MacBro ======================= -->
+  <section class="band" id="meet" aria-labelledby="meet-title">
+    <div class="wrap meet">
+      <div class="meet-intro">
+        <span class="mb" aria-hidden="true"><svg><use href="#macbro"/></svg></span>
+        <h2 id="meet-title">Meet MacBro</h2>
+        <p class="meet-tagline">He does the counting. You just eat.</p>
+        <p>MacBro is the chat assistant inside Tandurust. Think of a supportive gym buddy who is good with numbers: friendly, never preachy, and careful. He only suggests; nothing is saved until you tap Looks good.</p>
+        <p class="meet-quote">"Tell me what you ate. I'll do the maths."</p>
+      </div>
+      <ul class="can" aria-label="What MacBro can do">
+        <li><b>Understands everyday words</b><q>2 rotis, a katori of dal and some salad</q></li>
+        <li><b>Asks instead of assuming</b><q>How many rotis, and about how much dal?</q></li>
+        <li><b>Answers your questions</b><q>How much protein did I have this week?</q></li>
+        <li><b>Fixes things for you</b><q>Move the banana to my evening snack</q></li>
+        <li><b>Remembers your usuals</b><q>Same breakfast as yesterday</q></li>
+      </ul>
+    </div>
+  </section>
+
+  <!-- ======================= two ways to log ======================= -->
+  <section class="band alt" id="ways" aria-labelledby="ways-title">
+    <div class="wrap">
+      <div class="section-head">
+        <p class="kicker">How you log</p>
+        <h2 id="ways-title">Chat when you're busy. Add it yourself when you like.</h2>
+        <p>The chat is the fastest way to stay consistent on busy days. Everything you'd expect from a traditional tracker is there too, and both ways fill the same day.</p>
+      </div>
+      <div class="ways">
+        <div class="mode">
+          <div class="mode-top">
+            <span class="mode-icon"><span class="mb" aria-hidden="true"><svg><use href="#macbro"/></svg></span></span>
+            <div><h3>Chat with MacBro</h3><p class="for">For busy days and whole meals</p></div>
+          </div>
+          <ul>
+            <li><b>One sentence</b> for a whole meal, typed or spoken with the mic.</li>
+            <li><b>A card to check</b> before anything is saved: Looks good, Needs changes or Cancel.</li>
+            <li><b>Past days too:</b> pick a date and fill in a day you missed.</li>
+          </ul>
+        </div>
+        <div class="mode">
+          <div class="mode-top">
+            <span class="mode-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg></span>
+            <div><h3>Add and edit by hand</h3><p class="for">For when you'd rather do it yourself</p></div>
+          </div>
+          <ul>
+            <li><b>+ Add food</b> under any meal: type the food, amount and unit. Your saved foods pop up as you type and are added instantly.</li>
+            <li><b>Change an amount</b> with the pencil on any food; calories and protein update as you type.</li>
+            <li><b>Move or copy</b> a food to another meal, or <b>delete</b> it, in one tap.</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ======================= pantry ======================= -->
+  <section class="band" id="pantry" aria-labelledby="pantry-title">
+    <div class="wrap pantry">
+      <div class="pantry-copy">
+        <div class="section-head" style="margin-bottom:0">
+          <p class="kicker">My Foods</p>
+          <h2 id="pantry-title">Your personal pantry</h2>
+          <p>Every food you confirm is saved to My Foods. The next time you eat it, Tandurust uses exactly the same numbers, instantly, without asking the AI again. The foods you eat most become the fastest to log.</p>
+        </div>
+        <ul>
+          <li><b>Generic</b><span>Everyday foods like paneer, poha or a banana, saved per 100 g or per piece.</span></li>
+          <li><b>Branded</b><span>Packaged foods grouped by brand. Check them against the real pack label using the product's barcode.</span></li>
+          <li><b>My Recipes</b><span>Home dishes made from their raw ingredients, so "3 chapatis" or "1 serving of bhurji" is exact.</span></li>
+          <li><b>Yours to edit</b><span>Correct any number or add your own foods. Your edits are never overwritten.</span></li>
+        </ul>
+      </div>
+      <div class="shelf" aria-label="Example of My Foods">
+        <div class="shelf-top"><b>My Foods</b><span class="demo-tag">Example</span></div>
+        <div class="tabs" aria-hidden="true"><span class="on">Generic (42)</span><span>Branded (6)</span><span>My Recipes (2)</span></div>
+        <ul class="shelf-list">
+          <li><span class="name">Paneer</span><span class="kc"><b>265</b> kcal <span class="muted">per 100 g</span></span></li>
+          <li><span class="name">Poha, cooked</span><span class="kc"><b>130</b> kcal <span class="muted">per 100 g</span></span></li>
+          <li><span class="name">Banana <small>· 118 g per piece</small></span><span class="kc"><b>89</b> kcal <span class="muted">per 100 g</span></span></li>
+          <li><span class="name">Butter <small>· Amul</small><span class="tag">label ✓</span></span><span class="kc"><b>722</b> kcal <span class="muted">per 100 g</span></span></li>
+          <li><span class="name">Chapati<span class="tag rec">recipe</span></span><span class="kc"><b>104</b> kcal <span class="muted">per piece</span></span></li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- ======================= how it works ======================= -->
+  <section class="band alt" aria-labelledby="how-title">
+    <div class="wrap">
+      <div class="section-head">
+        <p class="kicker">How it works</p>
+        <h2 id="how-title">Three steps, and you're in control</h2>
+        <p>Nothing is saved until you say so.</p>
+      </div>
+      <ol class="steps">
+        <li><h3>Tell MacBro what you ate</h3><p>Say the food and how much. Plain words are fine, including Hindi food names and small typos.</p></li>
+        <li><h3>Check his card</h3><p>Calories and protein first, then each food and amount. Fix anything in plain words: "the rice was 200 g".</p></li>
+        <li><h3>Tap Looks good</h3><p>Your day updates straight away: calories left, protein, water and your streaks.</p></li>
+      </ol>
+    </div>
+  </section>
+
+  <!-- ======================= also inside ======================= -->
+  <section class="band" aria-labelledby="get-title">
+    <div class="wrap">
+      <div class="section-head">
+        <p class="kicker">Also inside</p>
+        <h2 id="get-title">Everything around your meals</h2>
+      </div>
+      <div class="features">
+        <div class="feature">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="4"/><circle cx="12" cy="12" r="0.8"/></svg>
+          <div><h3>Targets set for you</h3><p>Calories, protein, carbs, fat and fiber worked out from your profile and goal. Adjust any number.</p></div>
+        </div>
+        <div class="feature">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 18l5-6 4 3 7-9"/><path d="M15 6h5v5"/></svg>
+          <div><h3>Progress and streaks</h3><p>A meal-logging streak, a protein streak, and trends over 7, 14 or 30 days.</p></div>
+        </div>
+        <div class="feature">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3c3.5 4.4 6 7.9 6 11a6 6 0 0 1-12 0c0-3.1 2.5-6.6 6-11z"/></svg>
+          <div><h3>Water</h3><p>A daily water goal with one-tap +250 ml and +500 ml, or just say "drank 1 L water".</p></div>
+        </div>
+        <div class="feature">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 20V10M10 20V4M15 20v-7M20 20v-4"/></svg>
+          <div><h3>Micronutrients</h3><p>Iron, calcium, magnesium, potassium, zinc, vitamins C, B12 and D, and sodium, for every day.</p></div>
+        </div>
+        <div class="feature">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="5" r="2.5"/><path d="M12 8v6M8 10l4 1 4-1M10 21l2-7 2 7"/></svg>
+          <div><h3>Body Stats</h3><p>Weight, BMI, an estimated body-fat percentage and body measurements over time.</p></div>
+        </div>
+        <div class="feature">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3l7 3v6c0 4.5-3 7.5-7 9-4-1.5-7-4.5-7-9V6z"/><path d="M9 12l2 2 4-4"/></svg>
+          <div><h3>Your data stays yours</h3><p>Download everything or delete your account from Settings, any time.</p></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ======================= free ======================= -->
+  <section class="band alt" aria-labelledby="free-title">
+    <div class="wrap free">
+      <div class="section-head" style="margin-bottom:0">
+        <p class="kicker">Pricing</p>
+        <h2 id="free-title">The AI part is free</h2>
+        <p>Many trackers charge for AI logging. Tandurust is <strong>completely free to use today</strong>, AI included. Your saved foods, about 300 built-in foods, water and every button don't count towards the AI limit.</p>
+        <p>Why a limit at all? Tandurust runs on open-source AI models through free services, and those services cap how much we can use. So for now each account gets 20 AI messages a day, reset at midnight.</p>
+      </div>
+      <div style="display:grid;gap:12px;min-width:0">
+        <div class="free-figures">
+          <div class="figure"><strong>₹0</strong><span>to use today</span></div>
+          <div class="figure"><strong>20</strong><span>AI messages a day</span></div>
+          <div class="figure"><strong>300</strong><span>common foods built in</span></div>
+        </div>
+        <p class="later"><b>Looking ahead:</b> if Tandurust grows, we may add an optional paid plan later, for example with more AI messages. For now, it's all free: try it and use it as much as you like within the daily AI limit.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ======================= about ======================= -->
+  <section class="band" id="about" aria-labelledby="about-title">
+    <div class="wrap about">
+      <div class="story">
+        <p class="kicker">About Tandurust</p>
+        <h2 id="about-title">Built in India, in 2026, for everyday eaters</h2>
+        <div class="name-card">
+          <span class="emblem" aria-hidden="true"></span>
+          <div><b lang="hi">तंदुरुस्त</b><span>Tandurust means "healthy, in good shape" in Hindi and Urdu.</span></div>
+        </div>
+        <p>Tandurust started in 2026 with a simple observation: people who track their food do better, especially with protein, and yet most of us stop after a few days. The problem was never motivation. It was <strong>typing every food, one by one</strong>, in apps that barely know a katori of dal from a bowl of pasta.</p>
+        <p>So we built a tracker you can simply talk to, that understands Indian home food, and that remembers what you eat. And because AI logging usually sits behind a subscription, we made it <strong>free to use</strong>, running on open-source AI models.</p>
+        <p>Our goal is a community of people who eat well and track consistently: students, working professionals, people training for strength or recomposition, and anyone who wants to understand their food without it taking over their day.</p>
+      </div>
+      <div class="about-side">
+        <div class="facts" aria-label="Tandurust in brief">
+          <div class="fact"><strong>2026</strong><span>Started</span></div>
+          <div class="fact"><strong>India</strong><span>Built and available</span></div>
+          <div class="fact"><strong>Free</strong><span>To use, AI included</span></div>
+          <div class="fact"><strong>Open-source AI</strong><span>No paid model locked in</span></div>
+        </div>
+        <ul class="principles" aria-label="What Tandurust stands for">
+          <li><b>You stay in control</b><span>MacBro suggests. Nothing is saved until you confirm it.</span></li>
+          <li><b>Honest numbers</b><span>No guessed amounts, real pack labels, and estimates labelled as estimates.</span></li>
+          <li><b>Free while we grow</b><span>Logging, progress and AI help are free today, with no subscription.</span></li>
+          <li><b>Private by default</b><span>Your data is yours to download or delete, any time.</span></li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- ======================= early days + feedback ======================= -->
+  <section class="band alt" id="feedback" aria-labelledby="know-title">
+    <div class="wrap early">
+      <div>
+        <div class="section-head"><p class="kicker">Before you join</p><h2 id="know-title">Early days, and we're listening</h2>
+          <p>Tandurust is in its very first phase. MacBro can make mistakes, so check each card before you save it, and tell us when something looks off.</p>
+        </div>
+        <ul class="notes">
+          <li><b>Where</b><span>Available in India for now.</span></li>
+          <li><b>Who</b><span>For adults, 18 and over.</span></li>
+          <li><b>Numbers</b><span>Calories and nutrients are estimates to help you track, not medical advice.</span></li>
+          <li><b>Changes</b><span>New features and fixes arrive often. Your feedback decides what comes next.</span></li>
+        </ul>
+      </div>
+      <div class="feedback">
+        <h3>Questions, doubts or feedback?</h3>
+        <p>Found a wrong number, got stuck, or have an idea? Write to us. Every message is read.</p>
+        <div class="asks" aria-hidden="true"><span>A wrong estimate</span><span>A bug</span><span>A missing food</span><span>An idea</span><span>Your account</span></div>
+        <div class="mail">
+          <a href="mailto:mhatre.anushka.work@gmail.com?subject=Tandurust%20feedback" id="mail-link">mhatre.anushka.work@gmail.com</a>
+          <button type="button" class="copy" id="copy-mail" data-email="mhatre.anushka.work@gmail.com">Copy</button>
+        </div>
+        <p class="fine" id="copy-note" aria-live="polite">Tip: tell us the date and the meal, so we can find it quickly.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ======================= closing ======================= -->
+  <section class="band" aria-labelledby="closing-title">
+    <div class="wrap">
+      <div class="closing">
+        <div style="display:grid;gap:10px">
+          <h2 id="closing-title">Start with your next meal.</h2>
+          <p class="fine">It takes a minute to sign up. Your targets are worked out for you.</p>
+        </div>
+        <div class="join">
+          <p class="join-label" id="join-label-2">
+            Join the Tandurust community
+            <svg class="join-arrow" viewBox="0 0 54 44" fill="none" aria-hidden="true">
+              <path d="M4 6c16-2 30 4 32 18 1 6-1 10-4 14" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"/>
+              <path d="M24 32l8 7 5-10" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+          </p>
+          <div class="join-row">
+            <button type="button" class="btn btn-primary" data-go="signup" id="join-closing" aria-describedby="join-label-2">Join</button>
+            <p class="fine">Already a member? <a href="/#login" data-go="login">Log in</a></p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer>
+  <div class="wrap">
+    <div class="foot-top">
+      <span class="foot-brand"><span class="emblem" aria-hidden="true"></span>Tandurust <span class="muted" style="font-weight:600">· AI meal &amp; wellness tracker</span></span>
+      <nav aria-label="Legal and contact">
+        <a href="#feedback">Feedback</a>
+        <a href="/privacy" data-app-link>Privacy</a>
+        <a href="/terms" data-app-link>Terms</a>
+      </nav>
+    </div>
+    <p class="legal">Contact: <span style="user-select:all">mhatre.anushka.work@gmail.com</span> · Tandurust™ © 2026. All rights reserved. Made in India. MacBro is Tandurust's chat assistant.</p>
+  </div>
+</footer>
+
+<div class="status" id="status" role="status" aria-live="polite" hidden>
+  <span class="spinner" aria-hidden="true"></span>
+  <div><b id="status-title">Getting Tandurust ready…</b><span id="status-text">This takes up to a minute the first time. You'll go straight in.</span></div>
+</div>
+  </body>
+</html>

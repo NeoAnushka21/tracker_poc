@@ -24,6 +24,7 @@ def site(tmp_path: Path):
     (dist / "index.html").write_text("<html>app</html>")
     (dist / "assets" / "app-123.js").write_text("console.log(1)")
     (dist / "favicon.svg").write_text("<svg/>")
+    (dist / "welcome.html").write_text("<html>welcome</html>")
     (tmp_path / "secret.txt").write_text("nope")
     app = FastAPI()
 
@@ -43,6 +44,15 @@ def test_frontend_served_with_spa_fallback(site):
     assert site.get("/api/ping").json() == {"ok": True}                     # API routes win
     assert site.get("/api/missing").status_code == 404                      # unknown API isn't the app
     assert "nope" not in site.get("/..%2Fsecret.txt").text                  # no escaping dist/
+
+
+def test_welcome_page_is_served_at_welcome(site):
+    """Signed-out visitors land on /welcome (the app redirects there); / is still the app."""
+    for path in ("/welcome", "/welcome/", "/welcome.html"):
+        r = site.get(path)
+        assert r.text == "<html>welcome</html>", path
+    assert site.get("/welcome").headers["cache-control"] == "no-cache"
+    assert site.get("/").text == "<html>app</html>"
 
 
 def test_no_frontend_build_means_api_only(tmp_path):

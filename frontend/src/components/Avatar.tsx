@@ -1,7 +1,8 @@
 import { APP_LOGO, APP_NAME } from "../brand";
 import { useId } from "react";
 
-/** MacBro: a cartoon boy in an "MB" t-shirt. Drawn inline so it scales cleanly. */
+/** MacBro: a cartoon boy in a charcoal t-shirt with the Tandurust emblem on the chest. Drawn inline so it
+ *  scales cleanly; the same colours in light and dark themes (styles.css "MacBro avatar"). */
 export function MacBroAvatar({ size = 32 }: { size?: number }) {
   const clipId = `mb-clip-${useId().replace(/[^a-zA-Z0-9_-]/g, "")}`;
   return (
@@ -14,8 +15,7 @@ export function MacBroAvatar({ size = 32 }: { size?: number }) {
           <circle cx="32" cy="32" r="32" className="mb-bg" />
           {/* t-shirt */}
           <path d="M6 64c0-11 7-18 15-20l5-2h12l5 2c8 2 15 9 15 20z" className="mb-shirt" />
-          <path d="M26 42c1.5 3 3.5 4.5 6 4.5s4.5-1.5 6-4.5" className="mb-collar" />
-          <text x="32" y="59" textAnchor="middle" className="mb-letters">MB</text>
+          <image href={APP_LOGO.src} x="25" y="47.5" width="14" height="14" preserveAspectRatio="xMidYMid meet" />
           {/* neck, ears, head */}
           <rect x="28" y="36" width="8" height="8" rx="3" className="mb-skin" />
           <circle cx="18.5" cy="27" r="3.2" className="mb-skin" />

@@ -49,12 +49,12 @@ export default function ResetPasswordPage() {
         {done ? (
           <>
             <p className="ok" role="status">Your password is changed, and you've been signed out on every device.</p>
-            <a className="button primary" href="/">Log in</a>
+            <a className="button primary" href="/#login">Log in</a>
           </>
         ) : !token ? (
           <>
             <p className="error">This link is incomplete. Open the link from the email again, or ask for a new one.</p>
-            <a href="/">← Back to log in</a>
+            <a href="/#login">← Back to log in</a>
           </>
         ) : (
           <>
@@ -66,7 +66,7 @@ export default function ResetPasswordPage() {
                      autoComplete="new-password" /></label>
             {error && <p className="error">{error}</p>}
             <button className="primary" disabled={busy}>{busy ? "Saving…" : "Set new password"}</button>
-            <a className="small" href="/">← Back to log in</a>
+            <a className="small" href="/#login">← Back to log in</a>
           </>
         )}
       </form>

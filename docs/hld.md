@@ -1,6 +1,6 @@
 # Tandurust high-level design (HLD)
 
-> Last updated: 2026-10-01 (new logo and theme, display only; 2026-09-30: tab order Home, Meals, My Foods, Body Stats, Explore; tabs renamed: Saved Food → **My Foods**, Body Profile → **Body Stats**; app renamed Tandurust, display only; Dashboard tab renamed Meals, Analysis moved into it; Chat moved from a tab to a floating chat window opened from Home; Saved Food tabs: Generic / Branded / My Recipes; Saved Food + Add: §4.6; branded foods: Open Food Facts label check, §2, §3, §4.5, §5; optional "About you" answers: targets, meal times, MacBro context; country/region step in the sign-in flow; database hardening phase 1: public user UUIDs, items linked to foods, ON DELETE rules, timestamptz, composite indexes; built-in general food list (USDA) between Saved Food and the AI; raw/cooked asked, never assumed; typo-tolerant saved-food and meal-word matching, Dashboard "Did you mean …?"; earlier: tabs: Saved Food, Explore, Body Profile; admin two-step sign-in; tool allow-list; terms page; earlier: health notes, Alembic, forgot password…).Update the diagrams whenever a component, data flow, table or external service changes (see [docs/README.md](README.md)).
+> Last updated: 2026-10-01 (welcome page as the start for signed-out visitors, on the static site and at /welcome; new logo and theme, display only; 2026-09-30: tab order Home, Meals, My Foods, Body Stats, Explore; tabs renamed: Saved Food → **My Foods**, Body Profile → **Body Stats**; app renamed Tandurust, display only; Dashboard tab renamed Meals, Analysis moved into it; Chat moved from a tab to a floating chat window opened from Home; Saved Food tabs: Generic / Branded / My Recipes; Saved Food + Add: §4.6; branded foods: Open Food Facts label check, §2, §3, §4.5, §5; optional "About you" answers: targets, meal times, MacBro context; country/region step in the sign-in flow; database hardening phase 1: public user UUIDs, items linked to foods, ON DELETE rules, timestamptz, composite indexes; built-in general food list (USDA) between Saved Food and the AI; raw/cooked asked, never assumed; typo-tolerant saved-food and meal-word matching, Dashboard "Did you mean …?"; earlier: tabs: Saved Food, Explore, Body Profile; admin two-step sign-in; tool allow-list; terms page; earlier: health notes, Alembic, forgot password…).Update the diagrams whenever a component, data flow, table or external service changes (see [docs/README.md](README.md)).
 > Diagrams are Mermaid. They render on GitHub and in VS Code with a Mermaid preview extension.
 
 ## 1. Purpose and principles
@@ -72,7 +72,7 @@ In development, Vite serves the SPA on `:5173` and proxies `/api` to Uvicorn on 
 
 ```mermaid
 flowchart LR
-    U[Browser] -->|1. open| L["Render static site omniai-app<br/>launcher: dancing MacBro<br/>never sleeps"]
+    U[Browser] -->|1. open| L["Render static site omniai-app<br/>welcome page, never sleeps"]
     L -->|2. poll /api/health until awake| R
     U -->|3. app + /api over HTTPS| R["Render free web service · Singapore<br/>FastAPI serves the built SPA and /api<br/>sleeps after ~15 min idle"]
     R -->|SSL, pooled connections| N[("Neon Postgres · Singapore<br/>free, scales to zero")]
@@ -83,7 +83,7 @@ flowchart LR
     M -->|pull request with a report, only if something changed| GH
 ```
 
-The free web service sleeps when idle, and Render shows its own page while it wakes. So people open the always-on **launcher** (a free static site). It shows our wake screen until the app answers, then opens it. Inside the app, a request that hits the sleeping server shows the same wake screen as an overlay and is retried once the server is back. The app itself stays one service, keeping the site and the API on one address (simple same-site cookie, one cold start). The server and the database share a region because one chat message makes many database round trips. Secrets are set in the Render dashboard. Step-by-step: [deployment.md](deployment.md).
+The free web service sleeps when idle, and Render shows its own page while it wakes. So people open the always-on static site, whose start page is the **welcome page** (since 2026-10-01; before, a "launcher" wake screen). It shows at once and wakes the app in the background; **Join** / **Log in** open the app's sign-up / login page as soon as it answers (a spinner until then). The app also serves the same page at `/welcome`, and sends every signed-out visitor there. Inside the app, a request that hits the sleeping server shows the same wake screen as an overlay and is retried once the server is back. The app itself stays one service, keeping the site and the API on one address (simple same-site cookie, one cold start). The server and the database share a region because one chat message makes many database round trips. Secrets are set in the Render dashboard. Step-by-step: [deployment.md](deployment.md).
 
 ## 4. Key flows
 

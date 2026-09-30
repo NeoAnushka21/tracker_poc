@@ -95,9 +95,10 @@ def health(response: Response):
 
 
 def mount_frontend(app: FastAPI, dist: Path) -> bool:
-    """Serve the built React app from the backend: hashed assets as static files, any other
-    non-API path gets index.html so the single-page app can handle it. Registered after the
-    API routes, so they always win."""
+    """Serve the built React app from the backend: hashed assets as static files, /welcome is the
+    welcome page (welcome.html, where signed-out visitors land), any other non-API path gets
+    index.html so the single-page app can handle it. Registered after the API routes, so they
+    always win."""
     dist = dist.resolve()
     index = dist / "index.html"
     if not index.is_file():
@@ -109,6 +110,8 @@ def mount_frontend(app: FastAPI, dist: Path) -> bool:
     def spa(path: str):
         if path == "api" or path.startswith("api/"):
             raise HTTPException(status_code=404, detail="Not found")
+        if path.rstrip("/") == "welcome" and (dist / "welcome.html").is_file():
+            return FileResponse(dist / "welcome.html", headers={"Cache-Control": "no-cache"})
         file = (dist / path).resolve()
         if path and file.is_file() and dist in file.parents:   # favicon.svg etc.; no ../ escapes
             return FileResponse(file)

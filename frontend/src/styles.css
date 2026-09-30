@@ -1,11 +1,12 @@
 :root {
   --content-max: 1200px;
   --edge: max(24px, calc((100% - var(--content-max)) / 2));
-  --bg: #f9f9f5;
+  --bg: #f6faf3;                                  /* barely-green off-white (text 16.8, muted 6.3, green 4.9 : 1) */
   --surface: #ffffff;
   --surface-2: #f3f4ee;
   --glass: rgb(255 255 255 / 0.72);
-  --header-glass: rgb(255 255 255 / 0.75);
+  --header-glass: rgb(228 239 220 / 0.94);        /* #e4efdc, two shades darker than --bg */
+  --header-solid: #e4efdc;
   --header-mesh: radial-gradient(at 6% 30%, rgb(147 181 64 / 0.42) 0, transparent 45%), radial-gradient(at 36% 0%, rgb(99 156 70 / 0.32) 0, transparent 42%), radial-gradient(at 58% 55%, rgb(249 180 41 / 0.22) 0, transparent 48%), radial-gradient(at 78% 100%, rgb(242 139 37 / 0.22) 0, transparent 45%), radial-gradient(at 97% 15%, rgb(249 180 41 / 0.32) 0, transparent 40%);
   --text: #18181b;
   --muted: #5c5c66;
@@ -64,7 +65,8 @@
     --surface: #1c1c1f;
     --surface-2: #26262a;
     --glass: rgb(28 28 31 / 0.72);
-    --header-glass: rgb(28 28 31 / 0.75);
+    --header-glass: rgb(26 34 23 / 0.94);
+    --header-solid: #1a2217;
     --header-mesh: radial-gradient(at 6% 30%, rgb(53 132 73 / 0.7) 0, transparent 45%), radial-gradient(at 36% 0%, rgb(99 156 70 / 0.45) 0, transparent 42%), radial-gradient(at 58% 55%, rgb(120 90 20 / 0.4) 0, transparent 48%), radial-gradient(at 78% 100%, rgb(140 70 15 / 0.45) 0, transparent 45%), radial-gradient(at 97% 15%, rgb(150 110 20 / 0.5) 0, transparent 40%);
     --text: #ececef;
     --muted: #a1a1aa;
@@ -111,7 +113,8 @@
   --surface: #1c1c1f;
   --surface-2: #26262a;
   --glass: rgb(28 28 31 / 0.72);
-  --header-glass: rgb(28 28 31 / 0.75);
+  --header-glass: rgb(26 34 23 / 0.94);
+  --header-solid: #1a2217;
   --header-mesh: radial-gradient(at 6% 30%, rgb(53 132 73 / 0.7) 0, transparent 45%), radial-gradient(at 36% 0%, rgb(99 156 70 / 0.45) 0, transparent 42%), radial-gradient(at 58% 55%, rgb(120 90 20 / 0.4) 0, transparent 48%), radial-gradient(at 78% 100%, rgb(140 70 15 / 0.45) 0, transparent 45%), radial-gradient(at 97% 15%, rgb(150 110 20 / 0.5) 0, transparent 40%);
   --text: #ececef;
   --muted: #a1a1aa;
@@ -281,8 +284,9 @@ button.link { background: none; border: none; color: var(--accent); padding: 6px
 /* ---------- header: a soft mesh image under frosted glass ----------
    The image sits on .app-header; the glass layer inside it blurs that image (backdrop-filter blurs
    whatever is painted behind it, here the parent's background). Top bar and tabs are transparent,
-   so they share one continuous image with no seam. Text contrast was checked (WCAG AA) against the
-   glass over each mesh colour at full strength: light worst 4.75:1 (accent), dark worst 5.6:1 (muted).
+   so they share one continuous image with no seam. Since 2026-10-01 the glass is the header green at 94%
+   (light #e4efdc: text 14.9, muted 5.6 : 1; dark #1a2217: muted 6.4, accent 8.7 : 1), so the bar reads as
+   one flat green, matching the welcome page; the mesh only tints it faintly.
    The active tab's pill and the sliding underline are opaque and sit above the glass. */
 .app-header {
   position: relative; z-index: 2; flex-shrink: 0;
@@ -295,7 +299,7 @@ button.link { background: none; border: none; color: var(--accent); padding: 6px
 .app-header .tabs { border-bottom: none; }   /* the header's own border takes over; the underline still overlaps it */
 @media (prefers-reduced-transparency: reduce) {
   .app-header { background-image: none; }
-  .app-header-glass { background: var(--surface); -webkit-backdrop-filter: none; backdrop-filter: none; }
+  .app-header-glass { background: var(--header-solid); -webkit-backdrop-filter: none; backdrop-filter: none; }
 }
 
 .page { flex: 1; min-height: 0; overflow-y: auto; padding: 20px; }
@@ -721,10 +725,10 @@ button.danger { color: var(--error); }
 /* ---------- MacBro avatar ---------- */
 .macbro-avatar { overflow: hidden; background: none; }
 .macbro-avatar svg { display: block; }
-.mb-bg { fill: var(--accent-soft); }
-.mb-shirt { fill: var(--accent); }
-.mb-collar { fill: none; stroke: var(--accent-text); stroke-width: 1.6; opacity: 0.55; stroke-linecap: round; }
-.mb-letters { fill: var(--accent-text); font: 800 10px system-ui, sans-serif; letter-spacing: 0.5px; }
+/* One look in both themes: a pale green circle and a charcoal shirt, so the emblem on his chest
+   stands out (every logo colour >= 3.2:1 on the shirt) and the shirt stays crisp on dark pages. */
+.mb-bg { fill: #edf6e6; }
+.mb-shirt { fill: #1f2937; }
 .mb-skin { fill: #f3c9a6; }
 .mb-hair { fill: #3b2a20; }
 .mb-ink { fill: #2a1d16; }
@@ -742,6 +746,9 @@ button.danger { color: var(--error); }
 /* ---------- auth & consent ---------- */
 .auth-page { position: relative; }
 .auth-theme { position: absolute; top: 16px; right: 16px; }
+/* Back to the welcome page (the start point for everyone signed out) */
+.auth-back { position: absolute; top: 20px; left: 20px; color: var(--accent); font-weight: 700; font-size: 0.9rem; text-decoration: none; }
+.auth-back:hover { text-decoration: underline; }
 .auth-brand { display: flex; gap: 14px; align-items: center; margin-bottom: 8px; }
 .auth-brand h1 { margin: 0; }
 .consent-box {
@@ -851,6 +858,7 @@ button.danger { color: var(--error); }
   .admin-facts { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .hbar-row { grid-template-columns: 96px 1fr 48px; }
   .auth-theme { position: static; margin-bottom: 8px; }
+  .auth-back { position: static; align-self: flex-start; margin-bottom: 4px; }
 }
 
 /* collapsible meal cards, calorie split */
