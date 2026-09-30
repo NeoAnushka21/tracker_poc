@@ -745,11 +745,26 @@ button.danger { color: var(--error); }
 .settings-panel h3.first { margin-top: 0; }
 .account-card { display: flex; gap: 14px; align-items: center; margin-bottom: 12px; }
 .account-name { font-weight: 650; font-size: 1.05rem; }
-.settings-facts { display: grid; gap: 10px; margin: 0 0 8px; }
-.settings-facts > div { display: grid; grid-template-columns: 150px 1fr; gap: 10px; }
 .settings-location { display: grid; gap: 8px; }
-.settings-facts dt { color: var(--muted); font-size: 0.88rem; }
-.settings-facts dd { margin: 0; overflow-wrap: anywhere; }
+.settings-panel-head h3 { margin: 0 0 2px; font-size: 1.15rem; }
+.settings-panel-head p { margin: 0 0 16px; }
+.settings-group { margin-bottom: 20px; }
+.settings-group > h3 { font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); margin: 0 0 6px; }
+.settings-group > h3 .muted { text-transform: none; letter-spacing: 0; }
+.settings-group > p { margin: 0 0 8px; }
+.settings-rows { margin: 0; border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--surface); overflow: hidden; }
+.settings-row { display: grid; grid-template-columns: 140px 1fr auto; gap: 12px; align-items: center; padding: 11px 14px; min-height: 46px; }
+.settings-row + .settings-row { border-top: 1px solid var(--border); }
+.settings-row dt { color: var(--muted); font-size: 0.88rem; }
+.settings-row dd { margin: 0; min-width: 0; overflow-wrap: anywhere; }
+.settings-row dd:last-child { grid-column: 2 / -1; }
+.settings-row-action { justify-self: end; }
+.small-btn { padding: 5px 12px; font-size: 0.85rem; }
+.settings-card { border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--surface); padding: 14px; margin-bottom: 20px; }
+.settings-card .settings-form { max-width: none; }
+.settings-card h3 { margin-top: 0; }
+.settings-nav button.danger { margin-top: 14px; position: relative; }
+.settings-nav button.danger::before { content: ""; position: absolute; left: 10px; right: 10px; top: -8px; border-top: 1px solid var(--border); }
 .settings-form { max-width: 420px; }
 .settings-form .primary, .settings-form .danger-button { margin-top: 8px; }
 .danger-zone { border: 1px solid color-mix(in srgb, var(--error) 45%, var(--border)); border-radius: 10px; padding: 14px; max-width: none; }
@@ -757,7 +772,11 @@ button.danger { color: var(--error); }
 @media (max-width: 860px) {
   .settings-body { grid-template-columns: 1fr; }
   .settings-nav { flex-direction: row; flex-wrap: wrap; }
-  .settings-facts > div { grid-template-columns: 1fr; gap: 0; }
+  .settings-row { grid-template-columns: 1fr auto; gap: 4px 12px; }
+  .settings-row dt { grid-column: 1 / -1; }
+  .settings-row dd:last-child { grid-column: 1 / -1; }
+  .settings-nav button.danger { margin-top: 0; }
+  .settings-nav button.danger::before { display: none; }
   .settings-label { display: none; }
 }
 

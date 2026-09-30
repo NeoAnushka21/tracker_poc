@@ -62,7 +62,7 @@ export default function PrivacyPage() {
 
         <h2>Your choices and rights</h2>
         <ul>
-          <li><b>See your data:</b> Settings → Account → <b>Download my data</b> gives you everything as a file.</li>
+          <li><b>See your data:</b> Settings → Account &amp; privacy → <b>Download my data</b> gives you everything as a file.</li>
           <li><b>Correct it:</b> edit your profile, targets, logs and saved foods in the app.</li>
           <li><b>Delete it:</b> Settings → <b>Delete account</b> removes it permanently.</li>
           <li><b>Withdraw consent:</b> the app needs your consent to work, so withdrawing it means deleting your account.</li>
