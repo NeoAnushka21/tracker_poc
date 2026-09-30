@@ -4,7 +4,7 @@ import type { Food, MicroField } from "../types";
 import LabelSearch from "./LabelSearch";
 import AddFoodPanel, { type AddKind } from "./AddFoodPanel";
 import { grams } from "../format";
-import { PencilIcon, TrashIcon } from "./icons";
+import { ChevronDownIcon, PencilIcon, TrashIcon } from "./icons";
 
 type Filter = "generic" | "brand" | "recipe";
 
@@ -300,7 +300,7 @@ function FoodRow({ food, fields, onChanged, onDeleted }: {
           <button className="ghost info-btn" onClick={() => setOpen(!open)} aria-expanded={open} aria-controls={infoId}
                   title={open ? "Hide additional info" : "Additional info"}>
             <span className="info-label">Additional info</span>
-            <i className="chevron" aria-hidden="true" />
+            <span className="chevron" aria-hidden="true"><ChevronDownIcon /></span>
           </button>
           <button className={`ghost icon-btn ${editing ? "on" : ""}`} onClick={() => setEditing(!editing)}
                   aria-label={`${editing ? "Close editing" : "Edit"} ${food.name}`} title={editing ? "Close" : "Edit"} aria-pressed={editing}>

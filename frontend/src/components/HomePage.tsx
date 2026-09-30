@@ -4,8 +4,8 @@ import type { DailySummary, Streak, Streaks, User } from "../types";
 import { greeting } from "../format";
 import { haptic } from "../haptics";
 import { Bar, CalorieRing, Water } from "./Dashboard";
-import { AppLogo, MacBroAvatar } from "./Avatar";
-import { BOT_NAME } from "../brand";
+import { AppLogo } from "./Avatar";
+import MacBroInvite from "./MacBroInvite";
 
 type Props = {
   user: User;
@@ -131,10 +131,7 @@ export default function HomePage({ user, dataVersion, onDataChanged, onOpenChat,
           <h1>{greeting()}{user.preferred_name ? `, ${user.preferred_name}` : ""}!</h1>
           <p className="muted">{subline(day)}</p>
         </div>
-        <button type="button" className="macbro-invite" onClick={onOpenChat} aria-label={`Log a meal: chat with ${BOT_NAME}`}>
-          <span className="macbro-invite-bubble">Want to log something? <b>Talk to me</b></span>
-          <MacBroAvatar size={56} />
-        </button>
+        <MacBroInvite label="Log a meal" onClick={onOpenChat}>Want to log something? <b>Talk to me</b></MacBroInvite>
       </section>
 
       {error && <p className="error">{error}</p>}
@@ -142,7 +139,7 @@ export default function HomePage({ user, dataVersion, onDataChanged, onOpenChat,
       <section className="card home-summary" aria-labelledby="home-summary-title">
         <div className="home-section-head">
           <h2 id="home-summary-title">Today's summary</h2>
-          <button className="link" onClick={onOpenDashboard}>Open dashboard →</button>
+          <button className="link" onClick={onOpenDashboard}>Open meals →</button>
         </div>
         {!day ? <p className="muted">Loading…</p> : t && c ? (
           <>

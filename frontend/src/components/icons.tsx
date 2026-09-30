@@ -45,3 +45,7 @@ export const CupIcon = () => (
 export const MoonIcon = () => (
   <Icon size={20}><path d="M19.5 14.5A7.5 7.5 0 0 1 9.5 4.5a7.5 7.5 0 1 0 10 10z" /><path d="M16 4.5v3M14.5 6h3" /></Icon>
 );
+/** Down chevron for fold/unfold toggles (rotates to point up when open, styles.css .chevron). */
+export const ChevronDownIcon = () => <Icon size={18}><path d="M6 9l6 6 6-6" /></Icon>;
+/** Rising line: "Check your progress" (Meals tab). */
+export const TrendIcon = () => <Icon size={20}><path d="M4 18l5-6 4 3 7-9" /><path d="M15 6h5v5" /></Icon>;

@@ -480,7 +480,7 @@ button.link { background: none; border: none; color: var(--accent); padding: 6px
 
 /* meals */
 /* meal cards: one card per meal, each with its own hue (--meal, --meal-ink; tokens at the top) */
-.meals { display: grid; gap: 14px; }
+.meals { display: grid; gap: 12px; }
 .meal-card {
   --meal: var(--accent); --meal-ink: var(--accent);
   position: relative; overflow: hidden; border-radius: var(--radius); padding: 16px 18px 14px;
@@ -488,14 +488,19 @@ button.link { background: none; border: none; color: var(--accent); padding: 6px
   border: 1px solid color-mix(in srgb, var(--meal) 22%, var(--border)); box-shadow: var(--shadow-card);
   transition: transform 0.2s var(--ease-out), box-shadow 0.2s var(--ease-out);
 }
-.meal-card:hover { transform: translateY(-2px); box-shadow: var(--shadow-card), 0 10px 26px -12px color-mix(in srgb, var(--meal) 45%, transparent); }
+.meal-card:hover { box-shadow: var(--shadow-card), 0 10px 26px -12px color-mix(in srgb, var(--meal) 45%, transparent); }
 .meal-card.meal-breakfast { --meal: var(--meal-breakfast); --meal-ink: var(--meal-breakfast-ink); }
 .meal-card.meal-morning_snack, .meal-card.meal-snack { --meal: var(--meal-morning_snack); --meal-ink: var(--meal-morning_snack-ink); }
 .meal-card.meal-lunch { --meal: var(--meal-lunch); --meal-ink: var(--meal-lunch-ink); }
 .meal-card.meal-evening_snack { --meal: var(--meal-evening_snack); --meal-ink: var(--meal-evening_snack-ink); }
 .meal-card.meal-dinner { --meal: var(--meal-dinner); --meal-ink: var(--meal-dinner-ink); }
 .meal-card.empty { background: var(--surface); border-style: dashed; box-shadow: none; }
+.meal-card:hover, .meal-card.open { transform: none; }
+.meal-card:not(.open):hover { transform: translateY(-2px); }
 .meal-card.empty:hover { transform: none; }
+.meal-card .meal-macros { margin-bottom: 0; }
+.meal-card.open .meal-macros { margin-bottom: 8px; }
+.meal-card.open .meal-items { margin-top: 4px; }
 .meal-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
 .meal-badge {
   display: inline-grid; place-items: center; width: 42px; height: 42px; border-radius: 14px; flex-shrink: 0;
@@ -587,11 +592,10 @@ button.link { background: none; border: none; color: var(--accent); padding: 6px
 .food-kcal .muted { font-size: 0.8rem; }
 .food-actions { display: flex; gap: 2px; align-items: center; }
 .info-btn { display: inline-flex; align-items: center; gap: 8px; padding: 6px 10px; font-size: 0.83rem; font-weight: 600; color: var(--accent); border-radius: 999px; }
-.chevron {
-  width: 7px; height: 7px; border-right: 2px solid currentColor; border-bottom: 2px solid currentColor;
-  transform: rotate(45deg) translate(-2px, -2px); transition: transform 0.25s var(--ease-out);
-}
-.food-row.open .chevron { transform: rotate(-135deg) translate(-2px, -2px); }
+/* Fold/unfold chevron (ChevronDownIcon in a span): points down, turns up when open. */
+.chevron { display: inline-grid; place-items: center; flex-shrink: 0; color: var(--muted); transition: transform 0.25s var(--ease-out); }
+.chevron.open, .food-row.open .chevron { transform: rotate(180deg); }
+.info-btn .chevron { color: currentColor; }
 .icon-btn { width: 36px; height: 36px; padding: 0; display: inline-grid; place-items: center; border-radius: 10px; color: var(--muted); flex-shrink: 0; }
 .icon-btn:hover:not(:disabled), .icon-btn.on { color: var(--accent); background: var(--accent-soft); }
 .icon-btn.danger:hover:not(:disabled) { color: var(--error); background: color-mix(in srgb, var(--error) 10%, var(--surface)); }
@@ -851,9 +855,7 @@ button.danger { color: var(--error); }
   width: 100%; background: none; border: none; border-radius: 0; padding: 0; color: var(--text);
   font: inherit; font-weight: 600; text-align: left; cursor: pointer;
 }
-.meal-toggle:disabled { cursor: default; opacity: 1; }
-.chevron { display: inline-block; width: 14px; transition: transform 0.15s; color: var(--muted); }
-.chevron.open { transform: rotate(90deg); }
+.meal-toggle:focus-visible { outline: 2px solid var(--meal); outline-offset: 4px; border-radius: 12px; }
 .calorie-split { margin-top: 14px; }
 .calorie-split h3 { margin: 0 0 8px; }
 
@@ -1002,6 +1004,18 @@ button.danger { color: var(--error); }
 .guide-dots span { width: 7px; height: 7px; border-radius: 50%; background: var(--border); }
 .guide-dots span.on { background: var(--accent); width: 18px; border-radius: 4px; }
 @media (max-width: 600px) { .guide { bottom: 12px; } }
+/* GuideTour spotlight: the page is blurred and dimmed except rounded holes over the step's
+   targets (clip-path evenodd, set inline), each with a glowing outline. Above the header (z 2) and
+   the chat window (z 8), below the tour panel (z 20). */
+.guide-spotlight {
+  position: fixed; inset: 0; z-index: 15; background: rgb(15 23 42 / 0.28);
+  -webkit-backdrop-filter: blur(4px); backdrop-filter: blur(4px);
+}
+.guide-ring {
+  position: fixed; z-index: 16; pointer-events: none; border-radius: 14px;
+  box-shadow: 0 0 0 2px var(--accent), 0 0 22px 2px var(--accent-glow);
+  transition: left 0.3s var(--ease-out), top 0.3s var(--ease-out), width 0.3s var(--ease-out), height 0.3s var(--ease-out);
+}
 
 /* ---------- macro chips (chat cards, Dashboard add food) ---------- */
 .macro-chips { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 6px; }
@@ -1021,8 +1035,8 @@ button.danger { color: var(--error); }
 
 @media (prefers-reduced-motion: reduce) {
   .tab-indicator, .tabs button::after, .ring-fill, .bar-fill, .chart-tooltip, .stat-tile, .food-row, .food-info, .chevron,
-  .chat-widget, .chat-launcher, .macbro-invite-bubble, .meal-card, .meal-share i { transition: none; animation: none; }
-  .meal-card:hover { transform: none; }
+  .chat-widget, .chat-launcher, .macbro-invite-bubble, .meal-card, .meal-share i, .guide-ring, .progress-reports { transition: none; animation: none; }
+  .meal-card:hover, .meal-card:not(.open):hover { transform: none; }
   .bar-fill.reached { animation: none; }
 }
 @media (max-width: 860px) {
@@ -1153,7 +1167,25 @@ button.danger { color: var(--error); }
 .day-summary .water-head h3 { margin: 0 0 4px; font-size: 0.95rem; }
 .day-summary .water .bar { height: 8px; }
 .day-summary .micros { margin-top: 12px; }
-.meals-head { margin-top: 4px; }
+.meals-head { margin-top: 4px; flex-wrap: wrap; }
+.meals-head .macbro-invite { margin-left: auto; }
+.meals-head .macbro-invite-bubble { font-size: 0.88rem; max-width: 360px; }
+
+/* Meals → Check your progress (the trends that were the Analysis tab) */
+.progress-toggle {
+  display: flex; align-items: center; gap: 14px; width: 100%; padding: 16px 18px; text-align: left;
+  border-radius: var(--radius); border: 1px solid color-mix(in srgb, var(--accent) 30%, var(--border));
+  background: linear-gradient(135deg, var(--accent-soft), var(--surface) 70%); color: var(--text);
+  box-shadow: var(--shadow-card); transition: border-color 0.15s;
+}
+.progress-toggle:hover { border-color: var(--accent); }
+.progress-icon {
+  display: inline-grid; place-items: center; width: 42px; height: 42px; border-radius: 14px; flex-shrink: 0;
+  background: var(--accent-grad); color: var(--accent-text);
+}
+.progress-text { display: flex; flex-direction: column; flex: 1; min-width: 0; }
+.progress-text b { font-size: 1.02rem; }
+.progress-reports { animation: fade-up 0.25s var(--ease-out) both; }
 .meals-head h2 { margin: 0; font-size: 1.15rem; }
 .card > .water:first-child, .card > .micros:first-child { margin-top: 0; padding-top: 0; border-top: none; }
 .card > .water:first-child h3, .card > .micros:first-child h3 { margin-top: 0; }
@@ -1162,7 +1194,6 @@ button.danger { color: var(--error); }
   .home > .home-hero, .home > .error { grid-column: 1 / -1; }
   .home .streaks { grid-template-columns: 1fr; }
 
-  .dashboard .meals { grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: start; }
 
   .analysis-charts { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .analysis-charts .chart-water { order: 1; }          /* rows: calories|protein, trends|water, split|meals */

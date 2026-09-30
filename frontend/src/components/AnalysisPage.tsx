@@ -31,7 +31,7 @@ export default function AnalysisPage({ dataVersion }: { dataVersion: number }) {
   const header = (
     <div className="analysis-head">
       <div>
-        <h2>Advanced analysis</h2>
+        <h2>Your progress</h2>
         <p className="muted small">Trends from your confirmed logs. Hover or tap a day for details.</p>
       </div>
       <div className="segmented" role="radiogroup" aria-label="Range">

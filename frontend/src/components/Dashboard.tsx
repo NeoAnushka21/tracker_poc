@@ -4,10 +4,12 @@ import type { Action, DailySummary, Entry, Food, Item, MicroSummary, WaterSummar
 import { MEAL_LABEL, MEAL_ORDER, friendlyDate, grams, litres, shiftDay } from "../format";
 import { haptic } from "../haptics";
 import { useRevealFill } from "../motion";
+import AnalysisPage from "./AnalysisPage";
+import MacBroInvite from "./MacBroInvite";
 import MacroChips from "./MacroChips";
 import {
-  AppleIcon, ArrowRightIcon, BowlIcon, ChatIcon, CheckIcon, CloseIcon, CupIcon, MoonIcon, PencilIcon, SunriseIcon,
-  TrashIcon, WaterDrop,
+  AppleIcon, ArrowRightIcon, BowlIcon, ChatIcon, CheckIcon, ChevronDownIcon, CloseIcon, CupIcon, MoonIcon, PencilIcon,
+  SunriseIcon, TrashIcon, TrendIcon, WaterDrop,
 } from "./icons";
 
 /** How a macro stands against its target. Protein and fiber are goals: going past is good.
@@ -500,8 +502,9 @@ const MEAL_ICON: Record<string, () => React.JSX.Element> = {
   breakfast: SunriseIcon, morning_snack: AppleIcon, lunch: BowlIcon, evening_snack: CupIcon, dinner: MoonIcon, snack: AppleIcon,
 };
 
-/** One meal as its own card: a coloured icon badge (each meal has a hue, styles.css "meal cards"),
- *  the meal's calories and its share of the day, macro chips, then each food on its own line. */
+/** One meal as its own card, folded by default: the header (coloured icon badge, each meal has a
+ *  hue in styles.css "meal cards"; calories and share of the day) and the macro chips. Unfolded:
+ *  each food on its own line (pencil to edit) and + Add food. */
 function MealSection({ day, meal, entries, isToday, dayTarget, onChanged, onAskMacBro }: {
   day: string; meal: string; entries: Entry[]; isToday: boolean; dayTarget: number | null;
   onChanged: () => void; onAskMacBro: (text: string, date?: string) => void;
@@ -510,14 +513,14 @@ function MealSection({ day, meal, entries, isToday, dayTarget, onChanged, onAskM
   const [adding, setAdding] = useState(false);
   const items = entries.flatMap((e) => e.items);
   const t = sumItems(items);
-  const [open, setOpen] = useState(true);
+  const [open, setOpen] = useState(false);
   const Icon = MEAL_ICON[meal] ?? BowlIcon;
   const share = dayTarget ? Math.round((t.calories / dayTarget) * 100) : null;
   const label = MEAL_LABEL[meal] ?? meal;
   return (
-    <article className={`meal-card meal-${meal}${items.length ? "" : " empty"}`} aria-label={label}>
-      <button type="button" className="meal-head meal-toggle" onClick={() => setOpen(!open)}
-              aria-expanded={items.length ? open : undefined} disabled={!items.length}>
+    <article className={`meal-card meal-${meal}${items.length ? "" : " empty"}${open ? " open" : ""}`} aria-label={label}>
+      <button type="button" className="meal-head meal-toggle" onClick={() => { setOpen(!open); if (open) { setAdding(false); setMenuFor(null); } }}
+              aria-expanded={open} title={open ? "Fold" : items.length ? "Show foods, edit or add" : "Add food"}>
         <span className="meal-badge" aria-hidden="true"><Icon /></span>
         <span className="meal-title">
           <span className="meal-name">{label}</span>
@@ -530,7 +533,7 @@ function MealSection({ day, meal, entries, isToday, dayTarget, onChanged, onAskM
         {items.length > 0 && (
           <span className="meal-kcal num"><b>{Math.round(t.calories).toLocaleString()}</b><span className="muted"> kcal</span></span>
         )}
-        {items.length > 0 && <span className={`chevron ${open ? "open" : ""}`} aria-hidden="true">›</span>}
+        <span className={`chevron ${open ? "open" : ""}`} aria-hidden="true"><ChevronDownIcon /></span>
       </button>
       {items.length > 0 && share != null && (
         <div className="meal-share" aria-hidden="true"><i style={{ width: `${Math.min(100, share)}%` }} /></div>
@@ -566,20 +569,31 @@ function MealSection({ day, meal, entries, isToday, dayTarget, onChanged, onAskM
           </ul>}
         </>
       )}
-      {adding ? (
+      {open && (adding ? (
         <AddFoodPanel day={day} meal={meal} onChanged={onChanged} onAskMacBro={onAskMacBro} onClose={() => setAdding(false)} />
       ) : (
         <button type="button" className="meal-add-btn" onClick={() => { setMenuFor(null); setAdding(true); }}>
           + Add food
         </button>
-      )}
+      ))}
     </article>
   );
 }
 
-type DashboardProps = { dataVersion: number; onDataChanged: () => void; onAskMacBro: (text: string, date?: string) => void };
+type DashboardProps = {
+  dataVersion: number; onDataChanged: () => void; onAskMacBro: (text: string, date?: string) => void;
+  /** Bumped to open "Check your progress" (an old #analysis link, the guide). */
+  showProgress?: number;
+};
 
-export default function Dashboard({ dataVersion, onDataChanged, onAskMacBro }: DashboardProps) {
+export default function Dashboard({ dataVersion, onDataChanged, onAskMacBro, showProgress = 0 }: DashboardProps) {
+  // "Check your progress": the trends (Analysis was its own tab until 2026-09-30) load only when opened.
+  const [progressOpen, setProgressOpen] = useState(showProgress > 0);
+  const [seenProgress, setSeenProgress] = useState(showProgress);
+  if (showProgress !== seenProgress) {
+    setSeenProgress(showProgress);
+    setProgressOpen(true);
+  }
   const [day, setDay] = useState<string | undefined>(undefined);
   const [today, setToday] = useState<string | null>(null);
   const [data, setData] = useState<DailySummary | null>(null);
@@ -629,9 +643,10 @@ export default function Dashboard({ dataVersion, onDataChanged, onAskMacBro }: D
 
       <div className="meals-head">
         <h2>Meals</h2>
-        <button type="button" className="ghost log-day-btn" onClick={() => onAskMacBro("", data.date)}>
-          + Log with MacBro{data.date === today ? "" : ` for ${friendlyDate(data.date, today)}`}
-        </button>
+        <MacBroInvite label={`Log food${data.date === today ? "" : ` for ${friendlyDate(data.date, today)}`}`} size={44}
+                      onClick={() => onAskMacBro("", data.date)}>
+          Lazy to add meals manually? <b>Talk to me</b>, I'll do the hard work for you.
+        </MacBroInvite>
       </div>
       <div className="meals">
         {[...MEAL_ORDER, ...Object.keys(byMeal).filter((m) => !MEAL_ORDER.includes(m))].map((meal) => (
@@ -639,6 +654,17 @@ export default function Dashboard({ dataVersion, onDataChanged, onAskMacBro }: D
                        dayTarget={t?.calories ?? null} onChanged={onDataChanged} onAskMacBro={onAskMacBro} />
         ))}
       </div>
+
+      <button type="button" className={`progress-toggle${progressOpen ? " open" : ""}`} aria-expanded={progressOpen}
+              aria-controls="progress-reports" onClick={() => setProgressOpen(!progressOpen)}>
+        <span className="progress-icon" aria-hidden="true"><TrendIcon /></span>
+        <span className="progress-text">
+          <b>Check your progress</b>
+          <span className="muted small">Calories, protein, macros, meals and water over 7, 14 or 30 days</span>
+        </span>
+        <span className={`chevron ${progressOpen ? "open" : ""}`} aria-hidden="true"><ChevronDownIcon /></span>
+      </button>
+      {progressOpen && <div id="progress-reports" className="progress-reports"><AnalysisPage dataVersion={dataVersion} /></div>}
       <p className="muted small health-note">Calories, nutrients and targets are estimates to help you track, not medical advice. <a href="/privacy#health" target="_blank" rel="noopener">More</a></p>
     </div>
   );

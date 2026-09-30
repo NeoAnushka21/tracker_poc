@@ -1,6 +1,6 @@
 # OmniAI
 
-OmniAI is a chat-based calorie and macro tracker (working name). Its chat assistant is **MacBro** (macro + bro). You describe what you ate in plain language. LLM estimates the nutrition and proposes a log entry, and **nothing is saved until you click Confirm**.
+OmniAI is a chat-based calorie and macro tracker (working name). Its chat assistant is **MacBro**. You describe what you ate in plain language. LLM estimates the nutrition and proposes a log entry, and **nothing is saved until you click Confirm**.
 
 Spec: [macro_tracker_build_spec (1).md](macro_tracker_build_spec%20(1).md).
 
@@ -92,7 +92,7 @@ user message ─► FastAPI /api/chat ─► LLM (Groq gpt-oss-120b or Claude) w
 
 - **Home (default tab):** a time-of-day greeting, today's summary (calorie ring, macro bars, water), and two streaks: days in a row with a meal logged, and days in a row with at least 85% of the protein target.
 - **Chat:** tap MacBro on Home ("Want to log something? Talk to me") to open a chat window (typing or voice); minimize it to a bubble or close it. Proposals appear as cards you confirm.
-- **Dashboard:** today's calorie ring; protein, fiber, carbs and fat meters; calorie split; water tracker; micronutrients; five meal sections with per-meal macros.
+- **Meals** (was Dashboard): a compact day summary (calories, protein, fiber, carbs and fat meters; water tracker; micronutrients), five folded meal cards, and **Check your progress** (the 7/14/30-day trends); five meal sections with per-meal macros.
 - **Analysis:** 7, 14 or 30-day trends: calories and protein vs target, macro lines, calorie split, calories by meal, water, and a data table. All charts have hover and keyboard tooltips.
 - **Saved Food:** your saved foods and recipes; three tabs, **Generic**, **Branded** (packaged foods grouped by brand) and **My Recipes**,, and **Check label** takes their real pack label from Open Food Facts.
 - **Admin console:** reached through **Admin login** on the login page, and only for `ADMIN_EMAILS`. Admin emails can't sign up or use the normal login. The admin account is created at startup from `ADMIN_INITIAL_PASSWORD` if it doesn't exist yet. Two-step sign-in (authenticator app codes) can be switched on in the console; admin sessions last 12 hours. The console shows users, logins and activity, with read-only access to each user's logs, foods and chat, and every view is written to an audit log.
@@ -118,7 +118,7 @@ user message ─► FastAPI /api/chat ─► LLM (Groq gpt-oss-120b or Claude) w
 | `backend/app/routers/foods.py` | Saved Food API (list / add foods and recipes / edit / delete, label search and check) |
 | `backend/app/services/labels.py` | Pack labels for branded foods from Open Food Facts |
 | `backend/app/nutrition.py` | BMR / TDEE / target calculation |
-| `frontend/src/components/` | Auth, Onboarding, GuideTour, ChatWidget + Chat (with voice input), ProposalCard, Dashboard, Analysis, Saved Food, Settings, Admin |
+| `frontend/src/components/` | Auth, Onboarding, GuideTour, ChatWidget + Chat (with voice input), ProposalCard, Dashboard (the Meals tab) with Analysis inside, Saved Food, Settings, Admin |
 
 Full details: [docs/technical-overview.md](docs/technical-overview.md).
 

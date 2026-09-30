@@ -1,6 +1,6 @@
 # OmniAI high-level design (HLD)
 
-> Last updated: 2026-09-30 (Chat moved from a tab to a floating chat window opened from Home; Saved Food tabs: Generic / Branded / My Recipes; Saved Food + Add: §4.6; branded foods: Open Food Facts label check, §2, §3, §4.5, §5; optional "About you" answers: targets, meal times, MacBro context; country/region step in the sign-in flow; database hardening phase 1: public user UUIDs, items linked to foods, ON DELETE rules, timestamptz, composite indexes; built-in general food list (USDA) between Saved Food and the AI; raw/cooked asked, never assumed; typo-tolerant saved-food and meal-word matching, Dashboard "Did you mean …?"; earlier: tabs: Saved Food, Explore, Body Profile; admin two-step sign-in; tool allow-list; terms page; earlier: health notes, Alembic, forgot password…).Update the diagrams whenever a component, data flow, table or external service changes (see [docs/README.md](README.md)).
+> Last updated: 2026-09-30 (Dashboard tab renamed Meals, Analysis moved into it; Chat moved from a tab to a floating chat window opened from Home; Saved Food tabs: Generic / Branded / My Recipes; Saved Food + Add: §4.6; branded foods: Open Food Facts label check, §2, §3, §4.5, §5; optional "About you" answers: targets, meal times, MacBro context; country/region step in the sign-in flow; database hardening phase 1: public user UUIDs, items linked to foods, ON DELETE rules, timestamptz, composite indexes; built-in general food list (USDA) between Saved Food and the AI; raw/cooked asked, never assumed; typo-tolerant saved-food and meal-word matching, Dashboard "Did you mean …?"; earlier: tabs: Saved Food, Explore, Body Profile; admin two-step sign-in; tool allow-list; terms page; earlier: health notes, Alembic, forgot password…).Update the diagrams whenever a component, data flow, table or external service changes (see [docs/README.md](README.md)).
 > Diagrams are Mermaid. They render on GitHub and in VS Code with a Mermaid preview extension.
 
 ## 1. Purpose and principles
@@ -30,7 +30,7 @@ flowchart LR
 
 | Actor | Uses |
 |---|---|
-| **User** | Home (summary, meal-logging and protein streaks), Chat logging, Dashboard, Analysis, Saved Food, Settings |
+| **User** | Home (summary, meal-logging and protein streaks), Chat logging, Meals (day summary, meal cards, Check your progress), Saved Food, Settings |
 | **Admin** (emails in `ADMIN_EMAILS`) | Admin console only: user list, per-user read-only data, audit log |
 | **LLM provider** | Nutrition estimation, clarifying questions, choosing tools. It never writes data. |
 | **Open Food Facts** | Pack-label values for branded foods, searched only when the user presses **Check label**. It receives the search words or barcode, nothing about the user. |
@@ -40,7 +40,7 @@ flowchart LR
 ```mermaid
 flowchart TB
     subgraph Browser
-        SPA[React 19 + Vite SPA<br/>Home with MacBro chat window · Dashboard · Analysis · Saved Food · Explore · Body Profile<br/>Settings · Guide tour · Admin console<br/>public /privacy page<br/>wake screen while the server wakes]
+        SPA[React 19 + Vite SPA<br/>Home with MacBro chat window · Meals with Check your progress · Saved Food · Explore · Body Profile<br/>Settings · Guide tour · Admin console<br/>public /privacy page<br/>wake screen while the server wakes]
         STT[Web Speech API]
         SPA --- STT
     end
@@ -144,11 +144,11 @@ flowchart TD
 
 ```mermaid
 flowchart LR
-    D[Dashboard item edit panel] -->|POST /api/entries/items/id/transfer<br/>move or copy| E[services/entries]
+    D[Meals tab: item edit panel] -->|POST /api/entries/items/id/transfer<br/>move or copy| E[services/entries]
     AF[Meal: + Add food] -->|POST /api/entries/add<br/>saved food| E
     D -->|PATCH /api/entries/items/id<br/>quantity| E
     D -->|DELETE /api/entries/items/id| E
-    W[Water buttons<br/>Home and Dashboard] -->|POST · DELETE /api/water| WS[services/water]
+    W[Water buttons<br/>Home and Meals] -->|POST · DELETE /api/water| WS[services/water]
     H[Home streaks] -->|GET /api/dashboard/streaks| AN[services/analysis]
     AN --> DB
     E --> DB[(DB)]
@@ -178,7 +178,7 @@ flowchart TD
     Me -->|About you not answered or skipped| About[A bit more about you: optional, Skip for now]
     About --> Me
     Me -->|guide not seen| Guide[First-run guide tour]
-    Me --> Tabs[Home default, MacBro chat window · Dashboard · Analysis · Saved Food]
+    Me --> Tabs[Home default, MacBro chat window · Meals · Saved Food]
     Guide --> Tabs
 ```
 
@@ -188,7 +188,7 @@ Admin emails can't register, use the normal login or Continue with Google.
 
  Admin accounts are hidden from the admin user list, and every admin view of a user's data is written to `admin_audit`.
 
-### 4.4 Adding food from the Dashboard
+### 4.4 Adding food from the Meals tab
 
 ```mermaid
 flowchart TD

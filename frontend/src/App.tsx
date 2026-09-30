@@ -12,7 +12,6 @@ import HomePage from "./components/HomePage";
 import FoodsPage from "./components/FoodsPage";
 import BodyPage from "./components/BodyPage";
 import ExplorePage from "./components/ExplorePage";
-import AnalysisPage from "./components/AnalysisPage";
 import AdminPage from "./components/AdminPage";
 import ConsentGate from "./components/ConsentGate";
 import GuideTour from "./components/GuideTour";
@@ -23,8 +22,7 @@ import { useServerWaking } from "./wake";
 
 const TABS = [
   { id: "home", label: "Home" },
-  { id: "dashboard", label: "Dashboard" },
-  { id: "analysis", label: "Analysis" },
+  { id: "dashboard", label: "Meals" },   // id kept from when it was "Dashboard", so old links work
   { id: "foods", label: "Saved Food" },
   { id: "explore", label: "Explore" },
   { id: "body", label: "Body Profile" },
@@ -33,8 +31,11 @@ type TabId = (typeof TABS)[number]["id"];
 
 function tabFromHash(): TabId {
   const h = window.location.hash.replace("#", "");
+  if (h === "analysis") return "dashboard";   // Analysis moved into Meals ("Check your progress")
   return (TABS.find((t) => t.id === h)?.id ?? "home") as TabId;
 }
+
+const analysisFromHash = () => window.location.hash === "#analysis";
 
 /** Chat was a tab until 2026-09-30; an old #chat link opens the chat window on Home. */
 const chatFromHash = () => window.location.hash === "#chat";
@@ -50,6 +51,8 @@ export default function App() {
   const [tab, setTab] = useState<TabId>(tabFromHash);
   const [chatDraft, setChatDraft] = useState<{ text: string; nonce: number; date?: string } | null>(null);
   const [chatWindow, setChatWindow] = useState<ChatWindow>(() => (chatFromHash() ? "open" : "closed"));
+  // Bumped to open Meals → "Check your progress" (old #analysis links, the guide).
+  const [showProgress, setShowProgress] = useState(() => (analysisFromHash() ? 1 : 0));
   const [guideOpen, setGuideOpen] = useState(false);
   // Sliding underline under the active tab: measured from the button itself.
   const tabsRef = useRef<HTMLDivElement>(null);
@@ -59,6 +62,7 @@ export default function App() {
     const onHash = () => {
       setTab(tabFromHash());
       if (chatFromHash()) setChatWindow("open");
+      if (analysisFromHash()) setShowProgress((n) => n + 1);
     };
     window.addEventListener("hashchange", onHash);
     return () => window.removeEventListener("hashchange", onHash);
@@ -195,14 +199,9 @@ export default function App() {
           dataVersion={dataVersion}
           onDataChanged={() => setDataVersion((v) => v + 1)}
           onAskMacBro={(text, date) => { setChatDraft({ text, nonce: Date.now(), date }); setChatWindow("open"); }}
+          showProgress={showProgress}
         />
       </main>
-      {/* Analysis and Admin load only when opened (admin views are audited). */}
-      {current === "analysis" && (
-        <main className="page" id="panel-analysis" role="tabpanel" aria-labelledby="tab-analysis">
-          <AnalysisPage dataVersion={dataVersion} />
-        </main>
-      )}
       <main className="page" id="panel-foods" role="tabpanel" aria-labelledby="tab-foods" hidden={current !== "foods"}>
         <FoodsPage dataVersion={dataVersion} />
       </main>

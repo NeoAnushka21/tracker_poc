@@ -1,21 +1,25 @@
-import { useEffect, useRef, useState, type KeyboardEvent, type ReactNode } from "react";
+import { useEffect, useLayoutEffect, useRef, useState, type KeyboardEvent, type ReactNode } from "react";
 import { AppLogo } from "./Avatar";
 import { APP_NAME, BOT_NAME } from "../brand";
 
 // Keep these steps in sync with docs/user-guide.md whenever the UI changes.
-export type GuideTab = "home" | "dashboard" | "analysis" | "foods" | "explore" | "body";
+export type GuideTab = "home" | "dashboard" | "foods" | "explore" | "body";
 
-type Step = { tab: GuideTab; title: string; body: ReactNode };
+/** `targets`: CSS selectors of what the step talks about. Everything else is blurred; each visible
+ *  match is cut out of the blur and outlined (the first one is scrolled into view). */
+type Step = { tab: GuideTab; targets: string[]; title: string; body: ReactNode };
 
 function steps(name: string | null): Step[] {
   return [
     {
       tab: "home",
+      targets: [".guide-btn"],
       title: `Welcome to ${APP_NAME}${name ? `, ${name}` : ""}!`,
       body: <p>This quick tour shows you around in about a minute. You can reopen it any time from the <b>Guide</b> button at the top.</p>,
     },
     {
       tab: "home",
+      targets: ["#tab-home", "#panel-home .home"],
       title: "Your Home page",
       body: (
         <ul>
@@ -27,6 +31,7 @@ function steps(name: string | null): Step[] {
     },
     {
       tab: "home",
+      targets: ["#panel-home .macbro-invite"],
       title: `1. Tell ${BOT_NAME} what you ate`,
       body: (
         <>
@@ -42,6 +47,7 @@ function steps(name: string | null): Step[] {
     },
     {
       tab: "home",
+      targets: ["#panel-home .macbro-invite"],
       title: "2. Nothing is saved until you confirm",
       body: (
         <>
@@ -58,6 +64,7 @@ function steps(name: string | null): Step[] {
     },
     {
       tab: "home",
+      targets: ["#panel-home .macbro-invite"],
       title: "3. Ask, edit, move or delete",
       body: (
         <ul>
@@ -71,7 +78,8 @@ function steps(name: string | null): Step[] {
     },
     {
       tab: "dashboard",
-      title: "4. Your day on the Dashboard",
+      targets: ["#tab-dashboard", ".day-summary", ".meals-head"],
+      title: "4. Your day on Meals",
       body: (
         <ul>
           <li>A compact <b>summary tile</b>: small meters for calories, protein, fiber, carbs and fat (a bar glows once you hit its target), your <b>water</b> (tap +250 ml or +500 ml) and <b>micronutrients</b> (folded; tap to open).</li>
@@ -81,22 +89,26 @@ function steps(name: string | null): Step[] {
       ),
     },
     {
-      tab: "analysis",
-      title: "5. Trends in Analysis",
-      body: <p>Switch between <b>7, 14 or 30 days</b> to see calories and protein against target, macro trends, calories by meal, and water. Your streaks are on <b>Home</b>. Hover or tab onto any chart for exact numbers.</p>,
+      tab: "dashboard",
+      targets: ["#tab-dashboard", ".progress-toggle"],
+      title: "5. Check your progress",
+      body: <p>At the bottom of <b>Meals</b>, <b>Check your progress</b> opens your trends: switch between <b>7, 14 or 30 days</b> to see calories and protein against target, macro trends, calories by meal, and water. Your streaks are on <b>Home</b>. Hover or tab onto any chart for exact numbers.</p>,
     },
     {
       tab: "foods",
+      targets: ["#tab-foods", "#panel-foods .foods-head", "#panel-foods .foods-tools"],
       title: "6. Saved Food remembers for you",
       body: <p>Every food you confirm is saved here with its macros and micronutrients, so the next time you log it (e.g. "40g pineapple") the numbers are exactly the same, straight from your library, without using an AI message (small typos like "panner" are fine). About 300 common foods (fruit, dals, rice, milk, chicken…) are built in too, and for foods like rice or chicken MacBro asks whether the weight was raw or cooked instead of guessing. The list has three tabs: <b>Generic</b> foods, <b>Branded</b> products and <b>My Recipes</b>. It shows each name with its calories; tap <b>Additional info</b> for the other macros and micronutrients. You can search, correct or delete any of them. Packaged foods you log with their brand ("10 g Amul butter") are grouped by brand under <b>Branded</b>: press <b>Check label</b> to pick the real pack label from Open Food Facts, or type it in with the pencil. <b>+ Add</b> lets you add a branded product, a generic food or a recipe yourself.</p>,
     },
     {
       tab: "explore",
+      targets: ["#tab-explore", "#panel-explore .explore"],
       title: "7. Explore (coming soon)",
       body: <p>Ready-made recipe collections will live here, such as <b>high protein</b>, <b>non-veg quick &amp; easy</b> and <b>healthy desserts</b>, with the macros already worked out.</p>,
     },
     {
       tab: "body",
+      targets: ["#tab-body", "#panel-body .body-page > .card:first-child"],
       title: "8. Your Body Profile",
       body: (
         <ul>
@@ -108,6 +120,7 @@ function steps(name: string | null): Step[] {
     },
     {
       tab: "home",
+      targets: [".settings-btn"],
       title: "9. Settings",
       body: (
         <>
@@ -121,16 +134,77 @@ function steps(name: string | null): Step[] {
 
 type Props = { name: string | null; onTab: (tab: GuideTab) => void; onClose: () => void };
 
-/** First-run walkthrough: a panel docked at the bottom that switches tabs as it goes. */
+type Hole = { x: number; y: number; w: number; h: number };
+const PAD = 6;       // space between a highlighted element and its outline
+const RADIUS = 14;
+
+/** Rounded rectangle as an SVG path, for the evenodd clip-path that cuts holes in the blur. */
+function roundedRect({ x, y, w, h }: Hole): string {
+  const r = Math.min(RADIUS, w / 2, h / 2);
+  return `M${x + r} ${y}H${x + w - r}A${r} ${r} 0 0 1 ${x + w} ${y + r}V${y + h - r}A${r} ${r} 0 0 1 ${x + w - r} ${y + h}` +
+    `H${x + r}A${r} ${r} 0 0 1 ${x} ${y + h - r}V${y + r}A${r} ${r} 0 0 1 ${x + r} ${y}Z`;
+}
+
+/** The visible elements a step points at (hidden tab panels don't count). */
+function findTargets(selectors: string[]): HTMLElement[] {
+  return selectors.flatMap((sel) =>
+    [...document.querySelectorAll<HTMLElement>(sel)].filter((el) => el.getClientRects().length > 0).slice(0, 1));
+}
+
+/** Where the step's targets are on screen, kept up to date on scroll and resize. */
+function useHoles(selectors: string[], stepKey: number): Hole[] {
+  const [holes, setHoles] = useState<Hole[]>([]);
+  useLayoutEffect(() => {
+    let frame = 0;
+    const measure = () => {
+      cancelAnimationFrame(frame);
+      frame = requestAnimationFrame(() => setHoles(findTargets(selectors).map((el) => {
+        const r = el.getBoundingClientRect();
+        return { x: r.left - PAD, y: r.top - PAD, w: r.width + PAD * 2, h: r.height + PAD * 2 };
+      })));
+    };
+    // The step may have just switched tabs: give the panel a moment to lay out, then bring the
+    // main target (the last one: a section rather than its tab) into view.
+    const settle = window.setTimeout(() => {
+      const els = findTargets(selectors);
+      const main = els[els.length - 1];
+      const calm = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+      main?.scrollIntoView({ block: "center", behavior: calm ? "auto" : "smooth" });
+      measure();
+    }, 60);
+    const observer = new ResizeObserver(measure);
+    observer.observe(document.body);
+    window.addEventListener("scroll", measure, true);
+    window.addEventListener("resize", measure);
+    return () => {
+      window.clearTimeout(settle);
+      cancelAnimationFrame(frame);
+      observer.disconnect();
+      window.removeEventListener("scroll", measure, true);
+      window.removeEventListener("resize", measure);
+    };
+  }, [stepKey]); // eslint-disable-line react-hooks/exhaustive-deps
+  return holes;
+}
+
+/** First-run walkthrough: a panel docked at the bottom that switches tabs as it goes. The page
+ *  behind is blurred, except the parts the step talks about (tabs, tiles, buttons), which stay
+ *  sharp and outlined. */
 export default function GuideTour({ name, onTab, onClose }: Props) {
   const all = steps(name);
   const [i, setI] = useState(0);
   const panel = useRef<HTMLDivElement>(null);
   const step = all[i];
   const last = i === all.length - 1;
+  const holes = useHoles(step.targets, i);
 
   useEffect(() => { onTab(step.tab); }, [i]); // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => { panel.current?.focus(); }, [i]);
+
+  // One path: the whole screen, minus a rounded hole per target (evenodd).
+  const vw = typeof window === "undefined" ? 0 : window.innerWidth;
+  const vh = typeof window === "undefined" ? 0 : window.innerHeight;
+  const clip = `path(evenodd, "M0 0H${vw}V${vh}H0Z${holes.map(roundedRect).join("")}")`;
 
   function onKey(e: KeyboardEvent) {
     if (e.key === "Escape") onClose();
@@ -139,8 +213,13 @@ export default function GuideTour({ name, onTab, onClose }: Props) {
   }
 
   return (
-    // The tour panel is a dialog that handles its own keys (← → to step, Escape to close).
-    // oxlint-disable-next-line jsx-a11y/no-noninteractive-element-interactions
+    <>
+    <div className="guide-spotlight" aria-hidden="true" style={{ clipPath: clip }} />
+    {holes.map((h, k) => (
+      <div key={k} className="guide-ring" aria-hidden="true" style={{ left: h.x, top: h.y, width: h.w, height: h.h }} />
+    ))}
+    {/* The tour panel is a dialog that handles its own keys (← → to step, Escape to close). */}
+    {/* oxlint-disable-next-line jsx-a11y/no-noninteractive-element-interactions */}
     <div className="guide card" role="dialog" aria-modal="false" aria-labelledby="guide-title"
          ref={panel} tabIndex={-1} onKeyDown={onKey}>
       <div className="guide-head">
@@ -160,5 +239,6 @@ export default function GuideTour({ name, onTab, onClose }: Props) {
           : <button className="primary" onClick={() => setI(i + 1)}>Next</button>}
       </div>
     </div>
+    </>
   );
 }

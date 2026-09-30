@@ -4,7 +4,7 @@ OmniAI is a chat-based calorie and macro tracker. In the Chat you talk to **MacB
 
 This guide walks a new user through the app from sign-up to daily use. The same walkthrough appears inside the app as a short tour the first time you log in. You can reopen it any time with the **? Guide** button at the top.
 
-> Last updated: 2026-09-30 (Dashboard redesigned: one compact summary tile, colourful meal cards; Chat is no longer a tab: MacBro's chat opens as a window from Home ("Want to log something? Talk to me"), can be minimized or closed; Saved Food tabs: **Generic**, **Branded**, **My Recipes**; **+ Add** in Saved Food: a branded product, a generic food or a recipe from a form; branded foods: a **Brands** filter in Saved Food, and **Check label** fetches the real pack label from Open Food Facts; Settings reorganised: About you, Targets, Appearance, Account & privacy, Security; India only for now in the country list; optional "About you" questions: diet, allergies, pace, meal times, training, health; country and region in the profile, age in Settings; built-in general food list of ~300 common foods (USDA) used without the AI; "raw or cooked?" asked, never assumed; small typos in saved-food names and meal words are understood without the AI; Dashboard asks "Did you mean …?"; earlier: Saved Food renamed Saved Food, a list with Additional info; Body renamed Body Profile; new Explore tab, coming soon; terms page; earlier: health notes and low-target warning, forgot password…). Keep this file in step with the UI (see [docs/README.md](README.md)).
+> Last updated: 2026-09-30 (Dashboard renamed **Meals**, meal cards folded and one below another, MacBro invite there too; Analysis moved into Meals as **Check your progress**; the guide blurs the page and highlights what each step describes; Dashboard redesigned: one compact summary tile, colourful meal cards; Chat is no longer a tab: MacBro's chat opens as a window from Home ("Want to log something? Talk to me"), can be minimized or closed; Saved Food tabs: **Generic**, **Branded**, **My Recipes**; **+ Add** in Saved Food: a branded product, a generic food or a recipe from a form; branded foods: a **Brands** filter in Saved Food, and **Check label** fetches the real pack label from Open Food Facts; Settings reorganised: About you, Targets, Appearance, Account & privacy, Security; India only for now in the country list; optional "About you" questions: diet, allergies, pace, meal times, training, health; country and region in the profile, age in Settings; built-in general food list of ~300 common foods (USDA) used without the AI; "raw or cooked?" asked, never assumed; small typos in saved-food names and meal words are understood without the AI; Dashboard asks "Did you mean …?"; earlier: Saved Food renamed Saved Food, a list with Additional info; Body renamed Body Profile; new Explore tab, coming soon; terms page; earlier: health notes and low-target warning, forgot password…). Keep this file in step with the UI (see [docs/README.md](README.md)).
 
 ---
 
@@ -21,8 +21,8 @@ This guide walks a new user through the app from sign-up to daily use. The same 
 8. [Water](#8-water)
 9. [Recipes and Saved Food](#9-recipes-and-saved-food)
 10. [Ask about your history](#10-ask-about-your-history)
-11. [The Dashboard](#11-the-dashboard)
-12. [Analysis](#12-analysis)
+11. [Meals (your day)](#11-meals-your-day)
+12. [Check your progress](#12-check-your-progress)
 13. [Explore](#13-explore)
 14. [Body Profile](#14-body-profile)
 15. [Settings](#15-settings)
@@ -87,7 +87,7 @@ OmniAI needs a few details to work out your daily targets:
 | Diet (vegetarian, eggetarian, non-vegetarian, vegan, Jain) | MacBro suggests foods that fit it |
 | Allergies or intolerances (pick from the list, plus "anything else") | Cards say **Heads-up** when a food usually contains one, e.g. "curd usually contains milk / dairy" |
 | How fast? (weight loss 0.25–1 kg a week; gain 0.25–0.5 kg) | Your calorie target: about 1,100 kcal a day per kg a week, below or above maintenance. A loss is never set more than 25% below maintenance. |
-| Usual breakfast, lunch and dinner times | Which meal a message counts as (with breakfast at 10:30, food at noon is breakfast), and the time used when you add food to an empty meal on the Dashboard |
+| Usual breakfast, lunch and dinner times | Which meal a message counts as (with breakfast at 10:30, food at noon is breakfast), and the time used when you add food to an empty meal on the Meals tab |
 | Training (type and days) | MacBro knows when you train |
 | **Health** (optional, sensitive): conditions such as diabetes, PCOS or thyroid, and for a female profile pregnancy or breastfeeding | Context for MacBro, which still gives no medical advice. While pregnant or breastfeeding, no calorie deficit is set. Saving these needs an extra tick: you agree they're used only for this. Clearing them removes that agreement too. |
 
@@ -97,7 +97,7 @@ If your answers change the calculated calories (a pace, or pregnancy), you see t
 
 After you submit, **Your daily targets** shows the calories, protein, carbs, fat and fiber OmniAI suggests. Change any number you like, then continue. You can change them later in **Settings → Targets**. If the calorie target is below **1,200 kcal (women) or 1,500 kcal (men)**, a heads-up explains that such low targets are usually only advised with a doctor or dietitian involved. It's a warning, not a block.
 
-> OmniAI's calories, nutrients, targets, BMI and body-fat numbers are **estimates to help you track, not medical advice** (a reminder sits at the bottom of Home and the Dashboard). Talk to a doctor or dietitian about medical conditions, pregnancy or big changes to how you eat.
+> OmniAI's calories, nutrients, targets, BMI and body-fat numbers are **estimates to help you track, not medical advice** (a reminder sits at the bottom of Home and Meals). Talk to a doctor or dietitian about medical conditions, pregnancy or big changes to how you eat.
 
 <details>
 <summary>How targets are calculated</summary>
@@ -113,7 +113,7 @@ After you submit, **Your daily targets** shows the calories, protein, carbs, fat
 
 ## 3. The first-run tour
 
-The first time you reach the main screen, a small panel opens at the bottom. It steps through the tabs (Home, with MacBro's chat → Dashboard → Analysis → Saved Food → Explore → Body Profile) and explains each one.
+The first time you reach the main screen, a small panel opens at the bottom. It steps through the tabs (Home, with MacBro's chat → Meals, with Check your progress → Saved Food → Explore → Body Profile) and explains each one. While it's open, the page behind is **blurred**, and only what the step is talking about (a tab, a tile, a button) stays sharp, with a glowing outline; the page scrolls to it for you.
 
 - Use **Next** and **Back** (or the ← → keys) to move between steps.
 - **Skip**, **✕** or **Esc** closes the tour.
@@ -125,8 +125,7 @@ The first time you reach the main screen, a small panel opens at the bottom. It 
 |---|---|
 | Home | Today's summary (macros) on the left; the Water tile and the two streaks stacked on the right |
 | Chat window | Floats at the bottom right, about 440 px wide, over whatever page you are on (on a phone it fills the screen) |
-| Dashboard | The summary tile across the top (five meters side by side), then the meal cards two to a row |
-| Analysis | Charts in two columns: calories beside protein, macro trends beside water, the calorie split beside calories by meal |
+| Meals | The summary tile across the top (five meters side by side), then the meal cards one below another; **Check your progress** opens the charts in two columns |
 | Saved Food | A full-width list: name and calories on each line, the details opening underneath |
 | Explore | Recipe collection tiles in rows of up to four |
 | Body Profile | The body diagram with labelled arrows on both sides and the measurement editor beside it (on a phone: numbered dots and a list) |
@@ -154,7 +153,7 @@ Each card shows the current streak, your best streak, and the last 7 days as tic
 
 The chat is where you talk to MacBro. It isn't a tab: it opens as a **chat window** over the page, the way many websites show a chat assistant.
 
-- **Open it:** on **Home**, tap MacBro ("Want to log something? Talk to me"). The Dashboard's **Edit in chat** buttons open it too, with the message ready to send.
+- **Open it:** on **Home**, tap MacBro ("Want to log something? Talk to me"). The **Edit in chat** buttons on the Meals tab and MacBro's invite there open it too, with the message ready to send.
 - **Minimize** (**–** in the chat's top corner, or **Esc**): the window folds into a small **MacBro** bubble at the bottom right, which stays there on every tab. Tap it to come back exactly where you were, with your draft and any reply on its way.
 - **Close** (**✕**): the window and bubble go away. Your chat is kept; open it again from Home.
 - On a laptop the window sits at the bottom right over the page; on a phone it fills the screen.
@@ -194,8 +193,8 @@ If something is ambiguous, for example "a bowl of pasta", MacBro asks a short qu
 
 **Daily AI messages:** OmniAI runs on a free AI service shared by everyone, so each account gets **20 AI messages a day** (the number may change). The count left is shown above the message box, e.g. "14 of 20 AI messages left today", and it resets at midnight in your time zone.
 
-- **Counts:** a message the AI answers, and a new food estimated on the Dashboard (**+ Add food**).
-- **Doesn't count:** instant replies (a water amount, "what's left today", foods all in Saved Food or the general food list, the raw/cooked question and your answer, "same breakfast as yesterday"), saved and general-list foods added on the Dashboard, every button (Looks good, water, move, delete…), and messages that fail or that you stop.
+- **Counts:** a message the AI answers, and a new food estimated on the Meals tab (**+ Add food**).
+- **Doesn't count:** instant replies (a water amount, "what's left today", foods all in Saved Food or the general food list, the raw/cooked question and your answer, "same breakfast as yesterday"), saved and general-list foods added on the Meals tab, every button (Looks good, water, move, delete…), and messages that fail or that you stop.
 - When they're used up, your message stays in the box with a note. Everything that doesn't need the AI keeps working.
 
 Today's totals are on the **Home** tab (and in the summary card after each confirmed log: macros after food, water after water).
@@ -221,7 +220,7 @@ Cards you leave unanswered expire after 24 hours. Unconfirmed cards never count 
 
 ## 7. Edit, move, copy and delete
 
-You can do this **in the chat** (with a confirmation card) or **on the Dashboard** (straight away).
+You can do this **in the chat** (with a confirmation card) or **on the Meals tab** (straight away).
 
 **In the chat:**
 
@@ -230,7 +229,7 @@ You can do this **in the chat** (with a confirmation card) or **on the Dashboard
 - `move the banana to morning snack`: a *Move* card shows *from → to*, and nothing is deleted.
 - `copy yesterday's breakfast to today`
 
-**On the Dashboard:** **+ Log food** (next to *Meals*) opens the chat set to the day you're viewing, which is handy for filling in a past day.
+**On the Meals tab:** MacBro next to the *Meals* heading ("Lazy to add meals manually? Talk to me…") opens the chat set to the day you're viewing, which is handy for filling in a past day.
 
 **Add a food without the chat:** each meal has **+ Add food**. Type the food (your saved foods are suggested as you type), the quantity and the unit, then press **Add**. It goes into that meal on the day you're viewing.
 
@@ -253,7 +252,7 @@ For a single item that's already logged, tap the **pencil** ✎ next to any item
 ## 8. Water
 
 - **Chat:** `two glasses of water`, `drank 750 ml`. You'll get a water card; press **Log water**.
-- **Dashboard:** in the **Water** section, tap **+ 250 ml** or **+ 500 ml**, or **Undo** to remove the last entry.
+- **Meals tab:** in the summary tile's **Water** section, tap **+ 250 ml** or **+ 500 ml**, or **Undo** to remove the last entry.
 
 Your water target is based on your weight and activity level. The bar shows litres drunk against the target, with "to go" or "goal met ✓".
 
@@ -267,7 +266,7 @@ Your water target is based on your weight and activity level. The bar shows litr
 2. Later, a simple message like `had 40g pineapple` or `2 eggs for breakfast` is answered **straight from Saved Food, without the AI**. The saved numbers, micronutrients included, are scaled to your amount. The card says "All from your saved foods".
    - **Small typos are fine:** `200g cooked chiken breast` still finds your saved chicken breast, and the card says what it read ("I read 'cooked chiken breast' as chicken breast, cooked"), so you can check before confirming. To avoid wrong guesses, names under 5 letters (egg, oats) must be spelt exactly, longer ones may be off by one letter (two from 9 letters), and if the typo is close to two saved foods the AI handles it instead.
    - **Meal words too:** `brkfst`, `breakfst`, `bekfast`, `bfast`, `lnch`, `dinr`, `snak` or `mornng snak` are read as the meal, when they come after *for*, *at*, *in*, *as*, *my*, *same* or *yesterday's* (e.g. `3 eggs for brkfst`), so "a bunch of grapes" is never read as lunch.
-3. The Dashboard's **+ Add food** works the same way: a saved food is added from Saved Food without the AI (a small typo asks "Did you mean …?" first), and a new one is estimated once and saved when you add it.
+3. The Meals tab's **+ Add food** works the same way: a saved food is added from Saved Food without the AI (a small typo asks "Did you mean …?" first), and a new one is estimated once and saved when you add it.
 4. This shortcut needs **an amount for every item** (`40g`, `2`, `1 serving`, `1 tbsp`, `1 cup`) and **every item already saved or on the general food list** (below). A count like `1 apple` also needs the food's **g per piece** (add it in **Edit** if it's missing). Otherwise the message goes to the AI, which still reuses your saved numbers for the foods it recognises.
 
 **The general food list (no AI):** OmniAI also comes with about **300 common foods**: fruits, vegetables, grains and flours, dals and beans, dairy, eggs, meat and fish, nuts and seeds, oils and ghee, sugar, sauces and common drinks. Their numbers per 100 g, micronutrients included, come from **USDA FoodData Central** (a public-domain US government database). Indian names work too (`kela`, `atta`, `toor dal`, `dahi`, `palak`…), as do small typos.
@@ -319,9 +318,9 @@ MacBro answers from your **confirmed** data only:
 - `what was my highest-calorie meal on Monday?`
 - `how many calories do I have left today?`
 
-## 11. The Dashboard
+## 11. Meals (your day)
 
-The Dashboard is your day in detail. The big calorie ring lives on **Home**; here the day fits in one **compact summary tile**, and each meal gets its own card below it.
+The **Meals** tab (it used to be called Dashboard) is your day in detail. The big calorie ring lives on **Home**; here the day fits in one **compact summary tile**, and each meal gets its own card below it.
 
 **Day summary tile**
 
@@ -332,25 +331,20 @@ The Dashboard is your day in detail. The big calorie ring lives on **Home**; her
 | **Water** | Litres against target, +250 ml / +500 ml and Undo. The bar glows once you reach your goal. |
 | **Additional micronutrients** | Folded by default; the heading still says how many are tracked and how many are under half (or over a limit). Tap it to open; it remembers open or closed on this device. Inside: iron, calcium, magnesium, potassium, zinc, vitamin C, vitamin B12 and vitamin D, against daily reference values for your age and sex. Sodium is shown as a limit to stay under. |
 
-**Meals:** one card per meal, each with its own colour and icon: **Breakfast** (amber, sunrise), **Morning snack** (pink, apple), **Lunch** (teal, bowl), **Evening snack** (orange, cup) and **Dinner** (violet, moon). On a laptop they sit two to a row.
+**Meals:** one card per meal, one below another (on a phone and on a laptop), each with its own colour and icon: **Breakfast** (amber, sunrise), **Morning snack** (pink, apple), **Lunch** (teal, bowl), **Evening snack** (orange, cup) and **Dinner** (violet, moon).
 
-- The card's header shows the meal's **calories** in large type, how many items it has and its **share of your day** ("24% of your day", also drawn as a thin bar in the meal's colour).
-- Below: protein, fiber, carbs and fat chips, then each food with its amount and calories. Tap the header to fold or unfold the list, and the **pencil** on an item to move, copy, change or delete it.
-- **+ Add food** (in the meal's colour) adds a food to that meal without the chat (see §7). A meal with nothing logged shows a lighter, dashed card with just the button.
-- **+ Log with MacBro** above the meals opens the chat window for the day you're viewing.
+- **Folded by default:** each card shows just the meal's **calories**, how many items it has, its **share of your day** ("24% of your day", also a thin bar in the meal's colour) and its protein, fiber, carbs and fat. A meal with nothing logged shows a lighter, dashed card.
+- **Tap a meal** (or the **⌄** on its right) to unfold it: each food with its amount and calories, the **pencil** on an item to move, copy, change or delete it, and **+ Add food** (in the meal's colour) to add a food without the chat (see §7). Tap again to fold it.
+- **MacBro** next to the *Meals* heading says "Lazy to add meals manually? **Talk to me**, I'll do the hard work for you." Tap him to open the chat window for the day you're viewing.
 
-The split of the day's calories into protein, carbs and fat is in **Analysis** (the calorie split chart).
+## 12. Check your progress
 
-Micronutrients are estimates. Treat them as a guide, not a lab result.
+At the bottom of the **Meals** tab, **Check your progress** opens your trends right below it (it used to be a separate Analysis tab). Tap it again to close them. Choose **7, 14 or 30 days**:
 
-## 12. Analysis
-
-The **Analysis** tab shows trends over **7, 14 or 30 days**:
-
-- summary cards: average calories, average protein, average water (your streaks are on **Home**). Analysis's "on target" days still use calories within ±10% and at least 90% of protein; the Home protein streak only looks at protein.
+- summary cards: average calories, average protein, average water (your streaks are on **Home**). The "on target" days here still use calories within ±10% and at least 90% of protein; the Home protein streak only looks at protein.
 - calories per day and protein per day against target
 - macro trends
-- where your calories came from
+- where your calories came from (the split into protein, carbs and fat)
 - calories by meal
 - water per day
 - a data table under each chart
@@ -415,19 +409,19 @@ Open **⚙ Settings** from the top bar.
 
 ## 17. Troubleshooting and FAQ
 
-**"You've used all 20 AI messages for today."** Your daily AI allowance is used up (see §5). It resets at midnight. Until then, log foods you've saved, use the water buttons, the Dashboard and quick replies.
+**"You've used all 20 AI messages for today."** Your daily AI allowance is used up (see §5). It resets at midnight. Until then, log foods you've saved, use the water buttons, the Meals tab and quick replies.
 
 **"Too many attempts. Please wait…"** After several wrong passwords for one email (or many sign-in attempts from one connection), sign-in pauses for up to 15 minutes to stop password guessing. Wait and try again.
 
 **"Something went wrong on our side (ref 1a2b3c4d)."** An unexpected error in OmniAI itself. Try again; if it keeps happening, send the **ref** to the contact on the Privacy page so the exact problem can be found.
 
-**"MacBro's servers are temporarily down."** The AI model is unavailable or its free daily limit is used up. Your data is safe. Try again later. You can still use the Dashboard, water buttons and item actions, since they don't need the AI.
+**"MacBro's servers are temporarily down."** The AI model is unavailable or its free daily limit is used up. Your data is safe. Try again later. You can still use the Meals tab, water buttons and item actions, since they don't need the AI.
 
-**I don't want to use the chat.** Use **+ Add food** under any meal on the Dashboard. Saved foods don't need the AI at all; new foods need it once, for the estimate.
+**I don't want to use the chat.** Use **+ Add food** in any meal on the Meals tab (tap the meal to unfold it). Saved foods don't need the AI at all; new foods need it once, for the estimate.
 
 **The mic button is missing.** Your browser doesn't support speech recognition. Use Chrome or Edge, or type instead.
 
-**I confirmed the wrong thing.** Fix it on the Dashboard with the **pencil** on that item, or ask in the chat, e.g. "delete the pizza from lunch".
+**I confirmed the wrong thing.** Fix it on the Meals tab (unfold the meal) with the **pencil** on that item, or ask in the chat, e.g. "delete the pizza from lunch".
 
 **The meal was put in the wrong slot.** Move it with **pencil → Move → pick the meal → →**, or say "move it to lunch".
 
