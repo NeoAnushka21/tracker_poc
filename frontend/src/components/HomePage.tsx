@@ -4,7 +4,6 @@ import type { DailySummary, Streak, Streaks, User } from "../types";
 import { greeting } from "../format";
 import { haptic } from "../haptics";
 import { Bar, CalorieRing, Water } from "./Dashboard";
-import { AppLogo } from "./Avatar";
 import MacBroInvite from "./MacBroInvite";
 
 type Props = {
@@ -125,7 +124,6 @@ export default function HomePage({ user, dataVersion, onDataChanged, onOpenChat,
   return (
     <div className="home">
       <section className="home-hero card">
-        <AppLogo size={64} />
         <div className="home-hero-text">
           <p className="muted small">{todayLabel()}</p>
           <h1>{greeting()}{user.preferred_name ? `, ${user.preferred_name}` : ""}!</h1>
