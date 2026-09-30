@@ -3,6 +3,7 @@ import json
 
 from app.llm.provider import to_openai_messages, to_openai_tools
 from app.llm.tools import TOOLS, ToolContext, ToolInputError, run_tool
+from tests.conftest import internal_id
 
 
 def test_tools_translate_to_function_schema():
@@ -46,7 +47,7 @@ def test_missing_or_invalid_args_become_tool_errors(client, user):
     from app.models import User
 
     with SessionLocal() as db:
-        ctx = ToolContext(db=db, user=db.get(User, user["id"]), raw_user_message="x")
+        ctx = ToolContext(db=db, user=db.get(User, internal_id(user["id"])), raw_user_message="x")
         for args in ({"summary": "no items or times"}, {"__invalid_json__": "{oops"}):
             try:
                 run_tool(ctx, "propose_entry", args)

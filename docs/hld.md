@@ -1,6 +1,6 @@
 # OmniAI high-level design (HLD)
 
-> Last updated: 2026-09-30 (built-in general food list (USDA) between Saved Food and the AI; raw/cooked asked, never assumed; typo-tolerant saved-food and meal-word matching, Dashboard "Did you mean …?"; earlier: tabs: Saved Food, Explore, Body Profile; admin two-step sign-in; tool allow-list; terms page; earlier: health notes, Alembic, forgot password…).Update the diagrams whenever a component, data flow, table or external service changes (see [docs/README.md](README.md)).
+> Last updated: 2026-09-30 (database hardening phase 1: public user UUIDs, items linked to foods, ON DELETE rules, timestamptz, composite indexes; built-in general food list (USDA) between Saved Food and the AI; raw/cooked asked, never assumed; typo-tolerant saved-food and meal-word matching, Dashboard "Did you mean …?"; earlier: tabs: Saved Food, Explore, Body Profile; admin two-step sign-in; tool allow-list; terms page; earlier: health notes, Alembic, forgot password…).Update the diagrams whenever a component, data flow, table or external service changes (see [docs/README.md](README.md)).
 > Diagrams are Mermaid. They render on GitHub and in VS Code with a Mermaid preview extension.
 
 ## 1. Purpose and principles
@@ -215,6 +215,7 @@ erDiagram
     users ||--o{ body_measurements : "has (optional)"
     users ||--o{ log_entries : logs
     log_entries ||--|{ log_entry_items : contains
+    user_foods |o--o{ log_entry_items : "logged from (user_food_id)"
     users ||--o{ water_logs : drinks
     users ||--o{ user_foods : "food library"
     user_foods ||--o{ recipe_ingredients : "recipe of"
@@ -224,6 +225,8 @@ erDiagram
     users ||--o{ ai_requests : "daily AI allowance"
     users ||--o{ password_resets : "forgot-password links"
 ```
+
+**Identity and integrity (migration 0003, 2026-09-30):** `users.id` is the internal key every table joins on; `users.public_id` (UUID v7) is what the API and admin screens show. Every foreign key has an ON DELETE rule, so deleting a user row removes everything they own in the database itself (model-usage and admin-audit rows are kept, unlinked). Logged items point at the saved food they came from, so "most eaten" is a count. Timestamps are `timestamptz` (UTC); per-user tables are indexed on (user_id, date) or (user_id, status).
 
 Column-level detail is in [technical-overview.md](technical-overview.md#5-data-model).
 

@@ -5,6 +5,7 @@ from app import config
 from app.db import SessionLocal
 from app.models import User
 from tests.test_foods import CHICKEN, log_and_confirm
+from tests.conftest import internal_id
 
 
 @pytest.fixture
@@ -31,7 +32,7 @@ def test_register_requires_consent(client):
 
 def test_existing_user_without_consent_must_accept(client, user):
     with SessionLocal() as db:
-        db.get(User, user["id"]).consent_version = None
+        db.get(User, internal_id(user["id"])).consent_version = None
         db.commit()
     assert client.get("/api/auth/me").json()["consented"] is False
     assert client.get("/api/dashboard/daily").status_code == 403
@@ -43,7 +44,7 @@ def test_logins_are_counted(client, user):
     client.post("/api/auth/logout")
     client.post("/api/auth/login", json={"email": "me@example.com", "password": "password123"})
     with SessionLocal() as db:
-        u = db.get(User, user["id"])
+        u = db.get(User, internal_id(user["id"]))
         assert u.login_count == 2 and u.last_login_at is not None
 
 
@@ -75,7 +76,8 @@ def test_admin_sees_users_and_their_data_and_is_audited(client, user, fake_llm, 
 
 def test_admin_unknown_user_404(client, user, admin_emails):
     login_admin(client)
-    assert client.get("/api/admin/users/999").status_code == 404
+    assert client.get("/api/admin/users/00000000-0000-7000-8000-000000000000").status_code == 404
+    assert client.get("/api/admin/users/1").status_code == 422             # internal ids aren't accepted
 
 
 def test_default_admin_is_only_the_configured_email(client, user):

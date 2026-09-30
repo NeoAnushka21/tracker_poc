@@ -22,7 +22,7 @@ router = APIRouter(prefix="/api/profile", tags=["profile"])
 def user_to_dict(db: Session, user: User) -> dict:
     weight = current_weight(db, user.id)
     return {
-        "id": user.id,
+        "id": str(user.public_id),
         "email": user.email,
         "onboarded": user.onboarded,
         "preferred_name": user.preferred_name,

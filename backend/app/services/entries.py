@@ -28,6 +28,7 @@ def _clone(item: LogEntryItem) -> LogEntryItem:
     return LogEntryItem(
         ingredient_name=item.ingredient_name, brand_name=item.brand_name, quantity=item.quantity,
         unit=item.unit, micronutrients=dict(item.micronutrients) if item.micronutrients else None,
+        user_food_id=item.user_food_id, general_id=item.general_id, source=item.source,
         **{k: getattr(item, k) for k in NUTRIENTS},
     )
 
@@ -89,7 +90,8 @@ def add_saved_food(db: Session, user: User, food: UserFood, quantity: float, uni
     entry = LogEntry(
         user_id=user.id, meal_type=meal, eaten_at=eaten_at_for_meal(db, user, meal, day),
         items=[LogEntryItem(ingredient_name=food.name, brand_name=food.brand_name, quantity=quantity,
-                            unit=unit, **nutrients)],
+                            unit=unit, user_food_id=food.id,
+                            source="recipe" if food.kind == "recipe" else "library", **nutrients)],
     )
     db.add(entry)
     food.last_used_at = utcnow()

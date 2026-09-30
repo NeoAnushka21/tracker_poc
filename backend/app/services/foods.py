@@ -402,15 +402,19 @@ def learn_item(db: Session, user: User, item: dict) -> UserFood | None:
     return upsert_general(db, user, item) if item.get("general_id") else upsert_estimate(db, user, item)
 
 
-def record_confirmed_items(db: Session, user: User, items: list[dict]) -> None:
-    """After a log entry is confirmed: learn new foods, and mark library foods as used."""
+def record_confirmed_items(db: Session, user: User, items: list[dict]) -> list[UserFood | None]:
+    """After a log entry is confirmed: learn new foods, and mark library foods as used.
+    Returns each item's saved food (in order), so the logged items can point at it."""
+    foods = []
     for it in items:
         if it.get("food_id"):
             food = get_user_food(db, user.id, it["food_id"])
             if food is not None:
                 food.last_used_at = utcnow()
         else:
-            learn_item(db, user, it)
+            food = learn_item(db, user, it)
+        foods.append(food)
+    return foods
 
 
 def save_recipe(db: Session, user: User, payload: dict) -> UserFood:

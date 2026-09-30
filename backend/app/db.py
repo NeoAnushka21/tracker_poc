@@ -1,4 +1,6 @@
-from sqlalchemy import create_engine, event
+from datetime import timezone
+
+from sqlalchemy import DateTime, MetaData, TypeDecorator, create_engine, event
 from sqlalchemy.orm import DeclarativeBase, sessionmaker
 
 from app.config import DATABASE_URL
@@ -33,8 +35,36 @@ if _is_sqlite:
 SessionLocal = sessionmaker(bind=engine, autoflush=False, expire_on_commit=False)
 
 
+# Predictable names for every index and constraint, so later migrations can find them by name on
+# Postgres (2026-09-30). ix_ matches the names SQLAlchemy already gave indexes.
+NAMING_CONVENTION = {
+    "ix": "ix_%(column_0_label)s",
+    "uq": "uq_%(table_name)s_%(column_0_name)s",
+    "ck": "ck_%(table_name)s_%(constraint_name)s",
+    "fk": "fk_%(table_name)s_%(column_0_name)s_%(referred_table_name)s",
+    "pk": "pk_%(table_name)s",
+}
+
+
 class Base(DeclarativeBase):
-    pass
+    metadata = MetaData(naming_convention=NAMING_CONVENTION)
+
+
+class UTCDateTime(TypeDecorator):
+    """A UTC moment: `timestamptz` in Postgres (unambiguous for any tool reading the database),
+    while the app keeps working with naive UTC datetimes as before (models.utcnow)."""
+    impl = DateTime(timezone=True)
+    cache_ok = True
+
+    def process_bind_param(self, value, dialect):
+        if value is not None and value.tzinfo is None:
+            value = value.replace(tzinfo=timezone.utc)
+        return value
+
+    def process_result_value(self, value, dialect):
+        if value is not None and value.tzinfo is not None:
+            value = value.astimezone(timezone.utc).replace(tzinfo=None)
+        return value
 
 
 def add_missing_columns(connection=None) -> list[str]:

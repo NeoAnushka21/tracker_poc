@@ -1,5 +1,6 @@
 """Download my data: everything stored about a user, as one JSON document (right of access,
 India's DPDP Act 2023). Secrets are left out: the password hash and the Google account id."""
+import uuid
 from datetime import date, datetime
 
 from sqlalchemy import inspect, select
@@ -19,6 +20,8 @@ def _value(v):
         return v.isoformat() + "Z"          # stored as naive UTC
     if isinstance(v, date):
         return v.isoformat()
+    if isinstance(v, uuid.UUID):
+        return str(v)
     return v
 
 

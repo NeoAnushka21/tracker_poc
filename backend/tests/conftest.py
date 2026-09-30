@@ -89,3 +89,13 @@ def make_user(client: TestClient, email: str = "me@example.com") -> dict:
 @pytest.fixture
 def user(client):
     return make_user(client)
+
+
+def internal_id(public_id: str) -> int:
+    """The database id behind the public id the API shows (e.g. /api/auth/me "id")."""
+    import uuid
+    from sqlalchemy import select
+    from app.db import SessionLocal
+    from app.models import User
+    with SessionLocal() as db:
+        return db.scalar(select(User.id).where(User.public_id == uuid.UUID(public_id)))

@@ -10,6 +10,7 @@ from app.services.water import water_target_ml
 from app.timeutil import local_to_utc, resolve_meal_type
 from tests.conftest import text_reply, tool_reply
 from tests.test_foods import CHICKEN, chat_propose
+from tests.conftest import internal_id
 
 
 def test_water_target_from_weight_and_activity():
@@ -62,7 +63,7 @@ def test_plain_snack_is_stored_as_morning_or_evening(client, user, fake_llm):
 
 def test_legacy_snack_entries_are_relabelled(client, user):
     with SessionLocal() as db:
-        uid = user["id"]
+        uid = internal_id(user["id"])
         for local_hour in (11, 17):
             db.add(LogEntry(user_id=uid, meal_type="snack",
                             eaten_at=local_to_utc(datetime(2026, 9, 28, local_hour, 0), "Asia/Kolkata"),

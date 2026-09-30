@@ -4,6 +4,7 @@ from fastapi.testclient import TestClient
 
 from app.config import SECRET_KEY
 from app.main import app
+from tests.conftest import internal_id
 
 LOGIN = {"email": "me@example.com", "password": "password123"}
 
@@ -42,7 +43,7 @@ def test_a_copied_cookie_stops_working_after_log_out_everywhere(client, user):
 
 def test_tokens_from_before_versions_still_work(client, user):
     """Cookies issued before this change carry no version: they count as version 0."""
-    uid = client.get("/api/auth/me").json()["id"]
+    uid = internal_id(client.get("/api/auth/me").json()["id"])   # the token carries the internal id
     old = jwt.encode({"sub": str(uid), "iat": 1, "exp": 4102444800}, SECRET_KEY, algorithm="HS256")
     legacy = TestClient(app)
     legacy.cookies.set("session", old)

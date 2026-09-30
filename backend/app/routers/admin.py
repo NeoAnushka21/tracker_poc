@@ -3,6 +3,7 @@
 Access is limited to ADMIN_EMAILS, and every view of a user's data is written to
 admin_audit so there's a record of who looked at what.
 """
+import uuid
 from datetime import timedelta
 
 from fastapi import APIRouter, Depends, HTTPException, status
@@ -33,8 +34,8 @@ def _audit(db: Session, admin: User, target_id: int | None, action: str) -> None
     db.commit()
 
 
-def _target(db: Session, user_id: int) -> User:
-    user = db.get(User, user_id)
+def _target(db: Session, public_id: uuid.UUID) -> User:
+    user = db.scalar(select(User).where(User.public_id == public_id))
     if user is None or is_admin(user):
         raise HTTPException(status.HTTP_404_NOT_FOUND, "User not found")
     return user
@@ -63,7 +64,7 @@ def list_users(admin: User = Depends(admin_user), db: Session = Depends(get_db))
     _audit(db, admin, None, "list_users")
     return [
         {
-            "id": u.id,
+            "id": str(u.public_id),
             "email": u.email,
             "preferred_name": u.preferred_name,
             "created_at": _iso(u.created_at),
@@ -83,7 +84,7 @@ def list_users(admin: User = Depends(admin_user), db: Session = Depends(get_db))
 
 
 @router.get("/users/{user_id}")
-def user_detail(user_id: int, days: int = 14, admin: User = Depends(admin_user), db: Session = Depends(get_db)):
+def user_detail(user_id: uuid.UUID, days: int = 14, admin: User = Depends(admin_user), db: Session = Depends(get_db)):
     user = _target(db, user_id)
     days = max(1, min(days, 90))
     end = local_today(user.timezone)
@@ -102,7 +103,7 @@ def user_detail(user_id: int, days: int = 14, admin: User = Depends(admin_user),
 
 
 @router.get("/users/{user_id}/chat")
-def user_chat(user_id: int, limit: int = 100, admin: User = Depends(admin_user), db: Session = Depends(get_db)):
+def user_chat(user_id: uuid.UUID, limit: int = 100, admin: User = Depends(admin_user), db: Session = Depends(get_db)):
     user = _target(db, user_id)
     _audit(db, admin, user.id, "view_user_chat")
     return [message_to_dict(m) for m in recent_messages(db, user.id, max(1, min(limit, 500)))]

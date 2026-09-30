@@ -104,9 +104,19 @@ def _items_from_payload(payload: dict) -> list[LogEntryItem]:
             fat_g=i["fat_g"],
             fiber_g=i.get("fiber_g", 0),
             micronutrients=i.get("micronutrients"),
+            user_food_id=i.get("food_id"),
+            general_id=i.get("general_id"),
+            source=i.get("source"),
         )
         for i in payload["items"]
     ]
+
+
+def _link_learned(items: list[LogEntryItem], foods: list) -> None:
+    """Point each logged item at the saved food it was logged from or just learned into."""
+    for item, food in zip(items, foods):
+        if food is not None:
+            item.user_food_id = food.id
 
 
 def confirm_action(db: Session, user: User, action_id: int) -> tuple[PendingAction, ChatMessage]:
@@ -144,7 +154,7 @@ def confirm_action(db: Session, user: User, action_id: int) -> tuple[PendingActi
         )
         db.add(entry)
         db.flush()
-        record_confirmed_items(db, user, p["items"])
+        _link_learned(entry.items, record_confirmed_items(db, user, p["items"]))
         if from_dashboard(action):
             what = ", ".join(f"{i['quantity']:g} {i['unit']} {i['ingredient_name']}" for i in p["items"])
             event_text = (f"On the dashboard the user added {what} to {entry.meal_type.replace('_', ' ')} "
@@ -164,7 +174,8 @@ def confirm_action(db: Session, user: User, action_id: int) -> tuple[PendingActi
             entry.meal_type = _meal_type(p, user)
             entry.eaten_at = datetime.fromisoformat(p["eaten_at_utc"])
             entry.updated_at = utcnow()
-            record_confirmed_items(db, user, p["items"])
+            db.flush()
+            _link_learned(entry.items, record_confirmed_items(db, user, p["items"]))
             event_text = f"User confirmed proposal #{action.id}; log entry #{entry.id} updated."
         elif action.action_type == "delete":
             entry.deleted_at = utcnow()

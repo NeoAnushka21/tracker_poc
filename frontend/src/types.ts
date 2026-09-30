@@ -17,7 +17,8 @@ export type Targets = {
 };
 
 export type User = {
-  id: number;
+  /** Public id (UUID). The database's internal number never leaves the server. */
+  id: string;
   email: string;
   onboarded: boolean;
   preferred_name: string | null;
@@ -218,7 +219,7 @@ export type RangeSummary = {
 };
 
 export type AdminUserRow = {
-  id: number;
+  id: string;   // public id (UUID)
   email: string;
   preferred_name: string | null;
   created_at: string | null;

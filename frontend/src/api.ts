@@ -203,8 +203,8 @@ export const api = {
   range: (days: number) => request<RangeSummary>("GET", `/api/dashboard/range?days=${days}`),
 
   adminUsers: () => request<AdminUserRow[]>("GET", "/api/admin/users"),
-  adminUser: (id: number, days = 14) => request<AdminUserDetail>("GET", `/api/admin/users/${id}?days=${days}`),
-  adminChat: (id: number) => request<ChatMessage[]>("GET", `/api/admin/users/${id}/chat`),
+  adminUser: (id: string, days = 14) => request<AdminUserDetail>("GET", `/api/admin/users/${id}?days=${days}`),
+  adminChat: (id: string) => request<ChatMessage[]>("GET", `/api/admin/users/${id}/chat`),
   adminAudit: () => request<AuditRow[]>("GET", "/api/admin/audit"),
   adminLlmUsage: (hours = 24) => request<LlmUsageReport>("GET", `/api/admin/llm-usage?hours=${hours}`),
 

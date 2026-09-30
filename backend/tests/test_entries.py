@@ -5,6 +5,7 @@ from app.services import cancel
 from app.services.progress import motivation
 from tests.conftest import make_user, text_reply, tool_reply
 from tests.test_foods import CHICKEN, OIL, chat_propose, log_and_confirm
+from tests.conftest import internal_id
 
 
 def day(client):
@@ -158,7 +159,7 @@ def test_stopped_turn_saves_nothing(client, user, fake_llm):
 
     class StopsMidway:
         def complete(self, **_):
-            cancel.cancel(me["id"], "req-1")       # user clicks Stop while the model is working
+            cancel.cancel(internal_id(me["id"]), "req-1")       # user clicks Stop while the model is working
             return tool_reply("propose_entry", {"summary": "m", "eaten_at": None, "meal_type": None,
                                                 "note": "", "items": [CHICKEN]})
 
