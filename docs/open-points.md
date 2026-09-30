@@ -1,6 +1,6 @@
 # Open points
 
-> Last updated: 2026-09-30 (staging environment plan parked; Settings reorganised; country list narrowed to India; optional About you questions built; country and region in onboarding; profile question ideas logged; database hardening phase 1 done; monthly USDA food list check built; general food list built with raw/cooked questions; follow-ups logged; general food list idea logged; typo-tolerant saved-food and meal-word matching done, learning your spellings parked; Render waking page seen on the app's direct link, noted under section 4; Saved Food list, Body Profile rename, Explore tab placeholder and its recipe-collection follow-up; reward-style UI pass done, its follow-ups in section 5; Continue with Google built; phone app and open-source licence parked; standards gap review, section 8; #1 limits, #3 privacy, #5 headers and #4 sessions, #6 CI and #7 monitoring (code) and #8 password hashing and #9 forgot password (code) and #10 Alembic and #11 pinned dependencies and #12 health wording done; #13/#14 lint + a11y fixes, #15, #16, #20 done; #17, #18 need decisions).Until at least 2026-10-06 the app is used by one person (the owner), and the focus is the single-user experience, UI and features.
+> Last updated: 2026-09-30 (keep-awake: code ready, monitor to set up; staging environment plan parked; Settings reorganised; country list narrowed to India; optional About you questions built; country and region in onboarding; profile question ideas logged; database hardening phase 1 done; monthly USDA food list check built; general food list built with raw/cooked questions; follow-ups logged; general food list idea logged; typo-tolerant saved-food and meal-word matching done, learning your spellings parked; Render waking page seen on the app's direct link, noted under section 4; Saved Food list, Body Profile rename, Explore tab placeholder and its recipe-collection follow-up; reward-style UI pass done, its follow-ups in section 5; Continue with Google built; phone app and open-source licence parked; standards gap review, section 8; #1 limits, #3 privacy, #5 headers and #4 sessions, #6 CI and #7 monitoring (code) and #8 password hashing and #9 forgot password (code) and #10 Alembic and #11 pinned dependencies and #12 health wording done; #13/#14 lint + a11y fixes, #15, #16, #20 done; #17, #18 need decisions).Until at least 2026-10-06 the app is used by one person (the owner), and the focus is the single-user experience, UI and features.
 
 **How this doc works (standing rule, 2026-09-29):** every idea, option or follow-up that comes up in a discussion but isn't built goes here, in the same change as the discussion's work, so nothing gets lost. Each item is either **open** (may be built later), **on hold**, or **decided against** (kept with the reason, so it isn't re-discussed from scratch). When an item is built, it moves to **Done** at the bottom with the date, and the feature itself is documented in the relevant doc.
 
@@ -83,7 +83,7 @@ Separate and also free: **"Sign in with Google"** for OmniAI accounts (built 202
 | Custom domain | Paid; wait for the final app name (`brand.ts`, `APP_DOMAIN`) |
 | Keep-awake pinger ("Option 1") | See 4 below |
 
-## 4. Keep the server awake with a pinger ("Option 1", parked 2026-09-29)
+## 4. Keep the server awake with a pinger ("Option 1"; code ready 2026-09-30, monitor to set up)
 
 The launcher (live since 2026-09-29) replaces Render's waking page with our dancing-MacBro screen, but the wait is still 30–60 s after ~15 min idle. A pinger would remove most waits.
 
@@ -94,7 +94,8 @@ The launcher (live since 2026-09-29) replaces Render's waking page with our danc
 - **What's left:** the wake screen only after a restart or redeploy.
 - **Also fixes the direct link (seen 2026-09-30):** opening the app's own address (`omniai-hkv2.onrender.com`, e.g. from an old bookmark) after it has slept shows Render's black "SERVICE WAKING UP" page, because our code isn't running yet; only the launcher (`https://omniai-app.onrender.com`) shows MacBro. For now: bookmark and share the launcher. A pinger would make the direct link almost always fast too. Status: **parked**.
 - **Caveat:** Render's docs don't mention whether keep-alive pings are allowed; it's common practice, but the policy could change.
-- **Effort:** about 5 minutes (an account on the pinger site, one monitor), no code.
+- **Effort:** about 5 minutes (an account on the pinger site, one monitor).
+- **2026-09-30:** `/api/health` now also answers `HEAD` (UptimeRobot's free plan pings with it; it used to get 405, which the monitor would show as "down"). Step-by-step setup in [deployment.md](deployment.md) ("Uptime alerts + keeping the server awake"). **Status: waiting for the owner to create the UptimeRobot monitor.** Only one free web service can stay always-on within Render's 750 hours, so a future staging service must not be pinged.
 
 ## 5. Feature follow-ups (discussed, not built)
 

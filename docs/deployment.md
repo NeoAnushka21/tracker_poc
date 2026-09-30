@@ -1,6 +1,6 @@
 # Deploying OmniAI (Render + Neon)
 
-> Last updated: 2026-09-30 (monthly USDA food list check; earlier: always-on launcher page).
+> Last updated: 2026-09-30 (keep-awake monitor steps, `/api/health` answers HEAD; monthly USDA food list check; earlier: always-on launcher page).
 
 **Open the app from the launcher:** https://omniai-app.onrender.com (static site `omniai-app`, never sleeps; the exact address is shown on its Render page). **App:** https://omniai-hkv2.onrender.com (Render service `omniai`, Singapore) · Neon project `young-star-73873699` (AWS Singapore). Local data was copied into Neon on 2026-09-29 (159 rows, 13 tables); Neon is now the real database. The NVIDIA backup is off in production, and there's no uptime pinger yet. Update this file whenever the deployment setup changes (see [README.md](README.md)).
 
@@ -126,10 +126,22 @@ Reports carry the error and stack trace only: no request bodies (chat, food, pas
 
 **Uptime alerts + keeping the server awake (UptimeRobot, free)**, about 5 minutes:
 
-1. Sign up at **https://uptimerobot.com**.
-2. **New monitor** → type **HTTP(s)** → URL `https://omniai-hkv2.onrender.com/api/health` → interval **5 minutes** → alert contact: your email.
+1. Sign up at **https://uptimerobot.com** (free plan: 50 monitors, checks every 5 minutes).
+2. **+ New monitor**:
+   - Monitor type: **HTTP(s)**
+   - Friendly name: `OmniAI app`
+   - URL: `https://omniai-hkv2.onrender.com/api/health` (the **app** address, not the launcher: the launcher is a static site that never sleeps)
+   - Monitoring interval: **5 minutes**
+   - Alert contact: your email
+   - **Create monitor.**
+3. Within a few minutes it shows **Up** (green). The free plan pings with `HEAD`; `/api/health` answers both `GET` and `HEAD` with 200 (since 2026-09-30; before that a `HEAD` got 405 and the monitor would have said "down").
+4. Check after an hour: open the app's own address directly; it should load straight away, with no Render waking page.
 
-A ping every 5 minutes also stops the free web service from sleeping (Render's 750 free instance-hours a month cover one always-on service), so people rarely see the wake screen. `/api/health` doesn't touch the database, so Neon still sleeps. Render's docs don't say whether keep-alive pings are allowed; if that changes, set the interval above 15 minutes to keep only the alerts.
+Why it works: Render's free web service sleeps after ~15 minutes without a request; a request every 5 minutes means it never does. `/api/health` doesn't touch the database, so Neon still sleeps between real use (it wakes in about a second).
+
+**Hours:** Render gives 750 free instance-hours a month per workspace, and one always-on service uses about 720-744. So keep **only one** free web service always on. A second free web service (e.g. the parked staging service) would share the same 750 hours and could use them up before the month ends, after which Render suspends free services until the next month; don't ping a staging service, and watch **Render → Billing → Free usage**. The launcher is a static site and uses no instance hours.
+
+**Fallback:** cron-job.org (free) can call the same URL every 5-10 minutes if UptimeRobot changes its free plan. Render's docs don't say whether keep-alive pings are allowed; if that changes, pause the monitor or set its interval above 15 minutes to keep only the downtime alerts.
 
 ## Password-reset emails (Brevo, free; code ready 2026-09-29, account to create)
 

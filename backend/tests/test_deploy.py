@@ -98,6 +98,12 @@ def test_health_is_readable_by_the_launcher(client):
     assert r.headers["cache-control"] == "no-store"
 
 
+def test_health_answers_uptime_monitors(client):
+    """UptimeRobot's free plan pings with HEAD; a 405 would show the site as down."""
+    r = client.head("/api/health")
+    assert r.status_code == 200 and r.content == b""
+
+
 # --- browser security headers and API docs ---------------------------------------------
 
 def test_security_headers_on_every_response(client):

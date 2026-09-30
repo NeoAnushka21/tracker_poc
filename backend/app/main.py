@@ -82,7 +82,9 @@ app.include_router(admin.router)
 app.include_router(entries.router)
 
 
-@app.get("/api/health")
+# GET and HEAD: uptime monitors (e.g. UptimeRobot's free plan) ping with HEAD, and a 405 would
+# show the site as down. The pings also keep the free Render service from sleeping.
+@app.api_route("/api/health", methods=["GET", "HEAD"])
 def health(response: Response):
     # Deliberately doesn't touch the database, so uptime pings don't keep Neon awake.
     # Readable from any origin: the always-on launcher page (another address) polls it while

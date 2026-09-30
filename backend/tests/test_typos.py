@@ -64,15 +64,16 @@ def test_ai_sees_saved_foods_despite_a_typo(client, user, fake_llm):
 # --- Dashboard: "Did you mean …?" ----------------------------------------------------------
 
 def test_dashboard_typo_asks_before_adding(client, user, fake_llm):
-    log_and_confirm(client, fake_llm, [PANEER])
+    log_and_confirm(client, fake_llm, [PANEER])        # lands in whichever meal the clock says
+    before = len(meal_items(client, "dinner"))         # so count, rather than expect an empty meal
     no = fake_llm()
     r = add(client, name="panner", meal_type="dinner")
     assert r.json()["status"] == "suggest" and r.json()["food"]["name"] == "paneer"
-    assert meal_items(client, "dinner") == [] and no.calls == []   # nothing added, no AI
+    assert len(meal_items(client, "dinner")) == before and no.calls == []   # nothing added, no AI
 
     food_id = r.json()["food"]["id"]
     assert add(client, name="paneer", food_id=food_id, meal_type="dinner").json()["status"] == "added"
-    assert [i["ingredient_name"] for i in meal_items(client, "dinner")] == ["paneer"]
+    assert [i["ingredient_name"] for i in meal_items(client, "dinner")] == ["paneer"] * (before + 1)
 
 
 def test_dashboard_no_thanks_estimates_the_typed_name(client, user, fake_llm):
