@@ -7,6 +7,7 @@ from sqlalchemy.orm import Session
 from app.models import User
 from app.services.actions import open_actions
 from app.services.foods import library_context
+from app.services.general_foods import context_lines
 from app.services.logs import current_weight, daily_summary
 from app.timeutil import local_now
 
@@ -23,6 +24,10 @@ entries and answer questions about what they've eaten.
 - Break the message into individual ingredients/items with quantities and units, then \
 estimate nutrition per item from typical nutrition data. Use cooked vs raw, and the \
 preparation, as the user describes it.
+- Raw or cooked: for meat, chicken, fish, prawns, rice, other grains (oats, quinoa, millet, \
+dalia, pasta, noodles) and dals/beans given by weight, if the user didn't say whether the \
+weight is raw or cooked, ask before proposing. Never assume: the calories per 100 g differ \
+by 25-80%. Pieces ("2 chicken drumsticks") and a named dish ("chicken curry") don't need it.
 - Ask a short clarifying question instead of proposing when something is genuinely \
 ambiguous in a way that materially changes the numbers: an unknown composition \
 ("had a sandwich" - what was in it?) or an unknown portion ("had an ice cream" - a scoop, \
@@ -69,6 +74,12 @@ computes them from the saved values. Only match when it's the same food in the s
 state: "chicken breast, cooked" is not "chicken breast, raw", and "roti" can match a saved \
 "Chapati" recipe. If the unit can't be converted (e.g. they said "a bowl" but the food is \
 saved per 100 g), ask for grams or pieces, or estimate with food_id null.
+- "general_foods" in the context lists common foods from a reference list (USDA), as \
+"id | name | per 100 g | units", for foods named in the message that aren't saved. When an \
+item is one of them (same food, same raw/cooked state) and isn't in my_foods, set its \
+general_id, keep the user's quantity and unit, and send 0 for the nutrients and null \
+micronutrients; the app computes them. For another unit (e.g. a bowl), also set \
+unit_weight_g. Prefer my_foods when both have it.
 - If the user corrects the nutrition of a saved food ("your chicken numbers are wrong, it's \
 31 g protein per 100 g"), send that item with food_id null and the corrected numbers; the \
 confirmed values replace the saved ones.
@@ -179,6 +190,12 @@ def build_system_prompt(sections: list[str] | None) -> str:
     return "\n\n".join(SECTIONS[k] for k in dict.fromkeys(keys)) + "\n"
 
 
+def general_context(food_text: str, my_foods: list[str]) -> list[str]:
+    """General-list foods named in the text, minus names the user has saved (my_foods lines)."""
+    saved = {line.split(" | ")[1].split(" (")[0].lower() for line in my_foods}
+    return context_lines(food_text, saved)
+
+
 def _entries_for_context(summary: dict) -> list[dict]:
     return [
         {
@@ -217,9 +234,11 @@ def build_dynamic_context(db: Session, user: User, selected_date: date | None = 
         "today_remaining": today["remaining"],
         "today_entries": today_entries,
         "open_proposals": proposals,
-        "my_foods": library_context(db, user, food_text) or (
+        "my_foods": (my_foods := library_context(db, user, food_text)) or (
             "(no saved foods match this message)" if food_text is not None else "(empty - nothing saved yet)"),
     }
+    if food_text:
+        context["general_foods"] = general_context(food_text, my_foods) or "(none match this message)"
     if selected_date is not None and selected_date != now.date():
         picked = daily_summary(db, user, selected_date)
         context["selected_date"] = selected_date.strftime("%A %Y-%m-%d")

@@ -12,7 +12,8 @@ from sqlalchemy.orm import Session
 
 from app.config import MEAL_TYPES
 from app.llm.tools import ToolContext, ToolInputError, run_tool
-from app.models import User
+from app.models import ChatMessage, User
+from app.services import general_foods
 from app.services.actions import open_actions
 from app.services.foods import FoodError, closest_saved, edit_distance, library_index, normalize_unit, nutrients_for, typo_limit
 from app.services.logs import daily_summary, entries_between
@@ -165,7 +166,7 @@ def _summary(ctx: ToolContext, text: str) -> str | None:
     return "\n".join(lines)
 
 
-# --- 4. foods that are all in Saved Food ---------------------------------------------
+# --- 4. foods from Saved Food or the general food list ---------------------------------------
 
 _MEAL_WORDS = {"breakfast": "breakfast", "lunch": "lunch", "dinner": "dinner", "morning snack": "morning_snack",
                "evening snack": "evening_snack", "snack": "snack"}
@@ -174,8 +175,63 @@ _FILLER = re.compile(r"^(?:i\s+)?(?:just\s+)?(?:have\s+)?(?:had|ate|eaten|have|l
 # Mentions of time, other days, drinks with water, or brands send the message to the model.
 _NOT_SIMPLE = re.compile(r"\b(?:yesterday|tomorrow|morning|afternoon|evening|night|ago|am|pm|at \d|water|"
                          r"instead|recipe|not|without|extra|less|more)\b|\d:\d")
-_ITEM = re.compile(_NUM + r"?\s*(?P<unit>g|gm|gms|grams?|kg|ml|l|pcs?|pieces?|servings?|slices?|nos?)?\s*(?:of\s+)?(?P<name>[a-z][a-z \-']*)")
+_ITEM = re.compile(_NUM + r"?\s*(?P<unit>g|gm|gms|grams?|kg|ml|l|pcs?|pieces?|servings?|slices?|nos?|"
+                   r"tbsps?|tsps?|tablespoons?|teaspoons?|cups?)?\s*(?:of\s+)?(?P<name>[a-z][a-z \-']*)")
 _SPLIT = re.compile(r"\s*(?:,|\band\b|&|\+|\bplus\b)\s*")
+_ASK = "ask"   # _resolve_item: the raw/cooked state must be asked first
+
+
+def _saved_match(index: dict, typed: str, state: str | None):
+    """(saved food, spelt exactly?) for a typed name; with a state, 'cooked chicken breast' also
+    finds 'chicken breast, cooked'."""
+    names = [typed]
+    if state:
+        rest = general_foods.strip_state(typed)
+        names += [n for w, s in general_foods.STATE_WORDS.items() if s == state for n in (f"{rest} {w}", f"{w} {rest}")]
+    for name in names:
+        food = closest_saved(index, name)
+        if food is not None:
+            return food, name in index
+    return None, False
+
+
+def _resolve_item(index: dict, typed: str, qty: float, unit: str | None) -> tuple[dict, str | None] | str | None:
+    """(card item, what a typo was read as) from Saved Food, else from the general list;
+    _ASK when the user must say raw or cooked; None to leave the message to the model."""
+    state = general_foods.state_in(typed)
+    food, exact = _saved_match(index, typed, state)
+    if food is not None:
+        saved_state = general_foods.state_in(food.name)
+        if saved_state and not state and unit is not None:
+            return _ASK                                  # saved as "chicken breast, cooked", typed "chicken breast"
+        if saved_state and state and saved_state != state:
+            food = None                                  # typed raw, saved cooked: not the same food
+    if food is not None:
+        u = unit or ("piece" if (food.grams_per_piece or normalize_unit(food.ref_unit)[0] == "piece")
+                     else "serving" if (food.grams_per_serving or normalize_unit(food.ref_unit)[0] == "serving")
+                     else None)
+        try:
+            if u is None:
+                raise FoodError("no unit")
+            nutrients_for(food, qty, u)
+            return ({"ingredient_name": food.name, "brand_name": None, "quantity": qty, "unit": u,
+                     "calories": 0, "protein_g": 0, "carbs_g": 0, "fat_g": 0, "fiber_g": 0,
+                     "food_id": food.id, "general_id": None, "unit_weight_g": None, "micronutrients": None},
+                    None if exact else f"'{typed}' as {food.name}")
+        except FoodError:
+            pass                                         # e.g. "1 cup" of a food saved per 100 g: try the list
+    m = general_foods.find(typed)
+    if m is None:
+        return None
+    if m.entry is None:
+        # Counted pieces ("2 drumsticks") have no raw/cooked question; the model handles those.
+        return _ASK if unit is not None else None
+    u = unit or ("piece" if m.entry["grams_per_piece"] else None)
+    if u is None or general_foods.grams_for(m.entry, qty, u) is None:
+        return None
+    return ({"ingredient_name": general_foods.display_name(m.entry), "brand_name": None, "quantity": qty, "unit": u,
+             "calories": 0, "protein_g": 0, "carbs_g": 0, "fat_g": 0, "fiber_g": 0, "food_id": None,
+             "general_id": m.entry["id"], "unit_weight_g": None, "micronutrients": None}, None)
 
 
 def _library_log(ctx: ToolContext, text: str) -> str | None:
@@ -189,7 +245,7 @@ def _library_log(ctx: ToolContext, text: str) -> str | None:
     if not body:
         return None
     index = library_index(ctx.db, ctx.user.id)
-    items, read_as = [], []
+    items, read_as, ask = [], [], []
     for part in _SPLIT.split(body):
         part = part.strip()
         if not part:
@@ -198,40 +254,73 @@ def _library_log(ctx: ToolContext, text: str) -> str | None:
         if not m or not m.group("num"):
             return None
         typed = re.sub(r"\s+", " ", m.group("name")).strip()
-        food = closest_saved(index, typed)   # allows a typo: "panner" -> Paneer
-        if food is None:
+        got = _resolve_item(index, typed, _num(m.group("num")), m.group("unit"))
+        if got is None:
             return None
-        if typed not in index:
-            read_as.append(f"'{typed}' as {food.name}")
-        qty = _num(m.group("num"))
-        unit = m.group("unit")
-        if unit is None:
-            # No unit: count of pieces (or servings), only if the food has such a measure.
-            unit = ("piece" if (food.grams_per_piece or normalize_unit(food.ref_unit)[0] == "piece")
-                    else "serving" if (food.grams_per_serving or normalize_unit(food.ref_unit)[0] == "serving")
-                    else None)
-            if unit is None:
-                return None
-        try:
-            nutrients_for(food, qty, unit)
-        except FoodError:
-            return None
-        items.append({"ingredient_name": food.name, "brand_name": None, "quantity": qty, "unit": unit,
-                      "calories": 0, "protein_g": 0, "carbs_g": 0, "fat_g": 0, "fiber_g": 0,
-                      "food_id": food.id, "unit_weight_g": None, "micronutrients": None})
+        if got == _ASK:
+            ask.append(typed)
+            continue
+        item, read = got
+        items.append(item)
+        if read:
+            read_as.append(read)
+    if ask:
+        # Raw and cooked differ by 25-80% per 100 g: ask, never assume (owner's rule, 2026-09-30).
+        ctx.reply_data = {"ask_state": {"text": text, "items": ask}}
+        if len(ask) == 1:
+            return (f"Was the {ask[0]} weighed raw or cooked? The calories per 100 g are very different, "
+                    "so I'd rather ask than guess.")
+        return (f"Were these weighed raw or cooked: {', '.join(ask)}? Reply with one word for all, "
+                f"or e.g. '{ask[0]} raw, {ask[1]} cooked'.")
     if not items:
         return None
     meal = next(iter(meals), None)
     names = ", ".join(f"{i['quantity']:g} {i['ingredient_name']}" for i in items)
+    general = [i["ingredient_name"] for i in items if i["general_id"]]
+    if not general:
+        source = "All from your saved foods, so the numbers match last time."
+    elif len(general) == len(items):
+        source = f"From the general food list ({general_foods.SOURCE_NOTE}), plain food with no oil or salt."
+    else:
+        source = f"From your saved foods and the general food list ({', '.join(general)})."
     try:
         run_tool(ctx, "propose_entry", {
             "summary": names[:80], "meal_type": meal, "eaten_at": None, "items": items,
-            "note": (f"I read {', '.join(read_as)}. " if read_as else "")
-                    + "All from your saved foods, so the numbers match last time. Confirm if it looks right.",
+            "note": (f"I read {', '.join(read_as)}. " if read_as else "") + source + " Confirm if it looks right.",
         })
     except ToolInputError:
         return None
     return ctx.notes[-1]
+
+
+# --- 4b. the answer to "raw or cooked?" ----------------------------------------------------
+
+_ANSWER_SPLIT = re.compile(r"\s*(?:,|;|\band\b|&)\s*")
+
+
+def _state_answer(ctx: ToolContext, text: str) -> str | None:
+    """'cooked' (or 'chicken raw, rice cooked') right after the raw/cooked question: log it."""
+    last = (ctx.db.query(ChatMessage).filter(ChatMessage.user_id == ctx.user.id, ChatMessage.role == "assistant")
+            .order_by(ChatMessage.id.desc()).first())
+    ask = ((last.data or {}) if last else {}).get("ask_state")
+    if not ask or len(text) > 80:
+        return None
+    # Typos in the answer: "cookd" -> cooked, "uncookd" -> uncooked.
+    text = " ".join(_close_to(w, tuple(general_foods.STATE_WORDS)) or w for w in text.split(" "))
+    states: dict[str, str] = {}
+    for seg in _ANSWER_SPLIT.split(text):
+        st, rest = general_foods.state_in(seg), general_foods.strip_state(seg)
+        for it in ask["items"]:
+            if st and rest and (rest in it or it in rest or _close_to(rest, (it,))):
+                states[it] = st
+    every = general_foods.state_in(text)
+    for it in ask["items"]:
+        if states.setdefault(it, every) is None:
+            return None
+    rebuilt = ask["text"]
+    for it in ask["items"]:
+        rebuilt = re.sub(rf"\b{re.escape(it)}\b", f"{states[it]} {it}", rebuilt, count=1)
+    return _library_log(ctx, rebuilt)
 
 
 # --- 5. same meal as yesterday ------------------------------------------------------
@@ -266,7 +355,7 @@ def _same_as_yesterday(ctx: ToolContext, text: str) -> str | None:
     return ctx.notes[-1]
 
 
-HANDLERS = [("water", _water), ("confirm_nudge", _yes), ("summary", _summary),
+HANDLERS = [("state_answer", _state_answer), ("water", _water), ("confirm_nudge", _yes), ("summary", _summary),
             ("repeat_meal", _same_as_yesterday), ("library_log", _library_log)]
 
 

@@ -1,6 +1,6 @@
 # OmniAI high-level design (HLD)
 
-> Last updated: 2026-09-30 (typo-tolerant saved-food and meal-word matching, Dashboard "Did you mean …?"; earlier: tabs: Saved Food, Explore, Body Profile; admin two-step sign-in; tool allow-list; terms page; earlier: health notes, Alembic, forgot password…).Update the diagrams whenever a component, data flow, table or external service changes (see [docs/README.md](README.md)).
+> Last updated: 2026-09-30 (built-in general food list (USDA) between Saved Food and the AI; raw/cooked asked, never assumed; typo-tolerant saved-food and meal-word matching, Dashboard "Did you mean …?"; earlier: tabs: Saved Food, Explore, Body Profile; admin two-step sign-in; tool allow-list; terms page; earlier: health notes, Alembic, forgot password…).Update the diagrams whenever a component, data flow, table or external service changes (see [docs/README.md](README.md)).
 > Diagrams are Mermaid. They render on GitHub and in VS Code with a Mermaid preview extension.
 
 ## 1. Purpose and principles
@@ -120,8 +120,9 @@ sequenceDiagram
 
 ```mermaid
 flowchart TD
-    M[User message] --> T[Fix meal-word typos<br/>brkfst → breakfast] --> F{Fast path?<br/>water · yes · summary ·<br/>saved foods, typos allowed · same as yesterday}
+    M[User message] --> T[Fix meal-word typos<br/>brkfst → breakfast] --> F{Fast path?<br/>raw/cooked answer · water · yes · summary ·<br/>Saved Food, then general food list, typos allowed ·<br/>same as yesterday}
     F -->|yes| C[Reply / card, no model call]
+    F -->|weight given, raw or cooked not said| Q[Ask: raw or cooked?<br/>Raw / Cooked buttons, no model call]
     F -->|no| R{Router rules}
     R -->|query · edit · simple log| S[Small tier<br/>gpt-oss-20b]
     R -->|vague dish · 3+ foods · recipe ·<br/>feedback · long| L[Large tier<br/>gpt-oss-120b]
@@ -183,11 +184,17 @@ Admin emails can't register, use the normal login or Continue with Google.
 flowchart TD
     A[+ Add food: name, quantity, unit] --> M{Saved in Saved Food?<br/>picked, or name matches}
     M -->|yes| S[Scale saved numbers in code<br/>add to the meal at once]
+    M -->|saved as raw/cooked,<br/>typed without| Q[Raw or cooked? buttons]
     M -->|no| T{Close typo of exactly<br/>one saved food?}
     T -->|yes| D[Did you mean …?<br/>no AI]
     D -->|Use it| S
-    D -->|No, add as typed| L
-    T -->|no| L[One AI call: propose_entry only<br/>same guards as the chat]
+    D -->|No, add as typed| G
+    T -->|no| G{On the general food list?}
+    G -->|yes, state known| GP[Preview computed in code<br/>from USDA numbers, no AI]
+    G -->|yes, raw or cooked not said| Q
+    Q -->|Raw / Cooked| A
+    G -->|no| L[One AI call: propose_entry only<br/>same guards as the chat]
+    GP --> P
     L --> P[(pending action<br/>origin = dashboard)]
     P --> C{User: Add it?}
     C -->|Add it| W[confirm_action: log entry +<br/>learn the food into Saved Food]
@@ -227,7 +234,8 @@ Column-level detail is in [technical-overview.md](technical-overview.md#5-data-m
 | Tools | Read: `get_food`, `get_logs`, `get_daily_summary`. Propose: `propose_entry`, `propose_edit`, `propose_delete`, `propose_move`, `propose_recipe`, `propose_water` |
 | Prompt | Stable system prompt (MacBro persona and rules, cacheable) plus per-turn dynamic context (date, time, targets, today's totals, my foods, item ids) |
 | History | Today's chat only (+3 h grace): last 6 messages on the small tier, 12 on the large |
-| Per-call size | Only the tools and prompt sections the intent needs, and only saved foods named in the message, typos allowed (25–87% fewer instruction tokens per call) |
+| Per-call size | Only the tools and prompt sections the intent needs, and only saved foods and general-list foods named in the message, typos allowed (25–87% fewer instruction tokens per call) |
+| General food list | ~300 common foods per 100 g from USDA FoodData Central (SR Legacy, public domain), a JSON file shipped with the backend (`app/data/general_foods.json`, built by `scripts/build_general_foods.py` from our curated `general_foods_spec.py`). Read-only, loaded once, no table. Order: Saved Food → general list → AI. Raw/cooked pairs are asked, never assumed. Confirmed foods are copied into Saved Food (`source = general`). |
 | Observability | `llm_usage` table and the admin **AI usage** panel (calls, tokens, fast-path share, cooldowns) |
 | Guards | Energy balance, quantity cleanup, false "Logged" claim nudge, missed-water nudge, move-vs-delete guard, tool allow-list per routed intent (other tool names are refused) |
 | Failure | Any provider error → HTTP 503 with a friendly message (`SHOW_LLM_ERRORS=true` shows details in dev) |

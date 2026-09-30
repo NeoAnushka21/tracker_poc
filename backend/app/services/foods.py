@@ -196,16 +196,19 @@ def edit_distance(a: str, b: str, limit: int) -> int:
     return prev[-1]
 
 
-def closest_saved(index: dict[str, UserFood], name: str) -> UserFood | None:
-    """The saved food a misspelt name means ('panner' -> Paneer), else None. Only when exactly
-    one saved food is that close, so a typo never picks between two foods."""
+def closest_saved(index: dict, name: str, strict: bool = False):
+    """The food a misspelt name means ('panner' -> Paneer), else None. Only when exactly one
+    food is that close, so a typo never picks between two foods. `strict` is for the big
+    general list: typos only from 6 letters, and the first letter must be right ('idlis' is
+    not 'imlis')."""
     key = _key(name)
     if key in index:
         return index[key]
-    limit = typo_limit(key)
+    limit = typo_limit(key[1:]) if strict else typo_limit(key)
     if not limit:
         return None
-    close = {id(f): f for k, f in index.items() if edit_distance(key, k, limit) <= limit}
+    close = {id(f): f for k, f in index.items()
+             if (not strict or k[:1] == key[:1]) and edit_distance(key, k, limit) <= limit}
     return next(iter(close.values())) if len(close) == 1 else None
 
 
@@ -374,6 +377,31 @@ def upsert_estimate(db: Session, user: User, item: dict) -> UserFood | None:
     return food
 
 
+def upsert_general(db: Session, user: User, item: dict) -> UserFood | None:
+    """Save a confirmed general-list food to the library with the list's exact numbers per
+    100 g (and piece weight). An existing saved food of that name is kept as it is."""
+    from app.services import general_foods
+    entry = general_foods.get(item["general_id"])
+    if entry is None:
+        return upsert_estimate(db, user, item)
+    name = general_foods.display_name(entry)
+    food = find_by_name(db, user.id, name, None)
+    if food is None:
+        food = UserFood(user_id=user.id, name=name, name_key=name_key(name, None), brand_name=None,
+                        kind="food", source="general", ref_qty=100.0, ref_unit="g",
+                        **{k: entry[k] for k in NUTRIENTS}, grams_per_piece=entry["grams_per_piece"],
+                        micronutrients=micros.clean(entry["micronutrients"]))
+        db.add(food)
+    food.last_used_at = utcnow()
+    db.flush()
+    return food
+
+
+def learn_item(db: Session, user: User, item: dict) -> UserFood | None:
+    """A confirmed item that isn't a saved food -> Saved Food (general-list or AI estimate)."""
+    return upsert_general(db, user, item) if item.get("general_id") else upsert_estimate(db, user, item)
+
+
 def record_confirmed_items(db: Session, user: User, items: list[dict]) -> None:
     """After a log entry is confirmed: learn new foods, and mark library foods as used."""
     for it in items:
@@ -382,14 +410,14 @@ def record_confirmed_items(db: Session, user: User, items: list[dict]) -> None:
             if food is not None:
                 food.last_used_at = utcnow()
         else:
-            upsert_estimate(db, user, it)
+            learn_item(db, user, it)
 
 
 def save_recipe(db: Session, user: User, payload: dict) -> UserFood:
     """Apply a confirmed save_recipe proposal (create, or replace an existing recipe)."""
     ingredient_foods: list[tuple[UserFood, dict]] = []
     for ing in payload["ingredients"]:
-        food = get_user_food(db, user.id, ing["food_id"]) if ing.get("food_id") else upsert_estimate(db, user, ing)
+        food = get_user_food(db, user.id, ing["food_id"]) if ing.get("food_id") else learn_item(db, user, ing)
         if food is None:
             raise FoodError(f"Ingredient '{ing['ingredient_name']}' could not be saved")
         ingredient_foods.append((food, ing))

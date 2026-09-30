@@ -40,7 +40,7 @@ def usage_rows():
 # --- router --------------------------------------------------------------------
 
 @pytest.mark.parametrize("text,intent,tier", [
-    ("had 2 eggs", "log", "small"),
+    ("had 2 idlis", "log", "small"),
     ("150g chicken breast", "log", "small"),
     ("had a sandwich for lunch", "log", "large"),                       # vague contents
     ("2 rotis, dal, rice and some sabzi", "log", "large"),              # 3+ foods
@@ -83,10 +83,8 @@ def test_water_with_food_goes_to_the_model(client, user, fake_llm):
 
 
 def test_yes_nudge_only_with_a_pending_card(client, user, fake_llm):
-    fake_llm(tool_reply("propose_entry", {"summary": "Chicken", "eaten_at": None, "meal_type": None,
-                                          "items": [CHICKEN], "note": "Here you go."}))
-    chat(client, "150g chicken breast")
     no = fake_llm()
+    chat(client, "150g cooked chicken breast")                        # a card from the general list, no model
     assert "Looks good" in chat(client, "yes")["content"] and no.calls == []
     # With nothing pending, "yes" is an answer to a question and goes to the model.
     client.post("/api/actions/1/reject")
@@ -112,15 +110,18 @@ def test_library_only_log_fastpath(client, user, fake_llm):
     assert (item["quantity"], item["unit"], item["source"]) == (3, "piece", "library")
     assert item["protein_g"] == pytest.approx(12.6 * 1.5, abs=0.1)
     assert no.calls == []
-    # Two saved foods in one message (the comma-free alias "chicken breast" works too).
-    items = chat(client, "3 eggs and 200 g chicken breast")["actions"][0]["payload"]["items"]
+    # Two saved foods in one message. The saved chicken is "cooked", so a plain "chicken breast"
+    # asks raw or cooked first (never assumed), and the one-word answer makes the card.
+    ask = chat(client, "3 eggs and 200 g chicken breast")
+    assert ask["actions"] == [] and "raw or cooked" in ask["content"]
+    items = chat(client, "cooked")["actions"][0]["payload"]["items"]
     assert [(i["ingredient_name"], i["quantity"]) for i in items] == [("eggs, large", 3), ("chicken breast, cooked", 200)]
     assert no.calls == []
 
 
 def test_unknown_food_goes_to_the_model(client, user, fake_llm):
     llm = fake_llm(text_reply("How big was the mango?"))
-    chat(client, "had 1 mango")
+    chat(client, "had 1 rambutan")
     assert len(llm.calls) == 1
 
 
@@ -153,7 +154,7 @@ def test_query_gets_only_read_tools_and_a_short_prompt(client, user, fake_llm):
 
 def test_simple_log_gets_logging_tools(client, user, fake_llm):
     llm = fake_llm(text_reply("Which meal?"))
-    chat(client, "had 2 eggs")
+    chat(client, "had 2 idlis")
     assert {t["name"] for t in llm.calls[0]["tools"]} == {"propose_entry", "propose_water", "get_food"}
 
 
@@ -183,8 +184,8 @@ def test_rate_limited_model_cools_down_and_the_next_one_answers(client, user, in
     limited = Named("gpt-oss-20b", error=LLMRateLimited("used up", retry_after=900))
     backup = Named("qwen3-32b", [text_reply("Which meal?"), text_reply("Which meal?")])
     install_pool(ModelSlot(limited, "small"), ModelSlot(backup, "small"))
-    chat(client, "had 2 eggs")
-    chat(client, "had 2 eggs")
+    chat(client, "had 2 idlis")
+    chat(client, "had 2 idlis")
     assert len(limited.calls) == 1              # skipped while cooling down
     assert len(backup.calls) == 2
     outcomes = [(m, o) for _, m, _, _, o in usage_rows()]
@@ -195,13 +196,13 @@ def test_small_tier_down_falls_back_to_large(client, user, install_pool):
     small = Named("gpt-oss-20b", error=LLMError("boom"))
     large = Named("gpt-oss-120b", [text_reply("Which meal?")])
     install_pool(ModelSlot(small, "small"), ModelSlot(large, "large"))
-    chat(client, "had 2 eggs")
+    chat(client, "had 2 idlis")
     assert len(large.calls) == 1
 
 
 def test_all_models_down_shows_the_friendly_message(client, user, install_pool):
     install_pool(ModelSlot(Named("gpt-oss-20b", error=LLMError("boom")), "small"))
-    r = client.post("/api/chat", json={"message": "had 2 eggs"})
+    r = client.post("/api/chat", json={"message": "had 2 idlis"})
     assert r.status_code == 503 and "temporarily down" in r.json()["detail"]
     assert usage_rows()[-1][-1] == "error"      # failed calls are still counted
 
@@ -212,7 +213,7 @@ def test_escalates_to_large_after_repeated_validation_errors(client, user, insta
     large = Named("gpt-oss-120b", [tool_reply("propose_entry", {
         "summary": "Eggs", "eaten_at": None, "meal_type": None, "items": [EGG], "note": "Here."}, "c")])
     install_pool(ModelSlot(small, "small"), ModelSlot(large, "large"))
-    reply = chat(client, "had 2 eggs")
+    reply = chat(client, "had 2 idlis")
     assert len(small.calls) == 2 and len(large.calls) == 1
     assert reply["actions"][0]["action_type"] == "create"
     assert large.calls[0]["tools"][0]["name"] == "propose_entry" and len(large.calls[0]["tools"]) > 3
@@ -249,7 +250,7 @@ def test_build_pool_drops_non_open_source(monkeypatch):
 def test_admin_usage_report(client, user, fake_llm, admin_emails):
     from tests.test_admin import login_admin
     fake_llm(text_reply("Which meal?"))
-    chat(client, "had 2 eggs")
+    chat(client, "had 2 idlis")
     chat(client, "drank 500 ml water")
     assert client.get("/api/admin/llm-usage").status_code == 403      # normal users can't see it
     login_admin(client)
@@ -267,10 +268,10 @@ def test_backup_models_only_after_every_primary(client, user, install_pool):
     large = Named("gpt-oss-120b", [text_reply("Which meal?")])
     backup = Named("deepseek-v4.1-flash", [text_reply("Which meal?")])
     install_pool(ModelSlot(small, "small"), ModelSlot(backup, "large", priority=2), ModelSlot(large, "large"))
-    chat(client, "had 2 eggs")
+    chat(client, "had 2 idlis")
     assert (len(large.calls), len(backup.calls)) == (1, 0)
     large.error = LLMError("down")
-    chat(client, "had 2 eggs")
+    chat(client, "had 2 idlis")
     assert len(backup.calls) == 1
 
 
@@ -317,7 +318,7 @@ class LimitedOnce(Named):
 def test_short_rate_limit_is_waited_out(client, user, install_pool):
     only = LimitedOnce("gpt-oss-120b", [text_reply("Which meal?")], retry_after=0.05)
     install_pool(ModelSlot(only, "large"))
-    r = client.post("/api/chat", json={"message": "had 2 eggs"})
+    r = client.post("/api/chat", json={"message": "had 2 idlis"})
     assert r.status_code == 200 and r.json()[-1]["content"] == "Which meal?"
     assert [o for *_, o in usage_rows()] == ["rate_limited", "ok"]
 
@@ -327,7 +328,7 @@ def test_model_still_cooling_from_the_last_message_is_waited_for(client, user, i
     slot = ModelSlot(Named("gpt-oss-120b", [text_reply("Which meal?")]), "large")
     slot.cooldown_until = time.monotonic() + 0.05          # limited a moment ago
     install_pool(slot)
-    assert client.post("/api/chat", json={"message": "had 2 eggs"}).status_code == 200
+    assert client.post("/api/chat", json={"message": "had 2 idlis"}).status_code == 200
 
 
 def test_long_rate_limit_still_fails_fast(client, user, install_pool, monkeypatch):
@@ -336,7 +337,7 @@ def test_long_rate_limit_still_fails_fast(client, user, install_pool, monkeypatc
     monkeypatch.setattr(time, "sleep", lambda s: pytest.fail("must not wait for a long limit"))
     only = Named("gpt-oss-120b", error=LLMRateLimited("daily quota used up", retry_after=config.LLM_RATE_LIMIT_MAX_WAIT_S + 60))
     install_pool(ModelSlot(only, "large"))
-    assert client.post("/api/chat", json={"message": "had 2 eggs"}).status_code == 503
+    assert client.post("/api/chat", json={"message": "had 2 idlis"}).status_code == 503
 
 
 def test_micronutrients_may_be_null_in_the_tool_schema():

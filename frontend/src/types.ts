@@ -106,8 +106,10 @@ export type ChatMessage = {
   created_at: string;
   actions: Action[];
   kind?: "progress" | null;
-  /** Progress card numbers (kind "progress"), or the day picked for a user message. */
-  data?: (ProgressData & { log_date?: undefined }) | { log_date?: string } | null;
+  /** Progress card numbers (kind "progress"), the day picked for a user message, or MacBro's
+   *  "raw or cooked?" question (answered with the quick-reply buttons). */
+  data?: (ProgressData & { log_date?: undefined }) | { log_date?: string }
+    | { ask_state: { text: string; items: string[] }; log_date?: undefined } | null;
 };
 
 export type ChatDay = { day: string; messages: ChatMessage[]; prev_day: string | null };
@@ -171,7 +173,7 @@ export type Food = Nutrients & {
   name: string;
   brand_name: string | null;
   kind: "food" | "recipe";
-  source: "estimate" | "user" | "recipe";
+  source: "estimate" | "user" | "recipe" | "general";
   ref_qty: number;
   ref_unit: string;
   grams_per_piece: number | null;

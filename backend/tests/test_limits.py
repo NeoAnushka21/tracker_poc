@@ -67,7 +67,7 @@ def test_dashboard_estimates_count_saved_foods_dont(client, user, fake_llm, limi
     assert allowance(client)["used"] == 1
     assert add(client, name="paneer").json()["status"] == "added"      # saved: no AI, not counted
     assert allowance(client)["used"] == 1
-    assert add(client, name="tofu").json()["status"] == "estimate"
+    assert add(client, name="seitan").json()["status"] == "estimate"
     r = add(client, name="tempeh")
     assert r.status_code == 429 and "AI messages" in r.json()["detail"]
 

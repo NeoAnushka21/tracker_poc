@@ -4,7 +4,7 @@ OmniAI is a chat-based calorie and macro tracker. In the Chat you talk to **MacB
 
 This guide walks a new user through the app from sign-up to daily use. The same walkthrough appears inside the app as a short tour the first time you log in. You can reopen it any time with the **? Guide** button at the top.
 
-> Last updated: 2026-09-30 (small typos in saved-food names and meal words are understood without the AI; Dashboard asks "Did you mean …?"; earlier: Saved Food renamed Saved Food, a list with Additional info; Body renamed Body Profile; new Explore tab, coming soon; terms page; earlier: health notes and low-target warning, forgot password…). Keep this file in step with the UI (see [docs/README.md](README.md)).
+> Last updated: 2026-09-30 (built-in general food list of ~300 common foods (USDA) used without the AI; "raw or cooked?" asked, never assumed; small typos in saved-food names and meal words are understood without the AI; Dashboard asks "Did you mean …?"; earlier: Saved Food renamed Saved Food, a list with Additional info; Body renamed Body Profile; new Explore tab, coming soon; terms page; earlier: health notes and low-target warning, forgot password…). Keep this file in step with the UI (see [docs/README.md](README.md)).
 
 ---
 
@@ -173,7 +173,7 @@ If something is ambiguous, for example "a bowl of pasta", MacBro asks a short qu
 **Daily AI messages:** OmniAI runs on a free AI service shared by everyone, so each account gets **20 AI messages a day** (the number may change). The count left is shown above the message box, e.g. "14 of 20 AI messages left today", and it resets at midnight in your time zone.
 
 - **Counts:** a message the AI answers, and a new food estimated on the Dashboard (**+ Add food**).
-- **Doesn't count:** instant replies (a water amount, "what's left today", foods all in Saved Food, "same breakfast as yesterday"), saved foods added on the Dashboard, every button (Looks good, water, move, delete…), and messages that fail or that you stop.
+- **Doesn't count:** instant replies (a water amount, "what's left today", foods all in Saved Food or the general food list, the raw/cooked question and your answer, "same breakfast as yesterday"), saved and general-list foods added on the Dashboard, every button (Looks good, water, move, delete…), and messages that fail or that you stop.
 - When they're used up, your message stays in the box with a note. Everything that doesn't need the AI keeps working.
 
 Today's totals are on the **Home** tab (and in the summary card after each confirmed log: macros after food, water after water).
@@ -214,7 +214,8 @@ You can do this **in the chat** (with a confirmation card) or **on the Dashboard
 
 - **A saved food** (one in Saved Food) is added straight away with your saved numbers. The unit list shows only the units it can be measured in (e.g. g, piece).
 - **A small typo of a saved food** (say `panner` for Paneer) asks **Did you mean Paneer?** first, without the AI. **Use Paneer** adds your saved one (if the unit you typed doesn't fit it, pick one from the unit list and press **Add**). **No, add "panner"** treats it as a new food.
-- **A new food** is estimated by the AI. You'll see its calories and macros marked **Not saved yet**, with any assumption it made. Press **Add it** to save it (it's also saved to Saved Food, so next time it's instant), **Change** to edit what you typed, or **Cancel**.
+- **A common food on the general food list** (see §9), e.g. `banana`, `ghee`, `chicken breast, cooked`, shows a preview marked **General food list · Not saved yet**, without the AI. If it could be raw or cooked (rice, dal, chicken…) and you didn't say, it first asks **raw or cooked?** with two buttons.
+- **A new food** is estimated by the AI. You'll see its calories and macros marked **AI estimate · Not saved yet**, with any assumption it made. Press **Add it** to save it (it's also saved to Saved Food, so next time it's instant), **Change** to edit what you typed, or **Cancel**.
 - If the AI can't estimate it (for example, it isn't a food), you'll see why, with **Ask in chat instead**.
 - An empty meal gets its usual time (breakfast 08:00, morning snack 11:00, lunch 13:00, evening snack 17:00, dinner 20:00, or now if that's later today); a meal that already has food keeps its time.
 
@@ -242,10 +243,17 @@ Your water target is based on your weight and activity level. The bar shows litr
 
 1. The first time you log a new food (say, pineapple), MacBro's AI estimates it. When you confirm, it's saved to Saved Food per 100 g (or per piece or serving), micronutrients included.
 2. Later, a simple message like `had 40g pineapple` or `2 eggs for breakfast` is answered **straight from Saved Food, without the AI**. The saved numbers, micronutrients included, are scaled to your amount. The card says "All from your saved foods".
-   - **Small typos are fine:** `200g chiken breast` still finds your saved chicken breast, and the card says what it read ("I read 'chiken breast' as chicken breast, cooked"), so you can check before confirming. To avoid wrong guesses, names under 5 letters (egg, oats) must be spelt exactly, longer ones may be off by one letter (two from 9 letters), and if the typo is close to two saved foods the AI handles it instead.
+   - **Small typos are fine:** `200g cooked chiken breast` still finds your saved chicken breast, and the card says what it read ("I read 'cooked chiken breast' as chicken breast, cooked"), so you can check before confirming. To avoid wrong guesses, names under 5 letters (egg, oats) must be spelt exactly, longer ones may be off by one letter (two from 9 letters), and if the typo is close to two saved foods the AI handles it instead.
    - **Meal words too:** `brkfst`, `breakfst`, `bekfast`, `bfast`, `lnch`, `dinr`, `snak` or `mornng snak` are read as the meal, when they come after *for*, *at*, *in*, *as*, *my*, *same* or *yesterday's* (e.g. `3 eggs for brkfst`), so "a bunch of grapes" is never read as lunch.
 3. The Dashboard's **+ Add food** works the same way: a saved food is added from Saved Food without the AI (a small typo asks "Did you mean …?" first), and a new one is estimated once and saved when you add it.
-4. This shortcut needs **an amount for every item** (`40g`, `2`, `1 serving`) and **every item already saved**. A count like `1 apple` also needs the food's **g per piece** (add it in **Edit** if it's missing). Otherwise the message goes to the AI, which still reuses your saved numbers for the foods it recognises.
+4. This shortcut needs **an amount for every item** (`40g`, `2`, `1 serving`, `1 tbsp`, `1 cup`) and **every item already saved or on the general food list** (below). A count like `1 apple` also needs the food's **g per piece** (add it in **Edit** if it's missing). Otherwise the message goes to the AI, which still reuses your saved numbers for the foods it recognises.
+
+**The general food list (no AI):** OmniAI also comes with about **300 common foods**: fruits, vegetables, grains and flours, dals and beans, dairy, eggs, meat and fish, nuts and seeds, oils and ghee, sugar, sauces and common drinks. Their numbers per 100 g, micronutrients included, come from **USDA FoodData Central** (a public-domain US government database). Indian names work too (`kela`, `atta`, `toor dal`, `dahi`, `palak`…), as do small typos.
+
+- **Lookup order:** your Saved Food first (your numbers always win), then the general list, then the AI.
+- `had 150 g banana and 1 tbsp ghee` makes a card straight from the list, marked "From the general food list … plain food with no oil or salt". Confirm it and the food is copied into Saved Food, so from then on it's yours to edit.
+- **Raw or cooked is never assumed.** Meat, chicken, fish, prawns, rice, other grains (oats, quinoa, millet, dalia, pasta, noodles) and dals/beans have very different calories raw and cooked (cooked rice is about 130 kcal per 100 g, raw rice 365). If you give a weight without saying which (`200 g rice`), MacBro asks **"Was the rice weighed raw or cooked?"** with **Raw** / **Cooked** buttons. You can also type the answer, or for two foods `chicken raw, rice cooked`. Saying it upfront (`200 g cooked rice`, `150 g raw chicken breast`, `boiled dal`) skips the question. The same applies to a food you saved as, say, "chicken breast, cooked": typing just `chicken breast` asks, so a raw weight isn't logged with cooked numbers.
+- Counted pieces without a weight (`2 chicken drumsticks`) and dishes (`chicken curry`, `dal tadka`, `paneer butter masala`) aren't on the list; the AI handles them as before. Not on the list yet: paneer, poha, jaggery, ragi, idli, dosa and other cooked dishes.
 
 - **Search** by name or brand, and filter by **All / Foods / Recipes**.
 - Foods are shown as a **list**: each line has the food's **name** and its **calories** for the saved amount (e.g. "165 kcal per 100 g").
@@ -373,7 +381,7 @@ Open **⚙ Settings** from the top bar.
 
 **The meal was put in the wrong slot.** Move it with **pencil → Move → pick the meal → →**, or say "move it to lunch".
 
-**Why do some replies arrive instantly?** Common messages, like a water amount, "yes", "what's left today?", foods you've saved in Saved Food ("had 3 eggs for breakfast") or "same breakfast as yesterday", are handled by the app directly without the AI. They're instant, and they save the free AI quota for harder messages.
+**Why do some replies arrive instantly?** Common messages, like a water amount, "yes", "what's left today?", foods you've saved in Saved Food ("had 3 eggs for breakfast"), common foods on the general food list ("150 g banana"), the raw/cooked question or "same breakfast as yesterday", are handled by the app directly without the AI. They're instant, and they save the free AI quota for harder messages.
 
 **I typed "yes" but nothing was saved.** Tap **Looks good** on the card. Typing isn't enough, so that you always see what's being saved.
 

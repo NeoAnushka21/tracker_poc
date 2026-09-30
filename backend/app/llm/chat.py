@@ -187,7 +187,7 @@ def handle_user_message(
     if not reply_text.strip():
         reply_text = FALLBACK_PROPOSAL_TEXT if ctx.created_actions else "Sorry, I didn't catch that. Could you rephrase?"
 
-    reply = ChatMessage(user_id=user.id, role="assistant", content=reply_text)
+    reply = ChatMessage(user_id=user.id, role="assistant", content=reply_text, data=ctx.reply_data)
     db.add(reply)
     db.flush()
     for a in ctx.created_actions:

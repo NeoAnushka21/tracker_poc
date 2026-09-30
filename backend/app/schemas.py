@@ -155,6 +155,8 @@ class ItemIn(BaseModel):
     fiber_g: float = Field(default=0, ge=0)
     # Library link: when set, nutrients are computed from the user's saved food/recipe.
     food_id: int | None = None
+    # General-list link (services/general_foods.py): nutrients are computed from the list.
+    general_id: str | None = Field(default=None, max_length=80)
     # Approximate grams in one unit, when the unit is a piece/serving/cup etc.
     unit_weight_g: float | None = Field(default=None, gt=0)
     # Estimated micronutrients for this amount ({"iron_mg": 1.2, ...}); unknown keys dropped.

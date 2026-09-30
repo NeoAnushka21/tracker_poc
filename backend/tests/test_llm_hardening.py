@@ -16,7 +16,7 @@ def test_a_tool_that_wasnt_offered_is_refused(client, user, fake_llm):
     # A plain food log is routed with log tools only; the model tries to delete anyway.
     provider = fake_llm(tool_reply("propose_delete", {"entry_id": entry_id, "summary": "x", "note": "gone"}),
                         text_reply("Sorry, I can only log food here."))
-    r = client.post("/api/chat", json={"message": "had 2 eggs"})
+    r = client.post("/api/chat", json={"message": "had 2 idlis"})
     assert r.status_code == 200 and not any(m["actions"] for m in r.json())
     assert "isn't available for this message" in str(provider.calls[1]["messages"])
 
@@ -65,4 +65,4 @@ def test_corrections_are_routed_to_the_editing_tools():
     for text in ("the chicken was 150g", "the rice were 2 cups", "it was actually 200g"):
         r = route(text)
         assert r.intent == "edit" and "propose_edit" in r.tools, text
-    assert route("had 2 eggs").intent == "log"
+    assert route("had 2 idlis").intent == "log"

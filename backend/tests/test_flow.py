@@ -23,7 +23,7 @@ def propose_meal(client, fake_llm, items=(CHICKEN, OIL), meal_type=None):
         }),
         text_reply("Ready for you to confirm."),
     )
-    r = client.post("/api/chat", json={"message": "had 100g cooked chicken, 10ml oil"})
+    r = client.post("/api/chat", json={"message": "had 100g chicken tikka, 10ml oil"})
     assert r.status_code == 200, r.text
     reply = r.json()[-1]
     assert reply["role"] == "assistant"
@@ -170,7 +170,7 @@ def test_llm_failure_rolls_back_turn(client, user, fake_llm):
 
     from app.llm.provider import set_provider
     set_provider(Broken())
-    r = client.post("/api/chat", json={"message": "had an apple"})
+    r = client.post("/api/chat", json={"message": "had 2 idlis"})
     assert r.status_code == 503
     assert r.json()["detail"] == "MacBro's servers are temporarily down. Please try again in a little while."
     assert client.get("/api/chat/history").json() == []
@@ -182,7 +182,7 @@ def test_proposal_ends_turn_in_one_call_and_uses_note(client, user, fake_llm):
         "items": [{"ingredient_name": "guava", "brand_name": None, "quantity": 1, "unit": "piece",
                    "calories": 68, "protein_g": 2.6, "carbs_g": 14.3, "fat_g": 1, "fiber_g": 5.4}],
     }))
-    reply = client.post("/api/chat", json={"message": "had a guava"}).json()[-1]
+    reply = client.post("/api/chat", json={"message": "had a rambutan"}).json()[-1]
     assert len(provider.calls) == 1
     assert reply["content"] == "Assumed one medium guava."
 
@@ -194,7 +194,7 @@ def test_calories_that_dont_match_macros_are_sent_back(client, user, fake_llm):
         tool_reply("propose_entry", {"summary": "x", "eaten_at": None, "meal_type": None, "items": [CHICKEN_150]},
                    call_id="t2"),
     )
-    reply = client.post("/api/chat", json={"message": "150g chicken"}).json()[-1]
+    reply = client.post("/api/chat", json={"message": "150g chicken tikka"}).json()[-1]
     first_result = provider.calls[1]["messages"][-2]["content"][0]   # [-1] is the 2nd assistant turn
     assert first_result["is_error"] is True
     assert "don't agree" in first_result["content"]

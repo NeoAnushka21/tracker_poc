@@ -36,12 +36,12 @@ def test_chat_typo_of_saved_food_uses_no_ai(client, user, fake_llm):
     log_and_confirm(client, fake_llm, [EGG, CHICKEN])
     used = allowance(client)["used"]
     no = fake_llm()                                          # any model call would fail
-    reply = chat(client, "had 3 eggs and 200 g chiken breast for lunch")
+    reply = chat(client, "had 3 eggs and 200 g cooked chiken breast for lunch")
     [card] = reply["actions"]
     items = card["payload"]["items"]
     assert [(i["ingredient_name"], i["quantity"]) for i in items] == [("eggs, large", 3), ("chicken breast, cooked", 200)]
     assert items[1]["calories"] == 330                        # numbers from the saved food
-    assert "I read 'chiken breast' as chicken breast, cooked" in reply["content"]
+    assert "I read 'cooked chiken breast' as chicken breast, cooked" in reply["content"]
     assert no.calls == [] and allowance(client)["used"] == used
 
 

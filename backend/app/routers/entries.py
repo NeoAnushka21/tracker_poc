@@ -14,10 +14,10 @@ from app.config import LLM_UNAVAILABLE_MESSAGE, MEAL_TYPES, SHOW_LLM_ERRORS
 from app.db import get_db
 from app.deps import onboarded_user
 from app.llm import usage
-from app.llm.estimate import estimate_food
+from app.llm.estimate import estimate_food, general_food_action
 from app.llm.provider import LLMError
 from app.models import User
-from app.services import allowance
+from app.services import allowance, general_foods
 from app.services.actions import action_to_dict
 from app.services.entries import (
     add_saved_food, check_target_date, delete_item, owned_item, record_event, set_item_quantity, transfer_items,
@@ -118,8 +118,9 @@ def remove(item_id: int, user: User = Depends(onboarded_user), db: Session = Dep
 
 @router.post("/add")
 def add_food(body: AddFoodIn, user: User = Depends(onboarded_user), db: Session = Depends(get_db)):
-    """Add a food to a meal. A saved food is added straight away from its saved numbers; any
-    other food gets one AI estimate, returned as a pending action to confirm."""
+    """Add a food to a meal. A saved food is added straight away from its saved numbers; a food
+    on the general list gets a preview card computed in code; any other food gets one AI
+    estimate. Both previews are pending actions to confirm. Raw/cooked foods ask first."""
     day = body.day or local_today(user.timezone)
     check_target_date(user, day)
     if body.food_id is not None:
@@ -128,12 +129,25 @@ def add_food(body: AddFoodIn, user: User = Depends(onboarded_user), db: Session 
             raise HTTPException(status.HTTP_404_NOT_FOUND, "That saved food no longer exists")
     else:
         food = match_saved(db, user.id, body.name)
+        if food is not None and general_foods.state_in(food.name) and not general_foods.state_in(body.name):
+            # Saved as "chicken breast, cooked" but typed "chicken breast": ask, never assume.
+            return {"status": "ask_state", "name": general_foods.strip_state(food.name)}
         if food is None and not body.as_typed:
             # A typo of a saved food ("panner"): ask instead of guessing, since this adds straight away.
             close = closest_saved(library_index(db, user.id), body.name)
             if close is not None:
                 return {"status": "suggest", "food": {"id": close.id, "name": close.name,
                                                        "units": measurable_units(close)}}
+        if food is None:
+            # The general food list (no AI): a preview card, or "raw or cooked?" first.
+            m = general_foods.find(body.name)
+            if m is not None and m.entry is None:
+                return {"status": "ask_state", "name": m.base}
+            made = m and general_food_action(db, user, m.entry, body.quantity, body.unit, body.meal_type, day)
+            if made:
+                db.commit()
+                action, note = made
+                return {"status": "estimate", "source": "general", "action": action_to_dict(action), "note": note}
 
     if food is not None:
         try:
@@ -169,4 +183,4 @@ def add_food(body: AddFoodIn, user: User = Depends(onboarded_user), db: Session 
             db.rollback()
     if action is None:
         return {"status": "no_estimate", "message": note}
-    return {"status": "estimate", "action": action_to_dict(action), "note": note}
+    return {"status": "estimate", "source": "ai", "action": action_to_dict(action), "note": note}

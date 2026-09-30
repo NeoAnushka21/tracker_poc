@@ -10,6 +10,7 @@ const SOURCE_LABEL: Record<Food["source"], string> = {
   estimate: "learned from your logs",
   user: "edited by you",
   recipe: "your recipe",
+  general: "from the general food list (USDA)",
 };
 
 function yieldText(f: Food): string {

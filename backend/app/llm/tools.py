@@ -14,6 +14,7 @@ from sqlalchemy.orm import Session
 from app.config import LEGACY_SNACK, MEAL_TYPES, MICRONUTRIENTS, WATER_MAX_LOG_ML
 from app.models import PendingAction, User, utcnow
 from app.schemas import ItemIn
+from app.services import general_foods
 from app.services.foods import (
     FoodError, compute_recipe, find_by_name, food_to_dict, get_user_food, resolve_library_item,
 )
@@ -36,7 +37,7 @@ _MICROS_SCHEMA = _nullable({
     "properties": {key: {"anyOf": [{"type": "number"}, {"type": "null"}]} for key, *_ in MICRONUTRIENTS},
     "required": [m[0] for m in MICRONUTRIENTS],
     "additionalProperties": False,
-}, "For this item's amount; null if unknown or if food_id is set")
+}, "For this item's amount; null if unknown or if food_id or general_id is set")
 
 _ITEM_SCHEMA = {
     "type": "object",
@@ -51,12 +52,13 @@ _ITEM_SCHEMA = {
         "fat_g": {"type": "number"},
         "fiber_g": {"type": "number"},
         "food_id": _nullable({"type": "integer"}, "my_foods id if it's a saved food/recipe (send 0 nutrients), else null"),
+        "general_id": _nullable({"type": "string"}, "general_foods id if it's on that list and not saved (send 0 nutrients), else null"),
         "unit_weight_g": _nullable({"type": "number"}, "grams in ONE unit if unit isn't g/ml, else null"),
         "micronutrients": _MICROS_SCHEMA,
     },
     "required": [
         "ingredient_name", "brand_name", "quantity", "unit",
-        "calories", "protein_g", "carbs_g", "fat_g", "fiber_g", "food_id", "unit_weight_g", "micronutrients",
+        "calories", "protein_g", "carbs_g", "fat_g", "fiber_g", "food_id", "general_id", "unit_weight_g", "micronutrients",
     ],
     "additionalProperties": False,
 }
@@ -256,6 +258,7 @@ class ToolContext:
     raw_user_message: str
     created_actions: list[PendingAction] = field(default_factory=list)
     notes: list[str] = field(default_factory=list)   # user-facing text from propose_* calls
+    reply_data: dict | None = None   # stored on the reply message, e.g. a pending raw/cooked question
 
 
 def run_tool(ctx: ToolContext, name: str, args: dict) -> str:
@@ -287,9 +290,10 @@ def _parse_items(ctx: ToolContext, raw_items: list, what: str = "items") -> list
         raise ToolInputError(f"Invalid item: {e.errors()[0]['msg']}") from e
     resolved, estimates = [], []
     for it in items:
-        if it.get("food_id"):
+        if it.get("food_id") or it.get("general_id"):
             try:
-                resolved.append(resolve_library_item(ctx.db, ctx.user, it))
+                resolved.append(resolve_library_item(ctx.db, ctx.user, it) if it.get("food_id")
+                                else general_foods.resolve_item(it))
             except FoodError as e:
                 raise ToolInputError(str(e)) from e
             continue

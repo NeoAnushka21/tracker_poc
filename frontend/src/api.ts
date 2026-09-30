@@ -83,7 +83,8 @@ export type GoogleLoginResult =
 export type AddFoodResult =
   | { status: "added"; entry_id: number; item: Item }
   | { status: "suggest"; food: { id: number; name: string; units: string[] } }
-  | { status: "estimate"; action: Action; note: string }
+  | { status: "ask_state"; name: string }
+  | { status: "estimate"; source: "ai" | "general"; action: Action; note: string }
   | { status: "no_estimate"; message: string };
 
 /** BMI with WHO adult categories, or which inputs are missing. */

@@ -302,6 +302,8 @@ function AddFoodPanel({ day, meal, onChanged, onAskMacBro, onClose }: {
   const [estimate, setEstimate] = useState<{ action: Action; note: string } | null>(null);
   const [noEstimate, setNoEstimate] = useState<string | null>(null);
   const [suggest, setSuggest] = useState<{ id: number; name: string; units: string[] } | null>(null);
+  const [askState, setAskState] = useState<string | null>(null);
+  const [estimateSource, setEstimateSource] = useState<"ai" | "general">("ai");
 
   useEffect(() => { api.foods().then(setFoods).catch(() => setFoods([])); }, []);
 
@@ -311,19 +313,22 @@ function AddFoodPanel({ day, meal, onChanged, onAskMacBro, onClose }: {
   const ready = name.trim() !== "" && Number(qty) > 0 && unitValid.trim() !== "";
   const mealLabel = MEAL_LABEL[meal].toLowerCase();
 
-  /** `pick`: the saved food chosen from "Did you mean …?"; `asTyped`: the user said no to it. */
-  async function send(pick?: { id: number; name: string }, asTyped = false) {
+  /** `pick`: the saved food chosen from "Did you mean …?"; `asTyped`: the user said no to it;
+   *  `typed`: the name to send instead of the box (e.g. "chicken breast, cooked" after Raw/Cooked). */
+  async function send(pick?: { id: number; name: string }, asTyped = false, typed?: string) {
     setBusy(true);
     setError(null);
     setNoEstimate(null);
     setSuggest(null);
+    setAskState(null);
     try {
-      const r = await api.addFood({ name: pick?.name ?? name.trim(), quantity: Number(qty),
+      const r = await api.addFood({ name: pick?.name ?? typed ?? name.trim(), quantity: Number(qty),
                                     unit: unitValid.trim(),
                                     meal_type: meal, day, food_id: pick?.id ?? saved?.id ?? null, as_typed: asTyped });
       if (r.status === "added") { onClose(); onChanged(); return; }
       if (r.status === "suggest") setSuggest(r.food);
-      else if (r.status === "estimate") setEstimate({ action: r.action, note: r.note });
+      else if (r.status === "ask_state") setAskState(r.name);
+      else if (r.status === "estimate") { setEstimate({ action: r.action, note: r.note }); setEstimateSource(r.source); }
       else setNoEstimate(r.message);
     } catch (err) {
       setError((err as Error).message);
@@ -363,7 +368,7 @@ function AddFoodPanel({ day, meal, onChanged, onAskMacBro, onClose }: {
     return (
       <div className="add-food" role="group" aria-label={`Add to ${mealLabel}`}>
         <div className="add-preview-head">
-          <b>AI estimate</b><span className="badge pending">Not saved yet</span>
+          <b>{estimateSource === "general" ? "General food list" : "AI estimate"}</b><span className="badge pending">Not saved yet</span>
         </div>
         <ul className="add-preview-items">
           {(p.items ?? []).map((it, i) => (
@@ -392,7 +397,7 @@ function AddFoodPanel({ day, meal, onChanged, onAskMacBro, onClose }: {
       <div className="add-food-row">
         <label className="sr-only" htmlFor={`add-name-${meal}`}>Food</label>
         <input id={`add-name-${meal}`} className="add-name" list={listId} value={name} autoFocus autoComplete="off"
-               placeholder="Food, e.g. paneer" onChange={(e) => { setName(e.target.value); setSuggest(null); }} maxLength={200} />
+               placeholder="Food, e.g. paneer" onChange={(e) => { setName(e.target.value); setSuggest(null); setAskState(null); }} maxLength={200} />
         <datalist id={listId}>
           {foods.map((f) => (
             <option key={f.id} value={f.name}>{`${Math.round(f.calories)} kcal per ${f.ref_qty} ${f.ref_unit}${f.brand_name ? ` · ${f.brand_name}` : ""}`}</option>
@@ -419,8 +424,20 @@ function AddFoodPanel({ day, meal, onChanged, onAskMacBro, onClose }: {
       <p className="muted small add-hint">
         {!name.trim() ? "Pick one of your saved foods or type any food."
           : saved ? `Saved food: added straight away with your numbers (${saved.measures}).`
-          : "New food: the AI estimates it and you check it before it's added."}
+          : "New food: taken from the general food list when it's there, else the AI estimates it. You check it before it's added."}
       </p>
+      {askState && (
+        <div className="small add-suggest" role="status">
+          <p>Was the <b>{askState}</b> weighed raw or cooked? The calories per 100 g are very different, so I'd rather ask than guess.</p>
+          <div className="proposal-actions">
+            {(["raw", "cooked"] as const).map((s) => (
+              <button key={s} type="button" disabled={busy} onClick={() => { const n = `${askState}, ${s}`; setName(n); void send(undefined, false, n); }}>
+                {s === "raw" ? "Raw" : "Cooked"}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
       {suggest && (
         <div className="small add-suggest" role="status">
           <p>Did you mean <b>{suggest.name}</b>, from your saved foods?</p>

@@ -11,11 +11,12 @@ from sqlalchemy.orm import Session
 
 from app.config import LLM_ESCALATE_AFTER_ERRORS, LLM_MAX_TOOL_ROUNDS
 from app.llm.pool import get_pool
-from app.llm.prompt import build_system_prompt
+from app.llm.prompt import build_system_prompt, general_context
 from app.llm.provider import LLMError
 from app.llm.router import route
 from app.llm.tools import TOOLS, ToolContext, ToolInputError, run_tool
 from app.models import PendingAction, User, utcnow
+from app.services import general_foods
 from app.services.entries import eaten_at_for_meal
 from app.services.foods import library_context
 from app.timeutil import local_now, utc_to_local
@@ -42,7 +43,8 @@ def estimate_food(db: Session, user: User, name: str, quantity: float, unit: str
     system = build_system_prompt(["logging", "library"]) + "\n" + DASHBOARD_RULES
     dynamic = "## Current context\n" + json.dumps({
         "now_local": local_now(user.timezone).strftime("%A %Y-%m-%d %H:%M"),
-        "my_foods": library_context(db, user, name) or "(no saved foods match this food)",
+        "my_foods": (my_foods := library_context(db, user, name)) or "(no saved foods match this food)",
+        "general_foods": general_context(name, my_foods) or "(none match this food)",
     }, indent=1, ensure_ascii=False)
     messages: list[dict] = [{"role": "user", "content": text}]
     errors, escalated = 0, False
@@ -74,6 +76,34 @@ def estimate_food(db: Session, user: User, name: str, quantity: float, unit: str
     action, *extra = ctx.created_actions
     for a in extra:   # one card per add; any repeat call is dropped
         a.status, a.resolved_at = "superseded", utcnow()
+    _for_dashboard(db, user, action, meal, day)
+    return action, (ctx.notes[0] if ctx.notes else "")
+
+
+def general_food_action(db: Session, user: User, entry: dict, quantity: float, unit: str,
+                        meal: str, day: date) -> tuple[PendingAction, str] | None:
+    """A pending action for a general-list food, computed in code (no AI), or None if the unit
+    can't be converted (then the AI estimates it instead)."""
+    if general_foods.grams_for(entry, quantity, unit) is None:
+        return None
+    note = (f"From the general food list ({general_foods.SOURCE_NOTE}), plain food with no oil or salt. "
+            "Adding it also saves it to Saved Food.")
+    ctx = ToolContext(db=db, user=user, raw_user_message=f"{quantity:g} {unit} {entry['name']}")
+    item = {"ingredient_name": general_foods.display_name(entry), "brand_name": None, "quantity": quantity,
+            "unit": unit, "calories": 0, "protein_g": 0, "carbs_g": 0, "fat_g": 0, "fiber_g": 0, "food_id": None,
+            "general_id": entry["id"], "unit_weight_g": None, "micronutrients": None}
+    try:
+        run_tool(ctx, "propose_entry", {"summary": general_foods.display_name(entry), "eaten_at": None,
+                                        "meal_type": None, "items": [item], "note": note})
+    except ToolInputError:
+        return None
+    action = ctx.created_actions[0]
+    _for_dashboard(db, user, action, meal, day)
+    return action, note
+
+
+def _for_dashboard(db: Session, user: User, action: PendingAction, meal: str, day: date) -> None:
+    """The user's meal and time, and the dashboard origin (kept apart from chat proposals)."""
     eaten_utc = eaten_at_for_meal(db, user, meal, day)
     action.payload = {
         **action.payload,
@@ -83,4 +113,3 @@ def estimate_food(db: Session, user: User, name: str, quantity: float, unit: str
         "eaten_at": utc_to_local(eaten_utc, user.timezone).strftime("%Y-%m-%dT%H:%M"),
         "eaten_at_utc": eaten_utc.isoformat(),
     }
-    return action, (ctx.notes[0] if ctx.notes else "")

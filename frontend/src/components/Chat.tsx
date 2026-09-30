@@ -260,10 +260,11 @@ export default function Chat({ user, onDataChanged, draft, active }: Props) {
     setEarlier((blocks) => blocks.map((b) => ({ ...b, messages: patch(b.messages) })));
   }
 
-  async function send(e?: FormEvent) {
+  /** `preset`: a quick-reply button's text (e.g. "cooked"), sent without touching the draft. */
+  async function send(e?: FormEvent, preset?: string) {
     e?.preventDefault();
     if (speech.listening) speech.stop();
-    const text = input.trim();
+    const text = (preset ?? input).trim();
     if (!text || sending) return;
     setError(null);
     speech.clearError();
@@ -273,7 +274,7 @@ export default function Chat({ user, onDataChanged, draft, active }: Props) {
       data: logDate ? { log_date: logDate } : null,
     };
     setMessages((ms) => [...ms, optimistic]);
-    setInput("");
+    if (preset === undefined) setInput("");
     const feedbackId = feedbackFor?.id ?? null;
     const requestId = `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
     const controller = new AbortController();
@@ -387,6 +388,15 @@ export default function Chat({ user, onDataChanged, draft, active }: Props) {
           {m.kind === "progress" && m.data
             ? <ProgressCard m={m} fresh={fresh} />
             : <div className={`bubble ${fresh ? "fade-in" : ""}`}>{renderText(m.content)}</div>}
+          {m.data && "ask_state" in m.data && m.id === visible[visible.length - 1]?.id && (
+            <div className="quick-replies" role="group" aria-label="Raw or cooked">
+              {["raw", "cooked"].map((s) => (
+                <button key={s} type="button" className="chip" disabled={sending} onClick={() => void send(undefined, s)}>
+                  {s === "raw" ? "Raw" : "Cooked"}{m.data && "ask_state" in m.data && m.data.ask_state.items.length > 1 ? " (all)" : ""}
+                </button>
+              ))}
+            </div>
+          )}
           {m.actions.map((a) => (
             <ProposalCard
               key={a.id}
