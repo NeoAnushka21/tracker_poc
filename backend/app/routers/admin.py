@@ -10,6 +10,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
+from app import config
 from app.db import get_db
 from app.deps import admin_user, is_admin
 from app.llm.chat import message_to_dict, recent_messages
@@ -199,7 +200,7 @@ def totp_enable(body: TotpCodeIn, admin: User = Depends(admin_user), db: Session
     if totp.enabled(admin):
         raise HTTPException(status.HTTP_409_CONFLICT, "Two-step sign-in is already on")
     if not totp.verify(admin, body.code):
-        raise HTTPException(status.HTTP_400_BAD_REQUEST, "That code isn't right. Check the app shows OmniAI and try the current code.")
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, f"That code isn't right. Check the entry for {config.APP_NAME} in your authenticator app and try the current code.")
     admin.totp_enabled_at = utcnow()
     _audit(db, admin, None, "two-step sign-in turned on")
     db.commit()

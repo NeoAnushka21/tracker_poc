@@ -1,16 +1,16 @@
-# OmniAI user guide
+# Tandurust user guide
 
-OmniAI is a chat-based calorie and macro tracker. In the Chat you talk to **MacBro** (macro + bro), its nutrition assistant: you tell it what you ate in plain words, it works out the calories, protein, carbs, fat, fiber and micronutrients, and **nothing is saved until you confirm it**.
+Tandurust is a chat-based calorie and macro tracker. In the Chat you talk to **MacBro** (macro + bro), its nutrition assistant: you tell it what you ate in plain words, it works out the calories, protein, carbs, fat, fiber and micronutrients, and **nothing is saved until you confirm it**.
 
 This guide walks a new user through the app from sign-up to daily use. The same walkthrough appears inside the app as a short tour the first time you log in. You can reopen it any time with the **? Guide** button at the top.
 
-> Last updated: 2026-09-30 (Explore split into **Recipes** and **Workouts** sections; Dashboard renamed **Meals**, meal cards folded and one below another, MacBro invite there too; Analysis moved into Meals as **Check your progress**; the guide blurs the page and highlights what each step describes; Dashboard redesigned: one compact summary tile, colourful meal cards; Chat is no longer a tab: MacBro's chat opens as a window from Home ("Want to log something? Talk to me"), can be minimized or closed; Saved Food tabs: **Generic**, **Branded**, **My Recipes**; **+ Add** in Saved Food: a branded product, a generic food or a recipe from a form; branded foods: a **Brands** filter in Saved Food, and **Check label** fetches the real pack label from Open Food Facts; Settings reorganised: About you, Targets, Appearance, Account & privacy, Security; India only for now in the country list; optional "About you" questions: diet, allergies, pace, meal times, training, health; country and region in the profile, age in Settings; built-in general food list of ~300 common foods (USDA) used without the AI; "raw or cooked?" asked, never assumed; small typos in saved-food names and meal words are understood without the AI; Dashboard asks "Did you mean …?"; earlier: Saved Food renamed Saved Food, a list with Additional info; Body renamed Body Profile; new Explore tab, coming soon; terms page; earlier: health notes and low-target warning, forgot password…). Keep this file in step with the UI (see [docs/README.md](README.md)).
+> Last updated: 2026-09-30 (the app is now called **Tandurust**, logo "T" (it was OmniAI; the web address stays the same); Explore split into **Recipes** and **Workouts** sections; Dashboard renamed **Meals**, meal cards folded and one below another, MacBro invite there too; Analysis moved into Meals as **Check your progress**; the guide blurs the page and highlights what each step describes; Dashboard redesigned: one compact summary tile, colourful meal cards; Chat is no longer a tab: MacBro's chat opens as a window from Home ("Want to log something? Talk to me"), can be minimized or closed; Saved Food tabs: **Generic**, **Branded**, **My Recipes**; **+ Add** in Saved Food: a branded product, a generic food or a recipe from a form; branded foods: a **Brands** filter in Saved Food, and **Check label** fetches the real pack label from Open Food Facts; Settings reorganised: About you, Targets, Appearance, Account & privacy, Security; India only for now in the country list; optional "About you" questions: diet, allergies, pace, meal times, training, health; country and region in the profile, age in Settings; built-in general food list of ~300 common foods (USDA) used without the AI; "raw or cooked?" asked, never assumed; small typos in saved-food names and meal words are understood without the AI; Dashboard asks "Did you mean …?"; earlier: Saved Food renamed Saved Food, a list with Additional info; Body renamed Body Profile; new Explore tab, coming soon; terms page; earlier: health notes and low-target warning, forgot password…). Keep this file in step with the UI (see [docs/README.md](README.md)).
 
 ---
 
 ## Contents
 
-- [Opening OmniAI](#opening-omniai)
+- [Opening Tandurust](#opening-omniai)
 1. [Create your account](#1-create-your-account)
 2. [Set up your profile](#2-set-up-your-profile)
 3. [The first-run tour](#3-the-first-run-tour)
@@ -31,7 +31,7 @@ This guide walks a new user through the app from sign-up to daily use. The same 
 
 ---
 
-## Opening OmniAI
+## Opening Tandurust
 
 Open **https://omniai-app.onrender.com** (bookmark it). The app runs on a free server that naps when nobody has used it for about 15 minutes. If it's napping, you'll see **MacBro dancing** with messages like "MacBro is warming up the kitchen…" for up to a minute, then the app opens by itself. If it's awake, the app opens straight away.
 
@@ -48,8 +48,8 @@ Next time, use **Log in** with the same email and password.
 
 **Or continue with Google.** Under the form, **Continue with Google** signs you in with your Google account instead of a password. Choose whichever you like:
 
-- **New to OmniAI:** Google asks which account to use, then OmniAI shows the data-use consent. Tick it and press **Create account**. Your first name from Google fills in "What should I call you?" (you can change it).
-- **You already have an email + password account with the same email:** OmniAI asks **Link your Google account?** first. Press **Link and continue** to use either Google or your password from then on, or **Cancel** to leave your account as it is. Nothing is linked without your OK.
+- **New to Tandurust:** Google asks which account to use, then Tandurust shows the data-use consent. Tick it and press **Create account**. Your first name from Google fills in "What should I call you?" (you can change it).
+- **You already have an email + password account with the same email:** Tandurust asks **Link your Google account?** first. Press **Link and continue** to use either Google or your password from then on, or **Cancel** to leave your account as it is. Nothing is linked without your OK.
 - **Next time:** press **Continue with Google** again; there's no password to remember.
 
 If you signed up with Google, you have no password yet. Logging in with email and password tells you to use Google instead; you can set a password in **Settings → Set password**.
@@ -62,17 +62,17 @@ If the consent wording changes later (it did on 2026-09-28, to mention the AI se
 
 **Terms:** the **Terms** link (also at **/terms**) sets out the basics in plain words: adults only, estimates not medical advice, fair use of the free AI, your data stays yours, and the app is provided free and as is.
 
-**Privacy:** the **Privacy** link under the sign-in form (also at **/privacy**, no login needed) explains in plain words what OmniAI stores, why, which services handle it (Render and Neon in Singapore, Groq in the US for the AI, Google if you use it, Open Food Facts for label searches), how long it's kept, and how to download or delete it. OmniAI is for adults (18 and over).
+**Privacy:** the **Privacy** link under the sign-in form (also at **/privacy**, no login needed) explains in plain words what Tandurust stores, why, which services handle it (Render and Neon in Singapore, Groq in the US for the AI, Google if you use it, Open Food Facts for label searches), how long it's kept, and how to download or delete it. Tandurust is for adults (18 and over).
 
 ## 2. Set up your profile
 
-OmniAI needs a few details to work out your daily targets:
+Tandurust needs a few details to work out your daily targets:
 
 | Field | Notes |
 |---|---|
 | What should I call you? | Optional. Used in the Home greeting and by MacBro in the chat. |
-| Date of birth, sex | Used in the calorie formula and for micronutrient reference values; your **age** is worked out from the date of birth (shown in **Settings → About you**). You need to be **18 or over** to use OmniAI; a date of birth under 18 (or in the future) isn't accepted. |
-| Country | **Required.** Pick it from the list (you can't type your own). OmniAI is available in **India** for now, so India is the only choice and is already selected; more countries will follow. |
+| Date of birth, sex | Used in the calorie formula and for micronutrient reference values; your **age** is worked out from the date of birth (shown in **Settings → About you**). You need to be **18 or over** to use Tandurust; a date of birth under 18 (or in the future) isn't accepted. |
+| Country | **Required.** Pick it from the list (you can't type your own). Tandurust is available in **India** for now, so India is the only choice and is already selected; more countries will follow. |
 | State / region | Optional. Pick your state or union territory from the list, or leave it as *Not specified*. |
 | Units | Metric (kg, cm) or Imperial (lb, ft/in). |
 | Height, weight | Required. |
@@ -80,7 +80,7 @@ OmniAI needs a few details to work out your daily targets:
 | Activity level | From *Sedentary* to *Very active*. |
 | Time zone | Detected automatically. It decides where "today" starts and ends. |
 
-**A bit more about you (optional).** After the required details, OmniAI offers a few optional questions. Answer any of them, or press **Skip for now**; everything can be filled in or changed later in **Settings → About you**. Each answer is used:
+**A bit more about you (optional).** After the required details, Tandurust offers a few optional questions. Answer any of them, or press **Skip for now**; everything can be filled in or changed later in **Settings → About you**. Each answer is used:
 
 | Question | What it changes |
 |---|---|
@@ -91,13 +91,13 @@ OmniAI needs a few details to work out your daily targets:
 | Training (type and days) | MacBro knows when you train |
 | **Health** (optional, sensitive): conditions such as diabetes, PCOS or thyroid, and for a female profile pregnancy or breastfeeding | Context for MacBro, which still gives no medical advice. While pregnant or breastfeeding, no calorie deficit is set. Saving these needs an extra tick: you agree they're used only for this. Clearing them removes that agreement too. |
 
-If your answers change the calculated calories (a pace, or pregnancy), you see the new targets before starting; later, in Settings, OmniAI asks **Use the new target** or **Keep mine**.
+If your answers change the calculated calories (a pace, or pregnancy), you see the new targets before starting; later, in Settings, Tandurust asks **Use the new target** or **Keep mine**.
 
-**Already had an account?** If you joined before country and region were added, OmniAI asks once after you sign in: **Where do you live?** Pick your country (required) and region (optional), then **Save and continue**. You can change both later in **Settings → About you** (**Country / state → Change**). The optional **A bit more about you** questions are offered once too (after the country), with **Skip for now**.
+**Already had an account?** If you joined before country and region were added, Tandurust asks once after you sign in: **Where do you live?** Pick your country (required) and region (optional), then **Save and continue**. You can change both later in **Settings → About you** (**Country / state → Change**). The optional **A bit more about you** questions are offered once too (after the country), with **Skip for now**.
 
-After you submit, **Your daily targets** shows the calories, protein, carbs, fat and fiber OmniAI suggests. Change any number you like, then continue. You can change them later in **Settings → Targets**. If the calorie target is below **1,200 kcal (women) or 1,500 kcal (men)**, a heads-up explains that such low targets are usually only advised with a doctor or dietitian involved. It's a warning, not a block.
+After you submit, **Your daily targets** shows the calories, protein, carbs, fat and fiber Tandurust suggests. Change any number you like, then continue. You can change them later in **Settings → Targets**. If the calorie target is below **1,200 kcal (women) or 1,500 kcal (men)**, a heads-up explains that such low targets are usually only advised with a doctor or dietitian involved. It's a warning, not a block.
 
-> OmniAI's calories, nutrients, targets, BMI and body-fat numbers are **estimates to help you track, not medical advice** (a reminder sits at the bottom of Home and Meals). Talk to a doctor or dietitian about medical conditions, pregnancy or big changes to how you eat.
+> Tandurust's calories, nutrients, targets, BMI and body-fat numbers are **estimates to help you track, not medical advice** (a reminder sits at the bottom of Home and Meals). Talk to a doctor or dietitian about medical conditions, pregnancy or big changes to how you eat.
 
 <details>
 <summary>How targets are calculated</summary>
@@ -191,7 +191,7 @@ If something is ambiguous, for example "a bowl of pasta", MacBro asks a short qu
 
 **Log or change food for another day:** above the message box, **📅 Logging for Today** has a date picker. Pick any past date and everything you type is about that day: new food is logged on it, and edits, moves and deletes look at that day's meals first. Your message shows a small **"for Yesterday"** / **"for Fri, 25 Sep"** tag. Press **Back to today** when you're done. You can also just say the day in your message ("add 2 eggs to Monday's breakfast").
 
-**Daily AI messages:** OmniAI runs on a free AI service shared by everyone, so each account gets **20 AI messages a day** (the number may change). The count left is shown above the message box, e.g. "14 of 20 AI messages left today", and it resets at midnight in your time zone.
+**Daily AI messages:** Tandurust runs on a free AI service shared by everyone, so each account gets **20 AI messages a day** (the number may change). The count left is shown above the message box, e.g. "14 of 20 AI messages left today", and it resets at midnight in your time zone.
 
 - **Counts:** a message the AI answers, and a new food estimated on the Meals tab (**+ Add food**).
 - **Doesn't count:** instant replies (a water amount, "what's left today", foods all in Saved Food or the general food list, the raw/cooked question and your answer, "same breakfast as yesterday"), saved and general-list foods added on the Meals tab, every button (Looks good, water, move, delete…), and messages that fail or that you stop.
@@ -216,7 +216,7 @@ After you confirm, a summary card appears for **the day you logged for** (today,
 
 Cards you leave unanswered expire after 24 hours. Unconfirmed cards never count toward your totals.
 
-**On an Android phone** OmniAI gives a small vibration for key moments: a double pulse when **Looks good** saves, a light tick on the water **+ 250 ml / + 500 ml** buttons, and a longer buzz when a streak is completed for today. iPhones don't allow web apps to vibrate. Vibrations (and the animations) are off if your device is set to **reduce motion**.
+**On an Android phone** Tandurust gives a small vibration for key moments: a double pulse when **Looks good** saves, a light tick on the water **+ 250 ml / + 500 ml** buttons, and a longer buzz when a streak is completed for today. iPhones don't allow web apps to vibrate. Vibrations (and the animations) are off if your device is set to **reduce motion**.
 
 ## 7. Edit, move, copy and delete
 
@@ -269,7 +269,7 @@ Your water target is based on your weight and activity level. The bar shows litr
 3. The Meals tab's **+ Add food** works the same way: a saved food is added from Saved Food without the AI (a small typo asks "Did you mean …?" first), and a new one is estimated once and saved when you add it.
 4. This shortcut needs **an amount for every item** (`40g`, `2`, `1 serving`, `1 tbsp`, `1 cup`) and **every item already saved or on the general food list** (below). A count like `1 apple` also needs the food's **g per piece** (add it in **Edit** if it's missing). Otherwise the message goes to the AI, which still reuses your saved numbers for the foods it recognises.
 
-**The general food list (no AI):** OmniAI also comes with about **300 common foods**: fruits, vegetables, grains and flours, dals and beans, dairy, eggs, meat and fish, nuts and seeds, oils and ghee, sugar, sauces and common drinks. Their numbers per 100 g, micronutrients included, come from **USDA FoodData Central** (a public-domain US government database). Indian names work too (`kela`, `atta`, `toor dal`, `dahi`, `palak`…), as do small typos.
+**The general food list (no AI):** Tandurust also comes with about **300 common foods**: fruits, vegetables, grains and flours, dals and beans, dairy, eggs, meat and fish, nuts and seeds, oils and ghee, sugar, sauces and common drinks. Their numbers per 100 g, micronutrients included, come from **USDA FoodData Central** (a public-domain US government database). Indian names work too (`kela`, `atta`, `toor dal`, `dahi`, `palak`…), as do small typos.
 
 - **Lookup order:** your Saved Food first (your numbers always win), then the general list, then the AI.
 - `had 150 g banana and 1 tbsp ghee` makes a card straight from the list, marked "From the general food list … plain food with no oil or salt". Confirm it and the food is copied into Saved Food, so from then on it's yours to edit.
@@ -292,7 +292,7 @@ Your water target is based on your weight and activity level. The bar shows litr
 
 1. Name the brand when you log it: `10 g Amul butter`, `1 Britannia Nutrichoice biscuit`. MacBro saves it with its brand. Until you check the label, the numbers are the AI's memory of the label, and the chat card marks the item **check label**.
 2. Open **Saved Food → Branded**. Branded foods are grouped by brand (Amul → Butter, Paneer…), and each one shows **label ✓** or **label not checked**. The small number on the **Branded** tab counts the ones still to check.
-3. Press **Check label** under a food. OmniAI searches **Open Food Facts**, a free, open database of food labels, for the brand and name, and lists the products it finds with their calories, protein, carbs and fat **per 100 g** (or 100 ml for drinks), the pack size and serving size. Products sold in India come first. Not the right one? Change the words, or type the **barcode number** printed under the pack's barcode for an exact match.
+3. Press **Check label** under a food. Tandurust searches **Open Food Facts**, a free, open database of food labels, for the brand and name, and lists the products it finds with their calories, protein, carbs and fat **per 100 g** (or 100 ml for drinks), the pack size and serving size. Products sold in India come first. Not the right one? Change the words, or type the **barcode number** printed under the pack's barcode for an exact match.
 4. Compare with your pack, then press **Use this**. The food now uses the label's numbers (and micronutrients the label lists, like sodium and calcium), plus the serving weight when the label gives one. Nothing changes until you press it.
 5. **Also correct the times I've already logged it** (ticked by default) recomputes your past logs of this food with the label's numbers, so your earlier days add up correctly too. Untick it to leave past days as they were.
 
@@ -397,7 +397,7 @@ Open **⚙ Settings** from the top bar.
 | **About you** (opens first) | **Basics:** your name, age (from your date of birth), sex, height, country and state (**Change** to pick another from the lists), time zone, goal and activity level. Height and weight are updated on the Body Profile tab. **More about you (optional):** diet, allergies, pace, meal times, training and health; change or clear any of them and press **Save**. If that changes your calculated calories, choose **Use the new target** or **Keep mine**. |
 | **Targets** | Edit daily calories, protein, carbs, fat and fiber. |
 | **Appearance** | Light, dark, or follow your device (**System**). |
-| **Account & privacy** | **Sign-in:** your email, how you sign in (email and password, Google, or both), registration date and last login. **Your data:** when you gave data consent, **Download my data** (a file with everything OmniAI stores about you: profile, logs, foods, chat, usage, and any admin views of your account), and links to **How we use your data** and the **Terms**. |
+| **Account & privacy** | **Sign-in:** your email, how you sign in (email and password, Google, or both), registration date and last login. **Your data:** when you gave data consent, **Download my data** (a file with everything Tandurust stores about you: profile, logs, foods, chat, usage, and any admin views of your account), and links to **How we use your data** and the **Terms**. |
 | **Security** | Change your password (needs the current one). Changing (or setting) your password signs you out on every other device; this one stays logged in. **Log out of all devices** (same tab) signs you out everywhere, including here, e.g. after using a shared computer or losing your phone. If you signed up with Google, it offers **Set password** instead: add one to also log in with your email. **Account & privacy** shows how you sign in. |
 | **Delete account** (set apart at the bottom) | Permanently removes your account and **all** your data. Needs your password (or, for Google-only accounts, your email typed out) and can't be undone. |
 
@@ -416,7 +416,7 @@ Open **⚙ Settings** from the top bar.
 
 **"Too many attempts. Please wait…"** After several wrong passwords for one email (or many sign-in attempts from one connection), sign-in pauses for up to 15 minutes to stop password guessing. Wait and try again.
 
-**"Something went wrong on our side (ref 1a2b3c4d)."** An unexpected error in OmniAI itself. Try again; if it keeps happening, send the **ref** to the contact on the Privacy page so the exact problem can be found.
+**"Something went wrong on our side (ref 1a2b3c4d)."** An unexpected error in Tandurust itself. Try again; if it keeps happening, send the **ref** to the contact on the Privacy page so the exact problem can be found.
 
 **"MacBro's servers are temporarily down."** The AI model is unavailable or its free daily limit is used up. Your data is safe. Try again later. You can still use the Meals tab, water buttons and item actions, since they don't need the AI.
 

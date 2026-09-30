@@ -7,6 +7,7 @@ import json
 from functools import lru_cache
 from pathlib import Path
 
+from app import config
 from app.config import SUPPORTED_COUNTRIES
 
 DATA = Path(__file__).resolve().parents[1] / "data" / "countries.json"
@@ -31,7 +32,7 @@ def check(country: str, region: str | None) -> tuple[str, str | None]:
     """(country code, region or None) if both are on the list; ValueError with a readable message if not."""
     c = _by_code().get((country or "").strip().upper())
     if c is None:
-        raise ValueError("Please pick your country from the list (OmniAI is available in India for now)")
+        raise ValueError(f"Please pick your country from the list ({config.APP_NAME} is available in India for now)")
     region = (region or "").strip() or None
     if region is not None and region not in c["regions"]:
         raise ValueError(f"Please pick a region of {c['name']} from the list")

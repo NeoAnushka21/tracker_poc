@@ -1,4 +1,4 @@
-# OmniAI: multi-model LLM strategy on free, open-weight models
+# Tandurust: multi-model LLM strategy on free, open-weight models
 
 Status: **phases 1–4 implemented** (2026-09-28): routing live-tested on Groq, NVIDIA added as a backup; the phase-5 evaluation is on hold (section 12) · Date: 2026-09-28
 

@@ -50,10 +50,10 @@ export function UserAvatar({ name, email, size = 32 }: { name: string | null; em
   );
 }
 
-/** Placeholder app logo (the name isn't final): the app mark on a gradient tile. */
+/** App logo: the app mark ("T") on a gradient tile. The letters shrink to fit (one letter large). */
 export function AppLogo({ size = 32, label = false }: { size?: number; label?: boolean }) {
   return (
-    <span className="app-logo" style={{ width: size, height: size, fontSize: size * 0.34, borderRadius: size * 0.28 }}
+    <span className="app-logo" style={{ width: size, height: size, fontSize: size * Math.min(0.56, 1.02 / APP_MARK.length), borderRadius: size * 0.28 }}
           role={label ? "img" : undefined} aria-label={label ? APP_NAME : undefined} aria-hidden={label ? undefined : true}>
       {APP_MARK}
     </span>

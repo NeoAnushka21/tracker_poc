@@ -51,8 +51,10 @@ ADMIN_EMAILS = {
     e.strip().lower() for e in os.getenv("ADMIN_EMAILS", DEFAULT_ADMIN_EMAIL).split(",") if e.strip()
 }
 
-# Product names (not final). The app is OmniAI; MacBro is the chat assistant, named only in the chat.
-APP_NAME = "OmniAI"
+# Product names. The app is Tandurust (renamed from OmniAI on 2026-09-30, for display only: the live
+# URL, Render services, Google sign-in, database names and log names keep "omniai"); MacBro is the
+# chat assistant, named only in the chat.
+APP_NAME = "Tandurust"
 BOT_NAME = "MacBro"
 
 # Shown at sign-up; bump the version when the wording changes so users are asked again.

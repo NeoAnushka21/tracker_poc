@@ -44,7 +44,7 @@ def test_download_my_data(client, user, fake_llm):
     client.post("/api/water", json={"amount_ml": 500})
     r = client.get("/api/profile/export")
     assert r.status_code == 200
-    assert r.headers["content-disposition"].startswith('attachment; filename="omniai-my-data-')
+    assert r.headers["content-disposition"].startswith('attachment; filename="tandurust-my-data-')
     data = r.json()
     assert data["account"]["email"] == "me@example.com"
     assert "hashed_password" not in data["account"] and "google_sub" not in data["account"]

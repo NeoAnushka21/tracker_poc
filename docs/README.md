@@ -1,4 +1,4 @@
-# OmniAI documentation
+# Tandurust documentation
 
 | Document | Audience | What it covers |
 |---|---|---|
