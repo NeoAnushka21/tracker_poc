@@ -191,7 +191,7 @@ function FoodTemplate({ branded, fields, onAdded }: { branded: boolean; fields: 
       )}
       {error && <p className="error">{error}</p>}
       <div className="food-edit-actions">
-        <button className="primary" disabled={busy}>{busy ? "Saving…" : "Add to Saved Food"}</button>
+        <button className="primary" disabled={busy}>{busy ? "Saving…" : "Add to My Foods"}</button>
       </div>
     </form>
   );
@@ -273,8 +273,8 @@ function RecipeTemplate({ foods, onAdded }: { foods: Food[]; onAdded: (f: Food) 
       </ul>
       <button type="button" className="link" onClick={() => setRows([...rows, { ...NEW_ROW }])}>+ Add ingredient</button>
       <p className="muted small">
-        Ingredients come from your Saved Food (suggested as you type) or the general food list. Foods from the general
-        list are saved to Saved Food too. Anything else, add it first as a generic food or branded product.
+        Ingredients come from your My Foods (suggested as you type) or the general food list. Foods from the general
+        list are saved to My Foods too. Anything else, add it first as a generic food or branded product.
       </p>
       <h4>What it makes</h4>
       <div className="food-edit-grid">
@@ -312,7 +312,7 @@ function RecipeTemplate({ foods, onAdded }: { foods: Food[]; onAdded: (f: Food) 
   );
 }
 
-/** Saved Food → + Add: pick what to add, then fill in its template. */
+/** My Foods → + Add: pick what to add, then fill in its template. */
 export default function AddFoodPanel({ foods, fields, onAdded, onClose }: {
   foods: Food[]; fields: MicroField[]; onAdded: (f: Food, kind: AddKind) => void; onClose: () => void;
 }) {

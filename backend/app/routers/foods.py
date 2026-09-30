@@ -1,4 +1,4 @@
-"""The user's food library and recipes (Saved Food tab). Edits here are direct user
+"""The user's food library and recipes (My Foods tab). Edits here are direct user
 actions from the UI, so they apply immediately (the LLM can't reach these routes)."""
 from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel, Field, field_validator
@@ -62,7 +62,7 @@ class FoodCreateIn(FoodUpdateIn):
 
 class IngredientIn(BaseModel):
     name: str = Field(min_length=1, max_length=200)
-    food_id: int | None = None          # picked from Saved Food
+    food_id: int | None = None          # picked from My Foods
     quantity: float = Field(gt=0)
     unit: str = Field(min_length=1, max_length=32)
 
@@ -78,7 +78,7 @@ class RecipeCreateIn(BaseModel):
 def _no_clash(db: Session, user: User, name: str, brand: str | None) -> None:
     if find_by_name(db, user.id, name, brand) is not None:
         what = f"{name} ({brand})" if brand else name
-        raise HTTPException(status.HTTP_409_CONFLICT, f"You already have '{what}' in Saved Food. Edit that one instead.")
+        raise HTTPException(status.HTTP_409_CONFLICT, f"You already have '{what}' in My Foods. Edit that one instead.")
 
 
 def _food_or_404(db: Session, user: User, food_id: int):
@@ -145,7 +145,7 @@ def preview_recipe(body: RecipeCreateIn, user: User = Depends(onboarded_user), d
 
 @router.post("/recipes", status_code=status.HTTP_201_CREATED)
 def create_recipe(body: RecipeCreateIn, user: User = Depends(onboarded_user), db: Session = Depends(get_db)):
-    """+ Add → Recipe. General-list ingredients are saved to Saved Food too, like a chat recipe."""
+    """+ Add → Recipe. General-list ingredients are saved to My Foods too, like a chat recipe."""
     _no_clash(db, user, body.name.strip(), None)
     recipe = save_recipe(db, user, _recipe_payload(db, user, body))
     db.commit()

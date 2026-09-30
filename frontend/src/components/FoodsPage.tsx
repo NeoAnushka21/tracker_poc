@@ -391,7 +391,7 @@ export default function FoodsPage({ dataVersion }: { dataVersion: number }) {
     setQuery("");
     setFilter(SHOW_AFTER_ADD[kind]);
     setAdded(`Added ${f.name}${f.brand_name ? ` · ${f.brand_name}` : ""}.`);
-    // Reload: a recipe can also add its general-list ingredients to Saved Food.
+    // Reload: a recipe can also add its general-list ingredients to My Foods.
     try { setFoods(await api.foods()); } catch { setFoods((fs) => [f, ...(fs ?? [])]); }
   }
 
@@ -409,7 +409,7 @@ export default function FoodsPage({ dataVersion }: { dataVersion: number }) {
     <section className="foods card">
       <div className="foods-head">
         <div>
-          <h2>Saved Food</h2>
+          <h2>My Foods</h2>
           <p className="muted small">
             Foods are saved automatically when you confirm a meal, so next time the app reuses the same
             numbers. Add your own with <b>+ Add</b>: a branded product, a generic food or a recipe (or tell the

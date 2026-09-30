@@ -2,7 +2,7 @@
 (SR Legacy, public domain), with our own short names and aliases (incl. Indian names).
 Built by scripts/build_general_foods.py; read-only, loaded once.
 
-Lookup order everywhere is Saved Food -> this list -> the AI. Foods whose numbers change a lot
+Lookup order everywhere is My Foods -> this list -> the AI. Foods whose numbers change a lot
 when cooked (meat, fish, rice, grains, dals) come as a raw/cooked pair, and the app asks which
 one the user means instead of assuming (owner's rule, 2026-09-30).
 """
@@ -139,7 +139,7 @@ def resolve_item(item: dict) -> dict:
 def context_lines(match_text: str, skip_names: set[str], limit: int = 20) -> list[str]:
     """Lines for the AI's context: general foods named in the message (typos allowed) that the
     user hasn't saved, as 'id | name | per 100 g: kcal P C F | units'."""
-    from app.services.foods import _shares_word, _stems   # the same loose matching as Saved Food
+    from app.services.foods import _shares_word, _stems   # the same loose matching as My Foods
     by_id, groups, _ = _load()
     wanted = _stems(match_text)
     lines = []

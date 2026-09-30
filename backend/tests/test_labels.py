@@ -1,5 +1,5 @@
 """Branded foods: pack labels from Open Food Facts (stubbed, never the real service),
-the label check in Saved Food, and correcting past logs with the label's numbers."""
+the label check in My Foods, and correcting past logs with the label's numbers."""
 import pytest
 from sqlalchemy import select
 

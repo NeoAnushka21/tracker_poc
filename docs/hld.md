@@ -1,6 +1,6 @@
 # Tandurust high-level design (HLD)
 
-> Last updated: 2026-09-30 (app renamed Tandurust, display only; Dashboard tab renamed Meals, Analysis moved into it; Chat moved from a tab to a floating chat window opened from Home; Saved Food tabs: Generic / Branded / My Recipes; Saved Food + Add: §4.6; branded foods: Open Food Facts label check, §2, §3, §4.5, §5; optional "About you" answers: targets, meal times, MacBro context; country/region step in the sign-in flow; database hardening phase 1: public user UUIDs, items linked to foods, ON DELETE rules, timestamptz, composite indexes; built-in general food list (USDA) between Saved Food and the AI; raw/cooked asked, never assumed; typo-tolerant saved-food and meal-word matching, Dashboard "Did you mean …?"; earlier: tabs: Saved Food, Explore, Body Profile; admin two-step sign-in; tool allow-list; terms page; earlier: health notes, Alembic, forgot password…).Update the diagrams whenever a component, data flow, table or external service changes (see [docs/README.md](README.md)).
+> Last updated: 2026-09-30 (tab order Home, Meals, My Foods, Body Stats, Explore; tabs renamed: Saved Food → **My Foods**, Body Profile → **Body Stats**; app renamed Tandurust, display only; Dashboard tab renamed Meals, Analysis moved into it; Chat moved from a tab to a floating chat window opened from Home; Saved Food tabs: Generic / Branded / My Recipes; Saved Food + Add: §4.6; branded foods: Open Food Facts label check, §2, §3, §4.5, §5; optional "About you" answers: targets, meal times, MacBro context; country/region step in the sign-in flow; database hardening phase 1: public user UUIDs, items linked to foods, ON DELETE rules, timestamptz, composite indexes; built-in general food list (USDA) between Saved Food and the AI; raw/cooked asked, never assumed; typo-tolerant saved-food and meal-word matching, Dashboard "Did you mean …?"; earlier: tabs: Saved Food, Explore, Body Profile; admin two-step sign-in; tool allow-list; terms page; earlier: health notes, Alembic, forgot password…).Update the diagrams whenever a component, data flow, table or external service changes (see [docs/README.md](README.md)).
 > Diagrams are Mermaid. They render on GitHub and in VS Code with a Mermaid preview extension.
 
 ## 1. Purpose and principles
@@ -30,7 +30,7 @@ flowchart LR
 
 | Actor | Uses |
 |---|---|
-| **User** | Home (summary, meal-logging and protein streaks), Chat logging, Meals (day summary, meal cards, Check your progress), Saved Food, Settings |
+| **User** | Home (summary, meal-logging and protein streaks), Chat logging, Meals (day summary, meal cards, Check your progress), My Foods, Settings |
 | **Admin** (emails in `ADMIN_EMAILS`) | Admin console only: user list, per-user read-only data, audit log |
 | **LLM provider** | Nutrition estimation, clarifying questions, choosing tools. It never writes data. |
 | **Open Food Facts** | Pack-label values for branded foods, searched only when the user presses **Check label**. It receives the search words or barcode, nothing about the user. |
@@ -40,7 +40,7 @@ flowchart LR
 ```mermaid
 flowchart TB
     subgraph Browser
-        SPA[React 19 + Vite SPA<br/>Home with MacBro chat window · Meals with Check your progress · Saved Food · Explore · Body Profile<br/>Settings · Guide tour · Admin console<br/>public /privacy page<br/>wake screen while the server wakes]
+        SPA[React 19 + Vite SPA<br/>Home with MacBro chat window · Meals with Check your progress · My Foods · Body Stats · Explore<br/>Settings · Guide tour · Admin console<br/>public /privacy page<br/>wake screen while the server wakes]
         STT[Web Speech API]
         SPA --- STT
     end
@@ -126,7 +126,7 @@ sequenceDiagram
 
 ```mermaid
 flowchart TD
-    M[User message] --> T[Fix meal-word typos<br/>brkfst → breakfast] --> F{Fast path?<br/>raw/cooked answer · water · yes · summary ·<br/>Saved Food, then general food list, typos allowed ·<br/>same as yesterday}
+    M[User message] --> T[Fix meal-word typos<br/>brkfst → breakfast] --> F{Fast path?<br/>raw/cooked answer · water · yes · summary ·<br/>My Foods, then general food list, typos allowed ·<br/>same as yesterday}
     F -->|yes| C[Reply / card, no model call]
     F -->|weight given, raw or cooked not said| Q[Ask: raw or cooked?<br/>Raw / Cooked buttons, no model call]
     F -->|no| R{Router rules}
@@ -178,7 +178,7 @@ flowchart TD
     Me -->|About you not answered or skipped| About[A bit more about you: optional, Skip for now]
     About --> Me
     Me -->|guide not seen| Guide[First-run guide tour]
-    Me --> Tabs[Home default, MacBro chat window · Meals · Saved Food]
+    Me --> Tabs[Home default, MacBro chat window · Meals · My Foods]
     Guide --> Tabs
 ```
 
@@ -192,7 +192,7 @@ Admin emails can't register, use the normal login or Continue with Google.
 
 ```mermaid
 flowchart TD
-    A[+ Add food: name, quantity, unit] --> M{Saved in Saved Food?<br/>picked, or name matches}
+    A[+ Add food: name, quantity, unit] --> M{Saved in My Foods?<br/>picked, or name matches}
     M -->|yes| S[Scale saved numbers in code<br/>add to the meal at once]
     M -->|saved as raw/cooked,<br/>typed without| Q[Raw or cooked? buttons]
     M -->|no| T{Close typo of exactly<br/>one saved food?}
@@ -207,7 +207,7 @@ flowchart TD
     GP --> P
     L --> P[(pending action<br/>origin = dashboard)]
     P --> C{User: Add it?}
-    C -->|Add it| W[confirm_action: log entry +<br/>learn the food into Saved Food]
+    C -->|Add it| W[confirm_action: log entry +<br/>learn the food into My Foods]
     C -->|Change / Cancel| R[reject: nothing saved]
     L -->|not a food| Q[Reason + Ask in chat instead]
 ```
@@ -220,7 +220,7 @@ A branded food first comes from the AI's memory of its label, so it is saved wit
 
 ```mermaid
 flowchart TB
-    B[Saved Food → Branded<br/>Check label] -->|GET /api/foods/label-search?q=brand name or barcode| LS[services/labels]
+    B[My Foods → Branded<br/>Check label] -->|GET /api/foods/label-search?q=brand name or barcode| LS[services/labels]
     LS -->|search or product by barcode| OFF[(Open Food Facts)]
     OFF --> LS
     LS -->|complete labels only, per 100 g/ml<br/>sold in India first| P[User compares with the pack<br/>and picks one]
@@ -234,18 +234,18 @@ flowchart TB
 
 Principle 3 applies: the user's own click on a label they chose. The server never trusts label numbers sent by the browser; it re-fetches the product by barcode. A food marked `label` is never overwritten by a later AI estimate, and the model sees `| label |` on its line in "my foods", so it reuses the food's numbers.
 
-### 4.6 Adding a food or recipe in Saved Food (no LLM)
+### 4.6 Adding a food or recipe in My Foods (no LLM)
 
 ```mermaid
 flowchart TB
-    A[Saved Food: + Add] --> K{What to add?}
+    A[My Foods: + Add] --> K{What to add?}
     K -->|Branded product| B[Brand, product,<br/>nutrition table as on the pack]
     B -.->|optional| LS[Search Open Food Facts<br/>fills the form]
     K -->|Generic food| G[Name, per amount + unit,<br/>kcal and macros]
     K -->|Recipe| R[Name, raw ingredients,<br/>servings / pieces / cooked weight]
     B -->|POST /api/foods<br/>label_code if a label was picked and not changed| F[user_foods row<br/>source label or user]
     G -->|POST /api/foods| F
-    R -->|POST /api/foods/recipes/preview<br/>Calculate, nothing saved| P[foods.typed_ingredient:<br/>Saved Food, else general list]
+    R -->|POST /api/foods/recipes/preview<br/>Calculate, nothing saved| P[foods.typed_ingredient:<br/>My Foods, else general list]
     R -->|POST /api/foods/recipes| P --> C[compute_recipe] --> S[save_recipe<br/>general-list ingredients learned too]
     F --> DB[(DB)]
     S --> DB
@@ -290,7 +290,7 @@ Column-level detail is in [technical-overview.md](technical-overview.md#5-data-m
 | Prompt | Stable system prompt (MacBro persona and rules, cacheable) plus per-turn dynamic context (date, time, targets, today's totals, my foods, item ids) |
 | History | Today's chat only (+3 h grace): last 6 messages on the small tier, 12 on the large |
 | Per-call size | Only the tools and prompt sections the intent needs, and only saved foods and general-list foods named in the message, typos allowed (25–87% fewer instruction tokens per call) |
-| General food list | ~300 common foods per 100 g from USDA FoodData Central (SR Legacy, public domain), a JSON file shipped with the backend (`app/data/general_foods.json`, built by `scripts/build_general_foods.py` from our curated `general_foods_spec.py`). Read-only, loaded once, no table. Order: Saved Food → general list → AI. Raw/cooked pairs are asked, never assumed. Confirmed foods are copied into Saved Food (`source = general`). A monthly GitHub Action rebuilds it from USDA and opens a pull request only when numbers change or USDA adds foods ([deployment.md](deployment.md)). |
+| General food list | ~300 common foods per 100 g from USDA FoodData Central (SR Legacy, public domain), a JSON file shipped with the backend (`app/data/general_foods.json`, built by `scripts/build_general_foods.py` from our curated `general_foods_spec.py`). Read-only, loaded once, no table. Order: My Foods → general list → AI. Raw/cooked pairs are asked, never assumed. Confirmed foods are copied into My Foods (`source = general`). A monthly GitHub Action rebuilds it from USDA and opens a pull request only when numbers change or USDA adds foods ([deployment.md](deployment.md)). |
 | Observability | `llm_usage` table and the admin **AI usage** panel (calls, tokens, fast-path share, cooldowns) |
 | Guards | Energy balance, quantity cleanup, false "Logged" claim nudge, missed-water nudge, move-vs-delete guard, tool allow-list per routed intent (other tool names are refused) |
 | Failure | Any provider error → HTTP 503 with a friendly message (`SHOW_LLM_ERRORS=true` shows details in dev) |

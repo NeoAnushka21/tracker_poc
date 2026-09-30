@@ -31,9 +31,9 @@
 - **Home:** a greeting, today's calories and macros at a glance, water, and two streaks: days in a row with a meal logged, and days in a row reaching your protein target.
 - **Chat with MacBro:** a chat window that opens over any page, like a website's chat assistant. Type or use the mic, then minimize it to a bubble or close it. Ask about past days too ("how much protein this week?"), or edit, move or delete entries.
 - **Meals:** your day in detail. A compact summary of calories, protein, fiber, carbs, fat, water and micronutrients, then a colourful card for each meal (breakfast, snacks, lunch, dinner) that you can unfold to edit items or add food without the chat. **Check your progress** at the bottom opens 7, 14 or 30-day trends.
-- **Saved Food:** your personal food library in three tabs: **Generic** foods, **Branded** products (with **Check label** for the real pack values) and **My Recipes**. Add foods and recipes yourself with **+ Add**.
+- **My Foods:** your personal food library in three tabs: **Generic** foods, **Branded** products (with **Check label** for the real pack values) and **My Recipes**. Add foods and recipes yourself with **+ Add**.
+- **Body Stats:** weight, height, BMI, an estimated body-fat percentage, and body measurements over time.
 - **Explore** (coming soon): recipe collections with the macros worked out, and workout basics.
-- **Body Profile:** weight, height, BMI, an estimated body-fat percentage, and body measurements over time.
 - **Settings:** your details, optional "about you" questions (diet, allergies, meal times, training), targets, light or dark theme, password, **Download my data** and **Delete account**.
 - **? Guide:** a short tour that highlights each part of the app.
 
@@ -134,7 +134,7 @@ npm run build && npm run lint          # frontend type check, build and lint
 | `backend/app/services/general_foods.py` | The built-in list of ~300 common foods |
 | `backend/app/services/labels.py` | Pack labels for branded foods from Open Food Facts |
 | `backend/app/nutrition.py` | BMR / TDEE / target calculation |
-| `frontend/src/components/` | Home, ChatWidget + Chat (with voice input), ProposalCard, Dashboard (the Meals tab, with progress charts), Saved Food, Explore, Body Profile, Settings, GuideTour, Admin |
+| `frontend/src/components/` | Home, ChatWidget + Chat (with voice input), ProposalCard, Dashboard (the Meals tab, with progress charts), My Foods, Body Stats, Explore, Settings, GuideTour, Admin |
 
 ## Documentation
 

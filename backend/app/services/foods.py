@@ -402,7 +402,7 @@ def upsert_general(db: Session, user: User, item: dict) -> UserFood | None:
 
 
 def learn_item(db: Session, user: User, item: dict) -> UserFood | None:
-    """A confirmed item that isn't a saved food -> Saved Food (general-list or AI estimate)."""
+    """A confirmed item that isn't a saved food -> My Foods (general-list or AI estimate)."""
     return upsert_general(db, user, item) if item.get("general_id") else upsert_estimate(db, user, item)
 
 
@@ -493,7 +493,7 @@ def correct_past_logs(db: Session, user: User, food: UserFood) -> int:
     return changed
 
 
-# --- added by hand in Saved Food (+ Add) ------------------------------------------------
+# --- added by hand in My Foods (+ Add) ------------------------------------------------
 
 def typed_ingredient(db: Session, user: User, name: str, qty: float, unit: str, food_id: int | None = None) -> dict:
     """A recipe ingredient typed in the Add recipe form -> an item with its nutrients, from Saved
@@ -520,5 +520,5 @@ def typed_ingredient(db: Session, user: User, name: str, qty: float, unit: str, 
         except FoodError:
             raise FoodError(f"{general_foods.display_name(m.entry)} can't be measured in '{unit}'. "
                             f"Use: {', '.join(general_foods.units_for(m.entry))}.") from None
-    raise FoodError(f"'{name}' isn't in Saved Food or the general food list. Add it first "
+    raise FoodError(f"'{name}' isn't in My Foods or the general food list. Add it first "
                     "(+ Add → Generic food or Branded product), then use it here.")

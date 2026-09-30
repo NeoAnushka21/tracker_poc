@@ -97,19 +97,13 @@ function steps(name: string | null): Step[] {
     {
       tab: "foods",
       targets: ["#tab-foods", "#panel-foods .foods-head", "#panel-foods .foods-tools"],
-      title: "6. Saved Food remembers for you",
+      title: "6. My Foods remembers for you",
       body: <p>Every food you confirm is saved here with its macros and micronutrients, so the next time you log it (e.g. "40g pineapple") the numbers are exactly the same, straight from your library, without using an AI message (small typos like "panner" are fine). About 300 common foods (fruit, dals, rice, milk, chicken…) are built in too, and for foods like rice or chicken MacBro asks whether the weight was raw or cooked instead of guessing. The list has three tabs: <b>Generic</b> foods, <b>Branded</b> products and <b>My Recipes</b>. It shows each name with its calories; tap <b>Additional info</b> for the other macros and micronutrients. You can search, correct or delete any of them. Packaged foods you log with their brand ("10 g Amul butter") are grouped by brand under <b>Branded</b>: press <b>Check label</b> to pick the real pack label from Open Food Facts, or type it in with the pencil. <b>+ Add</b> lets you add a branded product, a generic food or a recipe yourself.</p>,
-    },
-    {
-      tab: "explore",
-      targets: ["#tab-explore", "#panel-explore .explore"],
-      title: "7. Explore (coming soon)",
-      body: <p>Two sections: <b>Recipes</b>, ready-made collections such as <b>high protein</b>, <b>non-veg quick &amp; easy</b> and <b>healthy desserts</b> with the macros already worked out, and <b>Workouts</b>, with strength basics, simple routines and tips. Tap a section to see what's planned.</p>,
     },
     {
       tab: "body",
       targets: ["#tab-body", "#panel-body .body-page > .card:first-child"],
-      title: "8. Your Body Profile",
+      title: "7. Your Body Stats",
       body: (
         <ul>
           <li>Your <b>weight</b>, <b>height</b> and <b>BMI</b>, and an estimated <b>body fat</b> once you add your neck and waist (and hips for women).</li>
@@ -117,6 +111,12 @@ function steps(name: string | null): Step[] {
           <li>Update your weight or height here too.</li>
         </ul>
       ),
+    },
+    {
+      tab: "explore",
+      targets: ["#tab-explore", "#panel-explore .explore"],
+      title: "8. Explore (coming soon)",
+      body: <p>Two sections: <b>Recipes</b>, ready-made collections such as <b>high protein</b>, <b>non-veg quick &amp; easy</b> and <b>healthy desserts</b> with the macros already worked out, and <b>Workouts</b>, with strength basics, simple routines and tips. Tap a section to see what's planned.</p>,
     },
     {
       tab: "home",

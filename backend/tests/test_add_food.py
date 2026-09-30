@@ -1,4 +1,4 @@
-"""Saved Food → + Add: a generic food, a branded product (typed or picked on Open Food Facts)
+"""My Foods → + Add: a generic food, a branded product (typed or picked on Open Food Facts)
 and a recipe, all typed in by the user without the AI."""
 from tests.test_foods import foods_by_name
 from tests.test_labels import off  # noqa: F401  (fixture: Open Food Facts stubbed)
@@ -64,7 +64,7 @@ def test_recipe_problems_are_explained(client, user):
         assert r.status_code == 422, r.text
         return r.json()["detail"]
 
-    assert "isn't in Saved Food" in err(recipe([{"name": "dragonfruit jam", "quantity": 10, "unit": "g"}], yield_servings=1))
+    assert "isn't in My Foods" in err(recipe([{"name": "dragonfruit jam", "quantity": 10, "unit": "g"}], yield_servings=1))
     assert "raw or cooked" in err(recipe([{"name": "rice", "quantity": 100, "unit": "g"}], yield_servings=1))
     assert "yield" in err(recipe([{"name": "banana", "quantity": 100, "unit": "g"}]))
     client.post("/api/foods", json=PANEER)

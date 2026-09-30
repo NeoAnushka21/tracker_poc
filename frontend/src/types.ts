@@ -207,7 +207,7 @@ export type Food = Nutrients & {
   logs_corrected?: number;
 };
 
-/** + Add → Recipe: an ingredient row (food_id when picked from Saved Food). */
+/** + Add → Recipe: an ingredient row (food_id when picked from My Foods). */
 export type RecipeIngredientInput = { name: string; food_id: number | null; quantity: number; unit: string };
 
 export type RecipeInput = {

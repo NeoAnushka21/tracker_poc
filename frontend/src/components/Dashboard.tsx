@@ -332,7 +332,7 @@ function ItemActions({ day, item, meal, isToday, onChanged, onAskMacBro, onClose
 
 const UNIT_SUGGESTIONS = ["g", "ml", "piece", "serving", "cup", "bowl", "slice", "tbsp", "tsp", "glass"];
 
-/** Add a food to a meal without the chat. A saved food (from Saved Food) is added at once with its
+/** Add a food to a meal without the chat. A saved food (from My Foods) is added at once with its
  *  saved numbers; any other food gets an AI estimate that is only saved after "Add it". */
 function AddFoodPanel({ day, meal, onChanged, onAskMacBro, onClose }: {
   day: string; meal: string; onChanged: () => void; onAskMacBro: (text: string, date?: string) => void; onClose: () => void;
@@ -424,7 +424,7 @@ function AddFoodPanel({ day, meal, onChanged, onAskMacBro, onClose }: {
         </ul>
         {p.totals && <MacroChips n={p.totals} />}
         {estimate.note && <p className="small add-note">{estimate.note}</p>}
-        <p className="muted small">Adding it also saves the food to Saved Food, so next time it's instant.</p>
+        <p className="muted small">Adding it also saves the food to My Foods, so next time it's instant.</p>
         <div className="proposal-actions">
           <button className="primary" onClick={confirm} disabled={busy}>Add it</button>
           <button onClick={() => discard(false)} disabled={busy}>Change</button>
@@ -467,7 +467,7 @@ function AddFoodPanel({ day, meal, onChanged, onAskMacBro, onClose }: {
       </div>
       <p className="muted small add-hint">
         {!name.trim() ? "Pick one of your saved foods or type any food."
-          : saved ? `Saved food: added straight away with your numbers (${saved.measures}).`
+          : saved ? `In My Foods: added straight away with your numbers (${saved.measures}).`
           : "New food: taken from the general food list when it's there, else the AI estimates it. You check it before it's added."}
       </p>
       {askState && (

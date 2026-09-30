@@ -23,9 +23,9 @@ import { useServerWaking } from "./wake";
 const TABS = [
   { id: "home", label: "Home" },
   { id: "dashboard", label: "Meals" },   // id kept from when it was "Dashboard", so old links work
-  { id: "foods", label: "Saved Food" },
+  { id: "foods", label: "My Foods" },
+  { id: "body", label: "Body Stats" },
   { id: "explore", label: "Explore" },
-  { id: "body", label: "Body Profile" },
 ] as const;
 type TabId = (typeof TABS)[number]["id"];
 

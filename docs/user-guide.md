@@ -4,7 +4,7 @@ Tandurust is a chat-based calorie and macro tracker. In the Chat you talk to **M
 
 This guide walks a new user through the app from sign-up to daily use. The same walkthrough appears inside the app as a short tour the first time you log in. You can reopen it any time with the **? Guide** button at the top.
 
-> Last updated: 2026-09-30 (item edit panel: the amount has its own **Save** and a live calorie/protein preview, Move/Copy is a separate row; the app is now called **Tandurust**, logo "T" (it was OmniAI; the web address stays the same); Explore split into **Recipes** and **Workouts** sections; Dashboard renamed **Meals**, meal cards folded and one below another, MacBro invite there too; Analysis moved into Meals as **Check your progress**; the guide blurs the page and highlights what each step describes; Dashboard redesigned: one compact summary tile, colourful meal cards; Chat is no longer a tab: MacBro's chat opens as a window from Home ("Want to log something? Talk to me"), can be minimized or closed; Saved Food tabs: **Generic**, **Branded**, **My Recipes**; **+ Add** in Saved Food: a branded product, a generic food or a recipe from a form; branded foods: a **Brands** filter in Saved Food, and **Check label** fetches the real pack label from Open Food Facts; Settings reorganised: About you, Targets, Appearance, Account & privacy, Security; India only for now in the country list; optional "About you" questions: diet, allergies, pace, meal times, training, health; country and region in the profile, age in Settings; built-in general food list of ~300 common foods (USDA) used without the AI; "raw or cooked?" asked, never assumed; small typos in saved-food names and meal words are understood without the AI; Dashboard asks "Did you mean …?"; earlier: Saved Food renamed Saved Food, a list with Additional info; Body renamed Body Profile; new Explore tab, coming soon; terms page; earlier: health notes and low-target warning, forgot password…). Keep this file in step with the UI (see [docs/README.md](README.md)).
+> Last updated: 2026-09-30 (tab order: Home, Meals, My Foods, Body Stats, Explore; tabs renamed: Saved Food → **My Foods**, Body Profile → **Body Stats**; item edit panel: the amount has its own **Save** and a live calorie/protein preview, Move/Copy is a separate row; the app is now called **Tandurust**, logo "T" (it was OmniAI; the web address stays the same); Explore split into **Recipes** and **Workouts** sections; Dashboard renamed **Meals**, meal cards folded and one below another, MacBro invite there too; Analysis moved into Meals as **Check your progress**; the guide blurs the page and highlights what each step describes; Dashboard redesigned: one compact summary tile, colourful meal cards; Chat is no longer a tab: MacBro's chat opens as a window from Home ("Want to log something? Talk to me"), can be minimized or closed; Saved Food tabs: **Generic**, **Branded**, **My Recipes**; **+ Add** in Saved Food: a branded product, a generic food or a recipe from a form; branded foods: a **Brands** filter in Saved Food, and **Check label** fetches the real pack label from Open Food Facts; Settings reorganised: About you, Targets, Appearance, Account & privacy, Security; India only for now in the country list; optional "About you" questions: diet, allergies, pace, meal times, training, health; country and region in the profile, age in Settings; built-in general food list of ~300 common foods (USDA) used without the AI; "raw or cooked?" asked, never assumed; small typos in saved-food names and meal words are understood without the AI; Dashboard asks "Did you mean …?"; earlier: Saved Food renamed Saved Food, a list with Additional info; Body renamed Body Profile; new Explore tab, coming soon; terms page; earlier: health notes and low-target warning, forgot password…). Keep this file in step with the UI (see [docs/README.md](README.md)).
 
 ---
 
@@ -19,12 +19,12 @@ This guide walks a new user through the app from sign-up to daily use. The same 
 6. [Confirm, correct or cancel](#6-confirm-correct-or-cancel)
 7. [Edit, move, copy and delete](#7-edit-move-copy-and-delete)
 8. [Water](#8-water)
-9. [Recipes and Saved Food](#9-recipes-and-saved-food)
+9. [Recipes and My Foods](#9-recipes-and-my-foods)
 10. [Ask about your history](#10-ask-about-your-history)
 11. [Meals (your day)](#11-meals-your-day)
 12. [Check your progress](#12-check-your-progress)
-13. [Explore](#13-explore)
-14. [Body Profile](#14-body-profile)
+13. [Body Stats](#13-body-stats)
+14. [Explore](#14-explore)
 15. [Settings](#15-settings)
 16. [Tips for accurate logging](#16-tips-for-accurate-logging)
 17. [Troubleshooting and FAQ](#17-troubleshooting-and-faq)
@@ -113,7 +113,7 @@ After you submit, **Your daily targets** shows the calories, protein, carbs, fat
 
 ## 3. The first-run tour
 
-The first time you reach the main screen, a small panel opens at the bottom. It steps through the tabs (Home, with MacBro's chat → Meals, with Check your progress → Saved Food → Explore → Body Profile) and explains each one. While it's open, the page behind is **blurred**, and only what the step is talking about (a tab, a tile, a button) stays sharp, with a glowing outline; the page scrolls to it for you, and the panel moves (to the top or a corner) so it never covers what it's pointing at.
+The first time you reach the main screen, a small panel opens at the bottom. It steps through the tabs (Home, with MacBro's chat → Meals, with Check your progress → My Foods → Body Stats → Explore) and explains each one. While it's open, the page behind is **blurred**, and only what the step is talking about (a tab, a tile, a button) stays sharp, with a glowing outline; the page scrolls to it for you, and the panel moves (to the top or a corner) so it never covers what it's pointing at.
 
 - Use **Next** and **Back** (or the ← → keys) to move between steps.
 - **Skip**, **✕** or **Esc** closes the tour.
@@ -126,9 +126,9 @@ The first time you reach the main screen, a small panel opens at the bottom. It 
 | Home | Today's summary (macros) on the left; the Water tile and the two streaks stacked on the right |
 | Chat window | Floats at the bottom right, about 440 px wide, over whatever page you are on (on a phone it fills the screen) |
 | Meals | The summary tile across the top (five meters side by side), then the meal cards one below another; **Check your progress** opens the charts in two columns |
-| Saved Food | A full-width list: name and calories on each line, the details opening underneath |
+| My Foods | A full-width list: name and calories on each line, the details opening underneath |
+| Body Stats | The body diagram with labelled arrows on both sides and the measurement editor beside it (on a phone: numbered dots and a list) |
 | Explore | Recipe collection tiles in rows of up to four |
-| Body Profile | The body diagram with labelled arrows on both sides and the measurement editor beside it (on a phone: numbered dots and a list) |
 
 On very wide screens, content stays at a comfortable width (about 1,200 px) in the middle, lined up with the top bar.
 
@@ -194,7 +194,7 @@ If something is ambiguous, for example "a bowl of pasta", MacBro asks a short qu
 **Daily AI messages:** Tandurust runs on a free AI service shared by everyone, so each account gets **20 AI messages a day** (the number may change). The count left is shown above the message box, e.g. "14 of 20 AI messages left today", and it resets at midnight in your time zone.
 
 - **Counts:** a message the AI answers, and a new food estimated on the Meals tab (**+ Add food**).
-- **Doesn't count:** instant replies (a water amount, "what's left today", foods all in Saved Food or the general food list, the raw/cooked question and your answer, "same breakfast as yesterday"), saved and general-list foods added on the Meals tab, every button (Looks good, water, move, delete…), and messages that fail or that you stop.
+- **Doesn't count:** instant replies (a water amount, "what's left today", foods all in My Foods or the general food list, the raw/cooked question and your answer, "same breakfast as yesterday"), saved and general-list foods added on the Meals tab, every button (Looks good, water, move, delete…), and messages that fail or that you stop.
 - When they're used up, your message stays in the box with a note. Everything that doesn't need the AI keeps working.
 
 Today's totals are on the **Home** tab (and in the summary card after each confirmed log: macros after food, water after water).
@@ -233,10 +233,10 @@ You can do this **in the chat** (with a confirmation card) or **on the Meals tab
 
 **Add a food without the chat:** each meal has **+ Add food**. Type the food (your saved foods are suggested as you type), the quantity and the unit, then press **Add**. It goes into that meal on the day you're viewing.
 
-- **A saved food** (one in Saved Food) is added straight away with your saved numbers. The unit list shows only the units it can be measured in (e.g. g, piece).
+- **A saved food** (one in My Foods) is added straight away with your saved numbers. The unit list shows only the units it can be measured in (e.g. g, piece).
 - **A small typo of a saved food** (say `panner` for Paneer) asks **Did you mean Paneer?** first, without the AI. **Use Paneer** adds your saved one (if the unit you typed doesn't fit it, pick one from the unit list and press **Add**). **No, add "panner"** treats it as a new food.
 - **A common food on the general food list** (see §9), e.g. `banana`, `ghee`, `chicken breast, cooked`, shows a preview marked **General food list · Not saved yet**, without the AI. If it could be raw or cooked (rice, dal, chicken…) and you didn't say, it first asks **raw or cooked?** with two buttons.
-- **A new food** is estimated by the AI. You'll see its calories and macros marked **AI estimate · Not saved yet**, with any assumption it made. Press **Add it** to save it (it's also saved to Saved Food, so next time it's instant), **Change** to edit what you typed, or **Cancel**.
+- **A new food** is estimated by the AI. You'll see its calories and macros marked **AI estimate · Not saved yet**, with any assumption it made. Press **Add it** to save it (it's also saved to My Foods, so next time it's instant), **Change** to edit what you typed, or **Cancel**.
 - If the AI can't estimate it (for example, it isn't a food), you'll see why, with **Ask in chat instead**.
 - An empty meal gets its usual time (breakfast 08:00, morning snack 11:00, lunch 13:00, evening snack 17:00, dinner 20:00, or now if that's later today); a meal that already has food keeps its time.
 
@@ -256,23 +256,23 @@ For a single item that's already logged, tap the **pencil** ✎ next to any item
 
 Your water target is based on your weight and activity level. The bar shows litres drunk against the target, with "to go" or "goal met ✓".
 
-## 9. Recipes and Saved Food
+## 9. Recipes and My Foods
 
-**Saved Food** is your personal food library. Every food in a meal you confirm is saved there automatically, with its calories, macros **and micronutrients**, so the next time you log it MacBro reuses **exactly the same numbers** and scales them to the amount.
+**My Foods** is your personal food library. Every food in a meal you confirm is saved there automatically, with its calories, macros **and micronutrients**, so the next time you log it MacBro reuses **exactly the same numbers** and scales them to the amount.
 
 **How a repeat food is logged:**
 
-1. The first time you log a new food (say, pineapple), MacBro's AI estimates it. When you confirm, it's saved to Saved Food per 100 g (or per piece or serving), micronutrients included.
-2. Later, a simple message like `had 40g pineapple` or `2 eggs for breakfast` is answered **straight from Saved Food, without the AI**. The saved numbers, micronutrients included, are scaled to your amount. The card says "All from your saved foods".
+1. The first time you log a new food (say, pineapple), MacBro's AI estimates it. When you confirm, it's saved to My Foods per 100 g (or per piece or serving), micronutrients included.
+2. Later, a simple message like `had 40g pineapple` or `2 eggs for breakfast` is answered **straight from My Foods, without the AI**. The saved numbers, micronutrients included, are scaled to your amount. The card says "All from your saved foods".
    - **Small typos are fine:** `200g cooked chiken breast` still finds your saved chicken breast, and the card says what it read ("I read 'cooked chiken breast' as chicken breast, cooked"), so you can check before confirming. To avoid wrong guesses, names under 5 letters (egg, oats) must be spelt exactly, longer ones may be off by one letter (two from 9 letters), and if the typo is close to two saved foods the AI handles it instead.
    - **Meal words too:** `brkfst`, `breakfst`, `bekfast`, `bfast`, `lnch`, `dinr`, `snak` or `mornng snak` are read as the meal, when they come after *for*, *at*, *in*, *as*, *my*, *same* or *yesterday's* (e.g. `3 eggs for brkfst`), so "a bunch of grapes" is never read as lunch.
-3. The Meals tab's **+ Add food** works the same way: a saved food is added from Saved Food without the AI (a small typo asks "Did you mean …?" first), and a new one is estimated once and saved when you add it.
+3. The Meals tab's **+ Add food** works the same way: a saved food is added from My Foods without the AI (a small typo asks "Did you mean …?" first), and a new one is estimated once and saved when you add it.
 4. This shortcut needs **an amount for every item** (`40g`, `2`, `1 serving`, `1 tbsp`, `1 cup`) and **every item already saved or on the general food list** (below). A count like `1 apple` also needs the food's **g per piece** (add it in **Edit** if it's missing). Otherwise the message goes to the AI, which still reuses your saved numbers for the foods it recognises.
 
 **The general food list (no AI):** Tandurust also comes with about **300 common foods**: fruits, vegetables, grains and flours, dals and beans, dairy, eggs, meat and fish, nuts and seeds, oils and ghee, sugar, sauces and common drinks. Their numbers per 100 g, micronutrients included, come from **USDA FoodData Central** (a public-domain US government database). Indian names work too (`kela`, `atta`, `toor dal`, `dahi`, `palak`…), as do small typos.
 
-- **Lookup order:** your Saved Food first (your numbers always win), then the general list, then the AI.
-- `had 150 g banana and 1 tbsp ghee` makes a card straight from the list, marked "From the general food list … plain food with no oil or salt". Confirm it and the food is copied into Saved Food, so from then on it's yours to edit.
+- **Lookup order:** your My Foods first (your numbers always win), then the general list, then the AI.
+- `had 150 g banana and 1 tbsp ghee` makes a card straight from the list, marked "From the general food list … plain food with no oil or salt". Confirm it and the food is copied into My Foods, so from then on it's yours to edit.
 - **Raw or cooked is never assumed.** Meat, chicken, fish, prawns, rice, other grains (oats, quinoa, millet, dalia, pasta, noodles) and dals/beans have very different calories raw and cooked (cooked rice is about 130 kcal per 100 g, raw rice 365). If you give a weight without saying which (`200 g rice`), MacBro asks **"Was the rice weighed raw or cooked?"** with **Raw** / **Cooked** buttons. You can also type the answer, or for two foods `chicken raw, rice cooked`. Saying it upfront (`200 g cooked rice`, `150 g raw chicken breast`, `boiled dal`) skips the question. The same applies to a food you saved as, say, "chicken breast, cooked": typing just `chicken breast` asks, so a raw weight isn't logged with cooked numbers.
 - Counted pieces without a weight (`2 chicken drumsticks`) and dishes (`chicken curry`, `dal tadka`, `paneer butter masala`) aren't on the list; the AI handles them as before. Not on the list yet: paneer, poha, jaggery, ragi, idli, dosa and other cooked dishes.
 
@@ -281,7 +281,7 @@ Your water target is based on your weight and activity level. The bar shows litr
 - **+ Add** (top right) adds a food yourself, without the chat. First pick what you're adding, then fill in its form:
   - **Branded product:** brand and product name. **Search Open Food Facts** finds the pack label (by brand and name, or the barcode number) and **Use this** fills in the form; or copy the **nutrition table** from the pack: per 100 g or ml, energy (kcal), protein, carbohydrate, fibre, total fat, sodium, and the serving size. **More nutrients from the label** takes the rest. Keep **These values are from the pack label** ticked when you copied them from the pack, and the food shows **label ✓**. If you change a number after picking a product, your typed numbers are saved instead.
   - **Generic food:** a loose or home food (paneer, a sabzi…): name, the amount the numbers are for (per 100 g, 100 ml, 1 piece or 1 serving), kcal, protein, carbs, fat, and optionally fiber, g per piece, g per serving and micronutrients. Common foods (banana, rice, ghee, dals…) are already on the general food list, so you only need this for foods that aren't, or to use your own numbers.
-  - **Recipe:** a name, the **raw ingredients for the whole batch** (each with an amount and unit, e.g. `200 g`, `1 tbsp`), and what it makes (**servings** or **pieces**, and optionally the **cooked weight** of the whole batch, so you can log it in grams). Ingredients come from your Saved Food (suggested as you type) or the general food list; anything else, add first as a generic food or branded product. **Calculate** shows the numbers per serving (or piece, or 100 g) and each ingredient's calories before you save; **Save recipe** saves it. Ingredients from the general list are saved to Saved Food too.
+  - **Recipe:** a name, the **raw ingredients for the whole batch** (each with an amount and unit, e.g. `200 g`, `1 tbsp`), and what it makes (**servings** or **pieces**, and optionally the **cooked weight** of the whole batch, so you can log it in grams). Ingredients come from your My Foods (suggested as you type) or the general food list; anything else, add first as a generic food or branded product. **Calculate** shows the numbers per serving (or piece, or 100 g) and each ingredient's calories before you save; **Save recipe** saves it. Ingredients from the general list are saved to My Foods too.
   - If a food's protein, carbs and fat don't add up to roughly its calories, the form says so. It's only a hint (labels round a little); you can still save. A food with the same name (and brand) as one you already have isn't added twice: edit that one instead.
 - Foods are shown as a **list**: each line has the food's **name** and its **calories** for the saved amount (e.g. "165 kcal per 100 g").
 - Tap **Additional info** on a line to open the rest: **protein, carbs, fat and fiber**, the saved **micronutrients** (iron, calcium, magnesium, potassium, zinc, vitamins C, B12 and D, and sodium), where the numbers came from, and a recipe's **ingredients**. Tap it again to close.
@@ -291,14 +291,14 @@ Your water target is based on your weight and activity level. The bar shows litr
 **Branded foods (the Branded tab):** a packaged product has a pack label, and its numbers should come from that label, not a guess.
 
 1. Name the brand when you log it: `10 g Amul butter`, `1 Britannia Nutrichoice biscuit`. MacBro saves it with its brand. Until you check the label, the numbers are the AI's memory of the label, and the chat card marks the item **check label**.
-2. Open **Saved Food → Branded**. Branded foods are grouped by brand (Amul → Butter, Paneer…), and each one shows **label ✓** or **label not checked**. The small number on the **Branded** tab counts the ones still to check.
+2. Open **My Foods → Branded**. Branded foods are grouped by brand (Amul → Butter, Paneer…), and each one shows **label ✓** or **label not checked**. The small number on the **Branded** tab counts the ones still to check.
 3. Press **Check label** under a food. Tandurust searches **Open Food Facts**, a free, open database of food labels, for the brand and name, and lists the products it finds with their calories, protein, carbs and fat **per 100 g** (or 100 ml for drinks), the pack size and serving size. Products sold in India come first. Not the right one? Change the words, or type the **barcode number** printed under the pack's barcode for an exact match.
 4. Compare with your pack, then press **Use this**. The food now uses the label's numbers (and micronutrients the label lists, like sodium and calcium), plus the serving weight when the label gives one. Nothing changes until you press it.
 5. **Also correct the times I've already logged it** (ticked by default) recomputes your past logs of this food with the label's numbers, so your earlier days add up correctly too. Untick it to leave past days as they were.
 
 Not on Open Food Facts, or its numbers don't match your pack? Press the pencil, type the values from the label, and tick **These values are from the pack label** (and, if you like, **Also correct the times I've already logged it**). Either way the food shows **label ✓**, and later AI estimates never overwrite it. Open Food Facts is filled in by volunteers, so always check the numbers against your pack before you use them.
 
-Once a branded food is saved, `10 g amul butter` (brand and name, in either order) is answered straight from Saved Food, without the AI, with the checked label's numbers once you've checked it.
+Once a branded food is saved, `10 g amul butter` (brand and name, in either order) is answered straight from My Foods, without the AI, with the checked label's numbers once you've checked it.
 
 **Recipes** are for dishes you make at home. Make one with **+ Add → Recipe** (above), or in the chat:
 
@@ -351,16 +351,9 @@ At the bottom of the **Meals** tab, **Check your progress** opens your trends ri
 
 Hover over any chart, or tab to it with the keyboard, to see exact values. A day counts as "on target" when calories are within ±10% of target and protein is at least 90% of target.
 
-## 13. Explore
+## 13. Body Stats
 
-**Explore** has two sections. The tab opens on two cards; tap one to see what's inside, and **‹ Explore** to go back. Both are **coming soon**: for now they preview what's planned, and the tiles can't be opened yet.
-
-- **Recipes:** ready-made recipe collections with the macros already worked out: **High protein**, **Non-veg, quick & easy**, **Healthy desserts**, **Vegetarian protein**, **Under 400 kcal** and **Breakfast ideas**.
-- **Workouts:** basics, tips and simple routines to go with your nutrition: **Strength training basics**, **Beginner full-body routine**, **Home workouts**, **Warm-up and mobility**, **Cardio and daily steps** and **Recovery and rest**.
-
-## 14. Body Profile
-
-The **Body Profile** tab (it used to be *Settings → Body profile*, then the *Body* tab) shows your body numbers and lets you record measurements. Everything beyond weight and height is optional.
+The **Body Stats** tab (it used to be *Settings → Body profile*, then the *Body* tab) shows your body numbers and lets you record measurements. Everything beyond weight and height is optional.
 
 **At the top:**
 
@@ -388,13 +381,20 @@ The **Body Profile** tab (it used to be *Settings → Body profile*, then the *B
 - **Update weight & height.** Tick *Recalculate my targets* if you want your calorie and macro targets updated.
 - **Measurement history:** each dated entry. **Edit** fixes a mistake in a saved entry (to record a new value, use the diagram so the history keeps the change); **Delete** removes it.
 
+## 14. Explore
+
+**Explore** has two sections. The tab opens on two cards; tap one to see what's inside, and **‹ Explore** to go back. Both are **coming soon**: for now they preview what's planned, and the tiles can't be opened yet.
+
+- **Recipes:** ready-made recipe collections with the macros already worked out: **High protein**, **Non-veg, quick & easy**, **Healthy desserts**, **Vegetarian protein**, **Under 400 kcal** and **Breakfast ideas**.
+- **Workouts:** basics, tips and simple routines to go with your nutrition: **Strength training basics**, **Beginner full-body routine**, **Home workouts**, **Warm-up and mobility**, **Cardio and daily steps** and **Recovery and rest**.
+
 ## 15. Settings
 
 Open **⚙ Settings** from the top bar.
 
 | Tab | What you can do |
 |---|---|
-| **About you** (opens first) | **Basics:** your name, age (from your date of birth), sex, height, country and state (**Change** to pick another from the lists), time zone, goal and activity level. Height and weight are updated on the Body Profile tab. **More about you (optional):** diet, allergies, pace, meal times, training and health; change or clear any of them and press **Save**. If that changes your calculated calories, choose **Use the new target** or **Keep mine**. |
+| **About you** (opens first) | **Basics:** your name, age (from your date of birth), sex, height, country and state (**Change** to pick another from the lists), time zone, goal and activity level. Height and weight are updated on the Body Stats tab. **More about you (optional):** diet, allergies, pace, meal times, training and health; change or clear any of them and press **Save**. If that changes your calculated calories, choose **Use the new target** or **Keep mine**. |
 | **Targets** | Edit daily calories, protein, carbs, fat and fiber. |
 | **Appearance** | Light, dark, or follow your device (**System**). |
 | **Account & privacy** | **Sign-in:** your email, how you sign in (email and password, Google, or both), registration date and last login. **Your data:** when you gave data consent, **Download my data** (a file with everything Tandurust stores about you: profile, logs, foods, chat, usage, and any admin views of your account), and links to **How we use your data** and the **Terms**. |
@@ -408,7 +408,7 @@ Open **⚙ Settings** from the top bar.
 - **Say whether amounts are cooked or raw** for rice, pasta and meat.
 - **Name brands** for packaged foods. If MacBro doesn't know a product, it asks you for the label values.
 - **Save recipes** for home-cooked dishes you eat often.
-- **Correct once, reuse forever:** fix a food in *Saved Food* and every future log uses your numbers.
+- **Correct once, reuse forever:** fix a food in *My Foods* and every future log uses your numbers.
 
 ## 17. Troubleshooting and FAQ
 
@@ -428,7 +428,7 @@ Open **⚙ Settings** from the top bar.
 
 **The meal was put in the wrong slot.** Move it with **pencil → Move → pick the meal → →**, or say "move it to lunch".
 
-**Why do some replies arrive instantly?** Common messages, like a water amount, "yes", "what's left today?", foods you've saved in Saved Food ("had 3 eggs for breakfast"), common foods on the general food list ("150 g banana"), the raw/cooked question or "same breakfast as yesterday", are handled by the app directly without the AI. They're instant, and they save the free AI quota for harder messages.
+**Why do some replies arrive instantly?** Common messages, like a water amount, "yes", "what's left today?", foods you've saved in My Foods ("had 3 eggs for breakfast"), common foods on the general food list ("150 g banana"), the raw/cooked question or "same breakfast as yesterday", are handled by the app directly without the AI. They're instant, and they save the free AI quota for harder messages.
 
 **I typed "yes" but nothing was saved.** Tap **Looks good** on the card. Typing isn't enough, so that you always see what's being saved.
 

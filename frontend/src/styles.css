@@ -659,7 +659,7 @@ button.danger { color: var(--error); }
 .label-picked { margin: 4px 0 8px; padding: 8px 10px; border-radius: 10px; background: var(--accent-soft); }
 .energy-warning { margin: 10px 0 0; padding: 8px 10px; border-radius: 10px; color: var(--status-warning); background: color-mix(in srgb, var(--status-warning) 12%, var(--surface)); }
 
-/* Saved Food → + Add */
+/* My Foods → + Add */
 .foods-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; }
 .foods-add-btn { flex-shrink: 0; white-space: nowrap; }
 .add-food-panel { margin: 14px 0 6px; padding: 14px; border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--surface); animation: fade-up 0.25s var(--ease-out) both; }

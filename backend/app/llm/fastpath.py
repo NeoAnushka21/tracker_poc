@@ -166,7 +166,7 @@ def _summary(ctx: ToolContext, text: str) -> str | None:
     return "\n".join(lines)
 
 
-# --- 4. foods from Saved Food or the general food list ---------------------------------------
+# --- 4. foods from My Foods or the general food list ---------------------------------------
 
 _MEAL_WORDS = {"breakfast": "breakfast", "lunch": "lunch", "dinner": "dinner", "morning snack": "morning_snack",
                "evening snack": "evening_snack", "snack": "snack"}
@@ -196,7 +196,7 @@ def _saved_match(index: dict, typed: str, state: str | None):
 
 
 def _resolve_item(index: dict, typed: str, qty: float, unit: str | None) -> tuple[dict, str | None] | str | None:
-    """(card item, what a typo was read as) from Saved Food, else from the general list;
+    """(card item, what a typo was read as) from My Foods, else from the general list;
     _ASK when the user must say raw or cooked; None to leave the message to the model."""
     state = general_foods.state_in(typed)
     food, exact = _saved_match(index, typed, state)

@@ -326,5 +326,5 @@ F("beer", "Alcoholic beverage, beer, regular, all", "lager")
 F("red wine", "Alcoholic beverage, wine, table, red", "wine")
 F("whisky", "Alcoholic beverage, distilled, all (gin, rum, vodka, whiskey) 80 proof", "whiskey", "vodka", "rum", "gin")
 
-# Not in SR Legacy in a usable form, so left to Saved Food / the AI for now: paneer, poha,
+# Not in SR Legacy in a usable form, so left to My Foods / the AI for now: paneer, poha,
 # jaggery, ragi, muesli, sugarcane juice, sweet lime (mosambi), amla, idli/dosa and other cooked dishes.

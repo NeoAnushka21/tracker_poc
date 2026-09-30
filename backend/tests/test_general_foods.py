@@ -105,9 +105,9 @@ def test_confirmed_general_food_joins_saved_food(client, user, fake_llm):
     client.post(f"/api/actions/{action['id']}/confirm")
     saved = foods_by_name(client)["banana"]
     assert saved["source"] == "general" and saved["calories"] == 89 and saved["grams_per_piece"] == 118
-    item = card(chat(client, "had 1 banana"))["items"][0]                     # now from Saved Food
+    item = card(chat(client, "had 1 banana"))["items"][0]                     # now from My Foods
     assert item["source"] == "library" and item["calories"] == 105
-    # Logging it again keeps one Saved Food entry and marks it as recently used.
+    # Logging it again keeps one My Foods entry and marks it as recently used.
     before = foods_by_name(client)["banana"]
     client.post(f"/api/actions/{chat(client, 'had 2 banana')['actions'][0]['id']}/confirm")
     after = [f for f in client.get("/api/foods").json() if f["name"] == "banana"]
@@ -144,7 +144,7 @@ def test_dashboard_general_food_preview_and_state_question(client, user, fake_ll
     assert r["status"] == "estimate" and r["source"] == "general"
     client.post(f"/api/actions/{r['action']['id']}/confirm")
     assert [i["ingredient_name"] for i in meal_items(client, "breakfast")] == ["banana"]
-    assert foods_by_name(client)["banana"]["source"] == "general"             # kept in Saved Food too
+    assert foods_by_name(client)["banana"]["source"] == "general"             # kept in My Foods too
 
     assert add(client, name="rice", quantity=200, unit="g", meal_type="lunch").json() == \
         {"status": "ask_state", "name": "white rice"}

@@ -111,7 +111,7 @@ function AboutSection({ user, onSaved }: { user: User; onSaved: (u: User) => voi
   return (
     <>
       <PanelHead title="About you">What {APP_NAME} knows about you, and what it's used for.</PanelHead>
-      <Group title="Basics" note="From your sign-up. Height and weight are updated on the Body Profile tab.">
+      <Group title="Basics" note="From your sign-up. Height and weight are updated on the Body Stats tab.">
         <Row label="Name">{user.preferred_name ?? "–"}</Row>
         <Row label="Age">{user.age ?? "–"} <span className="muted small">from your date of birth</span></Row>
         <Row label="Sex">{user.sex ? user.sex[0].toUpperCase() + user.sex.slice(1) : "–"}</Row>
@@ -213,7 +213,7 @@ function TargetsSection({ user, onSaved }: { user: User; onSaved: (u: User) => v
   return (
     <>
       <PanelHead title="Daily calorie & macro targets">
-        Calculated from your profile; adjust any number. Changing weight or height on the Body Profile tab can recalculate these.
+        Calculated from your profile; adjust any number. Changing weight or height on the Body Stats tab can recalculate these.
       </PanelHead>
       <div className="settings-card">
         <TargetsEditor

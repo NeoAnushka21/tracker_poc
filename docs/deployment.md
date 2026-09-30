@@ -83,7 +83,7 @@ Optional: the NVIDIA backup is **off** in production, because its free tier is f
 
 ## Step 5: Check the live site (Claude, then You)
 
-- **Claude:** checks `/api/health`, the page load, and the logged-in screens (Home, Chat, Dashboard, Analysis, Saved Food) on the live address.
+- **Claude:** checks `/api/health`, the page load, and the logged-in screens (Home, Chat, Dashboard, Analysis, My Foods) on the live address.
 - **You:** log in with your usual test-user email and password, and send one chat message such as "had 2 eggs".
 - **Admin:** the admin account was copied too; log in with its current password.
 - Everyone sees the **Before we continue** consent screen once, because the consent wording changed on 2026-09-28.

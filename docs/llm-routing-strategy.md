@@ -57,7 +57,7 @@ Rule-based handlers produce the same proposal cards the model would. These are g
 | "drank 1 L / 2 glasses / 500 ml water" | regex (amount + unit + "water") | water card |
 | "yes", "looks good", "ok" while a card is pending | rule | "Tap **Looks good** on the card" |
 | "how much protein/calories left?", "today's summary" | intent keywords + DB | the existing "day so far" text |
-| "had 3 chapatis", "2 eggs", "150 g chicken" where every food is in **Saved Food** | parse quantity + unit + name, exact or alias match on the library | entry card with numbers computed in code |
+| "had 3 chapatis", "2 eggs", "150 g chicken" where every food is in **My Foods** | parse quantity + unit + name, exact or alias match on the library | entry card with numbers computed in code |
 | "same breakfast as yesterday", "repeat lunch" | rule + DB | copy card |
 
 Anything the rules aren't sure about falls through to the router. A false negative only costs a model call; a false positive is caught by the confirm card.

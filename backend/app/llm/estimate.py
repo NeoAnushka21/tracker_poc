@@ -1,4 +1,4 @@
-"""Dashboard "Add food": one AI estimate for a food the user typed that isn't in Saved Food.
+"""Dashboard "Add food": one AI estimate for a food the user typed that isn't in My Foods.
 
 Same tool, guards and confirm step as the chat: the model can only call propose_entry, and the
 pending action it creates is saved by confirm_action when the user presses "Add it". Nothing is
@@ -87,7 +87,7 @@ def general_food_action(db: Session, user: User, entry: dict, quantity: float, u
     if general_foods.grams_for(entry, quantity, unit) is None:
         return None
     note = (f"From the general food list ({general_foods.SOURCE_NOTE}), plain food with no oil or salt. "
-            "Adding it also saves it to Saved Food.")
+            "Adding it also saves it to My Foods.")
     if heads_up := preferences.allergen_note(user, [general_foods.display_name(entry)]):
         note += " " + heads_up
     ctx = ToolContext(db=db, user=user, raw_user_message=f"{quantity:g} {unit} {entry['name']}")
