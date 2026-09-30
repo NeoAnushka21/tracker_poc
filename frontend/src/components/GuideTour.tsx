@@ -104,7 +104,7 @@ function steps(name: string | null): Step[] {
       tab: "explore",
       targets: ["#tab-explore", "#panel-explore .explore"],
       title: "7. Explore (coming soon)",
-      body: <p>Ready-made recipe collections will live here, such as <b>high protein</b>, <b>non-veg quick &amp; easy</b> and <b>healthy desserts</b>, with the macros already worked out.</p>,
+      body: <p>Two sections: <b>Recipes</b>, ready-made collections such as <b>high protein</b>, <b>non-veg quick &amp; easy</b> and <b>healthy desserts</b> with the macros already worked out, and <b>Workouts</b>, with strength basics, simple routines and tips. Tap a section to see what's planned.</p>,
     },
     {
       tab: "body",
@@ -151,6 +151,37 @@ function findTargets(selectors: string[]): HTMLElement[] {
     [...document.querySelectorAll<HTMLElement>(sel)].filter((el) => el.getClientRects().length > 0).slice(0, 1));
 }
 
+const overlaps = (a: Hole, b: Hole) => a.x < b.x + b.w && b.x < a.x + a.w && a.y < b.y + b.h && b.y < a.y + a.h;
+
+/** Holes for the targets as they show on screen. With evenodd, two overlapping holes cancel out
+ *  (the overlap is blurred again), so: a target in the page is cut off at the sticky header's
+ *  bottom edge (it's hidden behind it anyway, and the tab it belongs to has its own hole), and
+ *  any holes that still overlap are merged into one. */
+function visibleHoles(els: HTMLElement[]): Hole[] {
+  const headerBottom = document.querySelector(".app-header")?.getBoundingClientRect().bottom ?? 0;
+  const holes: Hole[] = [];
+  for (const el of els) {
+    const r = el.getBoundingClientRect();
+    const top = el.closest(".app-header") ? r.top - PAD : Math.max(r.top - PAD, headerBottom + 2);
+    const bottom = Math.min(r.bottom + PAD, window.innerHeight);
+    if (bottom - top > 4) holes.push({ x: r.left - PAD, y: top, w: r.width + PAD * 2, h: bottom - top });
+  }
+  for (let merged = true; merged;) {
+    merged = false;
+    for (let a = 0; a < holes.length && !merged; a++) {
+      for (let b = a + 1; b < holes.length && !merged; b++) {
+        if (!overlaps(holes[a], holes[b])) continue;
+        const [p, q] = [holes[a], holes[b]];
+        const x = Math.min(p.x, q.x), y = Math.min(p.y, q.y);
+        holes[a] = { x, y, w: Math.max(p.x + p.w, q.x + q.w) - x, h: Math.max(p.y + p.h, q.y + q.h) - y };
+        holes.splice(b, 1);
+        merged = true;
+      }
+    }
+  }
+  return holes;
+}
+
 /** Where the step's targets are on screen, kept up to date on scroll and resize. */
 function useHoles(selectors: string[], stepKey: number): Hole[] {
   const [holes, setHoles] = useState<Hole[]>([]);
@@ -158,10 +189,7 @@ function useHoles(selectors: string[], stepKey: number): Hole[] {
     let frame = 0;
     const measure = () => {
       cancelAnimationFrame(frame);
-      frame = requestAnimationFrame(() => setHoles(findTargets(selectors).map((el) => {
-        const r = el.getBoundingClientRect();
-        return { x: r.left - PAD, y: r.top - PAD, w: r.width + PAD * 2, h: r.height + PAD * 2 };
-      })));
+      frame = requestAnimationFrame(() => setHoles(visibleHoles(findTargets(selectors))));
     };
     // The step may have just switched tabs: give the panel a moment to lay out, then bring the
     // main target (the last one: a section rather than its tab) into view.
@@ -201,6 +229,34 @@ export default function GuideTour({ name, onTab, onClose }: Props) {
   useEffect(() => { onTab(step.tab); }, [i]); // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => { panel.current?.focus(); }, [i]);
 
+  // Keep the panel off what it's pointing at: bottom centre by default, else the first of top
+  // centre and the four corners that covers no highlight (or covers the least).
+  const [pos, setPos] = useState<{ left: number; top: number } | null>(null);
+  useLayoutEffect(() => {
+    const el = panel.current;
+    if (!el) return;
+    const { width: w, height: h } = el.getBoundingClientRect();
+    const M = 16;
+    const vw2 = window.innerWidth, vh2 = window.innerHeight;
+    const xs = { centre: (vw2 - w) / 2, left: M, right: vw2 - w - M };
+    const ys = { bottom: vh2 - h - M, top: M };
+    const spots = [[xs.centre, ys.bottom], [xs.centre, ys.top], [xs.left, ys.bottom], [xs.right, ys.bottom],
+      [xs.left, ys.top], [xs.right, ys.top]];
+    const covered = ([x, y]: number[]) => holes.reduce((sum, o) => {
+      const dx = Math.min(x + w, o.x + o.w) - Math.max(x, o.x);
+      const dy = Math.min(y + h, o.y + o.h) - Math.max(y, o.y);
+      return sum + (dx > 0 && dy > 0 ? dx * dy : 0);
+    }, 0);
+    let best = spots[0], bestArea = covered(best);
+    for (const s of spots.slice(1)) {
+      if (bestArea === 0) break;
+      const area = covered(s);
+      if (area < bestArea) { best = s; bestArea = area; }
+    }
+    const next = { left: Math.round(Math.max(M, best[0])), top: Math.round(Math.max(M, best[1])) };
+    setPos((p) => (p && p.left === next.left && p.top === next.top ? p : next));
+  }, [holes, i]);
+
   // One path: the whole screen, minus a rounded hole per target (evenodd).
   const vw = typeof window === "undefined" ? 0 : window.innerWidth;
   const vh = typeof window === "undefined" ? 0 : window.innerHeight;
@@ -221,7 +277,8 @@ export default function GuideTour({ name, onTab, onClose }: Props) {
     {/* The tour panel is a dialog that handles its own keys (← → to step, Escape to close). */}
     {/* oxlint-disable-next-line jsx-a11y/no-noninteractive-element-interactions */}
     <div className="guide card" role="dialog" aria-modal="false" aria-labelledby="guide-title"
-         ref={panel} tabIndex={-1} onKeyDown={onKey}>
+         ref={panel} tabIndex={-1} onKeyDown={onKey}
+         style={pos ? { left: pos.left, top: pos.top, bottom: "auto", transform: "none" } : undefined}>
       <div className="guide-head">
         <AppLogo size={40} />
         <h2 id="guide-title">{step.title}</h2>

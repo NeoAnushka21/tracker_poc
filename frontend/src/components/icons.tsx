@@ -49,3 +49,7 @@ export const MoonIcon = () => (
 export const ChevronDownIcon = () => <Icon size={18}><path d="M6 9l6 6 6-6" /></Icon>;
 /** Rising line: "Check your progress" (Meals tab). */
 export const TrendIcon = () => <Icon size={20}><path d="M4 18l5-6 4 3 7-9" /><path d="M15 6h5v5" /></Icon>;
+/** Explore sections: a dumbbell (Workouts). Recipes uses BowlIcon. */
+export const DumbbellIcon = () => (
+  <Icon size={22}><path d="M6.5 7v10M17.5 7v10M3.5 9.5v5M20.5 9.5v5M6.5 12h11" /></Icon>
+);

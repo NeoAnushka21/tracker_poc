@@ -4,7 +4,7 @@ OmniAI is a chat-based calorie and macro tracker. In the Chat you talk to **MacB
 
 This guide walks a new user through the app from sign-up to daily use. The same walkthrough appears inside the app as a short tour the first time you log in. You can reopen it any time with the **? Guide** button at the top.
 
-> Last updated: 2026-09-30 (Dashboard renamed **Meals**, meal cards folded and one below another, MacBro invite there too; Analysis moved into Meals as **Check your progress**; the guide blurs the page and highlights what each step describes; Dashboard redesigned: one compact summary tile, colourful meal cards; Chat is no longer a tab: MacBro's chat opens as a window from Home ("Want to log something? Talk to me"), can be minimized or closed; Saved Food tabs: **Generic**, **Branded**, **My Recipes**; **+ Add** in Saved Food: a branded product, a generic food or a recipe from a form; branded foods: a **Brands** filter in Saved Food, and **Check label** fetches the real pack label from Open Food Facts; Settings reorganised: About you, Targets, Appearance, Account & privacy, Security; India only for now in the country list; optional "About you" questions: diet, allergies, pace, meal times, training, health; country and region in the profile, age in Settings; built-in general food list of ~300 common foods (USDA) used without the AI; "raw or cooked?" asked, never assumed; small typos in saved-food names and meal words are understood without the AI; Dashboard asks "Did you mean …?"; earlier: Saved Food renamed Saved Food, a list with Additional info; Body renamed Body Profile; new Explore tab, coming soon; terms page; earlier: health notes and low-target warning, forgot password…). Keep this file in step with the UI (see [docs/README.md](README.md)).
+> Last updated: 2026-09-30 (Explore split into **Recipes** and **Workouts** sections; Dashboard renamed **Meals**, meal cards folded and one below another, MacBro invite there too; Analysis moved into Meals as **Check your progress**; the guide blurs the page and highlights what each step describes; Dashboard redesigned: one compact summary tile, colourful meal cards; Chat is no longer a tab: MacBro's chat opens as a window from Home ("Want to log something? Talk to me"), can be minimized or closed; Saved Food tabs: **Generic**, **Branded**, **My Recipes**; **+ Add** in Saved Food: a branded product, a generic food or a recipe from a form; branded foods: a **Brands** filter in Saved Food, and **Check label** fetches the real pack label from Open Food Facts; Settings reorganised: About you, Targets, Appearance, Account & privacy, Security; India only for now in the country list; optional "About you" questions: diet, allergies, pace, meal times, training, health; country and region in the profile, age in Settings; built-in general food list of ~300 common foods (USDA) used without the AI; "raw or cooked?" asked, never assumed; small typos in saved-food names and meal words are understood without the AI; Dashboard asks "Did you mean …?"; earlier: Saved Food renamed Saved Food, a list with Additional info; Body renamed Body Profile; new Explore tab, coming soon; terms page; earlier: health notes and low-target warning, forgot password…). Keep this file in step with the UI (see [docs/README.md](README.md)).
 
 ---
 
@@ -113,7 +113,7 @@ After you submit, **Your daily targets** shows the calories, protein, carbs, fat
 
 ## 3. The first-run tour
 
-The first time you reach the main screen, a small panel opens at the bottom. It steps through the tabs (Home, with MacBro's chat → Meals, with Check your progress → Saved Food → Explore → Body Profile) and explains each one. While it's open, the page behind is **blurred**, and only what the step is talking about (a tab, a tile, a button) stays sharp, with a glowing outline; the page scrolls to it for you.
+The first time you reach the main screen, a small panel opens at the bottom. It steps through the tabs (Home, with MacBro's chat → Meals, with Check your progress → Saved Food → Explore → Body Profile) and explains each one. While it's open, the page behind is **blurred**, and only what the step is talking about (a tab, a tile, a button) stays sharp, with a glowing outline; the page scrolls to it for you, and the panel moves (to the top or a corner) so it never covers what it's pointing at.
 
 - Use **Next** and **Back** (or the ← → keys) to move between steps.
 - **Skip**, **✕** or **Esc** closes the tour.
@@ -353,7 +353,10 @@ Hover over any chart, or tab to it with the keyboard, to see exact values. A day
 
 ## 13. Explore
 
-**Explore** is where ready-made recipe collections will live, each with the macros already worked out. It's **coming soon**: for now the tab previews the planned collections: **High protein**, **Non-veg, quick & easy**, **Healthy desserts**, **Vegetarian protein**, **Under 400 kcal** and **Breakfast ideas**. The tiles can't be opened yet.
+**Explore** has two sections. The tab opens on two cards; tap one to see what's inside, and **‹ Explore** to go back. Both are **coming soon**: for now they preview what's planned, and the tiles can't be opened yet.
+
+- **Recipes:** ready-made recipe collections with the macros already worked out: **High protein**, **Non-veg, quick & easy**, **Healthy desserts**, **Vegetarian protein**, **Under 400 kcal** and **Breakfast ideas**.
+- **Workouts:** basics, tips and simple routines to go with your nutrition: **Strength training basics**, **Beginner full-body routine**, **Home workouts**, **Warm-up and mobility**, **Cardio and daily steps** and **Recovery and rest**.
 
 ## 14. Body Profile
 
