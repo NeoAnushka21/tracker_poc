@@ -1,6 +1,6 @@
 # OmniAI high-level design (HLD)
 
-> Last updated: 2026-09-29 (tabs: Saved Food, Explore, Body Profile; admin two-step sign-in; tool allow-list; terms page; earlier: health notes, Alembic, forgot password…).Update the diagrams whenever a component, data flow, table or external service changes (see [docs/README.md](README.md)).
+> Last updated: 2026-09-30 (typo-tolerant saved-food and meal-word matching, Dashboard "Did you mean …?"; earlier: tabs: Saved Food, Explore, Body Profile; admin two-step sign-in; tool allow-list; terms page; earlier: health notes, Alembic, forgot password…).Update the diagrams whenever a component, data flow, table or external service changes (see [docs/README.md](README.md)).
 > Diagrams are Mermaid. They render on GitHub and in VS Code with a Mermaid preview extension.
 
 ## 1. Purpose and principles
@@ -120,7 +120,7 @@ sequenceDiagram
 
 ```mermaid
 flowchart TD
-    M[User message] --> F{Fast path?<br/>water · yes · summary ·<br/>saved foods · same as yesterday}
+    M[User message] --> T[Fix meal-word typos<br/>brkfst → breakfast] --> F{Fast path?<br/>water · yes · summary ·<br/>saved foods, typos allowed · same as yesterday}
     F -->|yes| C[Reply / card, no model call]
     F -->|no| R{Router rules}
     R -->|query · edit · simple log| S[Small tier<br/>gpt-oss-20b]
@@ -183,7 +183,11 @@ Admin emails can't register, use the normal login or Continue with Google.
 flowchart TD
     A[+ Add food: name, quantity, unit] --> M{Saved in Saved Food?<br/>picked, or name matches}
     M -->|yes| S[Scale saved numbers in code<br/>add to the meal at once]
-    M -->|no| L[One AI call: propose_entry only<br/>same guards as the chat]
+    M -->|no| T{Close typo of exactly<br/>one saved food?}
+    T -->|yes| D[Did you mean …?<br/>no AI]
+    D -->|Use it| S
+    D -->|No, add as typed| L
+    T -->|no| L[One AI call: propose_entry only<br/>same guards as the chat]
     L --> P[(pending action<br/>origin = dashboard)]
     P --> C{User: Add it?}
     C -->|Add it| W[confirm_action: log entry +<br/>learn the food into Saved Food]
@@ -223,7 +227,7 @@ Column-level detail is in [technical-overview.md](technical-overview.md#5-data-m
 | Tools | Read: `get_food`, `get_logs`, `get_daily_summary`. Propose: `propose_entry`, `propose_edit`, `propose_delete`, `propose_move`, `propose_recipe`, `propose_water` |
 | Prompt | Stable system prompt (MacBro persona and rules, cacheable) plus per-turn dynamic context (date, time, targets, today's totals, my foods, item ids) |
 | History | Today's chat only (+3 h grace): last 6 messages on the small tier, 12 on the large |
-| Per-call size | Only the tools and prompt sections the intent needs, and only saved foods named in the message (25–87% fewer instruction tokens per call) |
+| Per-call size | Only the tools and prompt sections the intent needs, and only saved foods named in the message, typos allowed (25–87% fewer instruction tokens per call) |
 | Observability | `llm_usage` table and the admin **AI usage** panel (calls, tokens, fast-path share, cooldowns) |
 | Guards | Energy balance, quantity cleanup, false "Logged" claim nudge, missed-water nudge, move-vs-delete guard, tool allow-list per routed intent (other tool names are refused) |
 | Failure | Any provider error → HTTP 503 with a friendly message (`SHOW_LLM_ERRORS=true` shows details in dev) |

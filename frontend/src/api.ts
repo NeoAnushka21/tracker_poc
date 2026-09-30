@@ -78,9 +78,11 @@ export type GoogleLoginResult =
   | { status: "ok"; user: User }
   | { status: "link_required" | "consent_required"; email: string };
 
-/** Dashboard Add food: a saved food is added at once; any other food comes back as an AI estimate to confirm. */
+/** Dashboard Add food: a saved food is added at once; a near-miss spelling of one asks "Did you mean …?";
+ *  any other food comes back as an AI estimate to confirm. */
 export type AddFoodResult =
   | { status: "added"; entry_id: number; item: Item }
+  | { status: "suggest"; food: { id: number; name: string; units: string[] } }
   | { status: "estimate"; action: Action; note: string }
   | { status: "no_estimate"; message: string };
 
@@ -183,7 +185,8 @@ export const api = {
   setItemQuantity: (itemId: number, quantity: number) =>
     request<{ ok: boolean }>("PATCH", `/api/entries/items/${itemId}`, { quantity }),
   deleteItem: (itemId: number) => request<{ ok: boolean }>("DELETE", `/api/entries/items/${itemId}`),
-  addFood: (body: { name: string; quantity: number; unit: string; meal_type: string; day: string; food_id: number | null }) =>
+  addFood: (body: { name: string; quantity: number; unit: string; meal_type: string; day: string; food_id: number | null;
+             as_typed?: boolean }) =>
     request<AddFoodResult>("POST", "/api/entries/add", body),
   confirm: (id: number) => request<ActionResult>("POST", `/api/actions/${id}/confirm`),
   reject: (id: number) => request<ActionResult>("POST", `/api/actions/${id}/reject`),

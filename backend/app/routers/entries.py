@@ -22,7 +22,7 @@ from app.services.actions import action_to_dict
 from app.services.entries import (
     add_saved_food, check_target_date, delete_item, owned_item, record_event, set_item_quantity, transfer_items,
 )
-from app.services.foods import FoodError, get_user_food, match_saved, measurable_units
+from app.services.foods import FoodError, closest_saved, get_user_food, library_index, match_saved, measurable_units
 from app.services.logs import item_to_dict
 from app.timeutil import local_today
 
@@ -56,6 +56,8 @@ class AddFoodIn(BaseModel):
     day: date | None = None     # the dashboard's day; None = today
     # Set when the user picked a saved food from the suggestions.
     food_id: int | None = None
+    # True after the user said "no" to "Did you mean …?": estimate the name as typed.
+    as_typed: bool = False
 
     @field_validator("name", "unit")
     @classmethod
@@ -126,6 +128,12 @@ def add_food(body: AddFoodIn, user: User = Depends(onboarded_user), db: Session 
             raise HTTPException(status.HTTP_404_NOT_FOUND, "That saved food no longer exists")
     else:
         food = match_saved(db, user.id, body.name)
+        if food is None and not body.as_typed:
+            # A typo of a saved food ("panner"): ask instead of guessing, since this adds straight away.
+            close = closest_saved(library_index(db, user.id), body.name)
+            if close is not None:
+                return {"status": "suggest", "food": {"id": close.id, "name": close.name,
+                                                       "units": measurable_units(close)}}
 
     if food is not None:
         try:

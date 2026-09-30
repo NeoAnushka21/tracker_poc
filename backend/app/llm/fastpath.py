@@ -14,7 +14,7 @@ from app.config import MEAL_TYPES
 from app.llm.tools import ToolContext, ToolInputError, run_tool
 from app.models import User
 from app.services.actions import open_actions
-from app.services.foods import FoodError, library_index, normalize_unit, nutrients_for
+from app.services.foods import FoodError, closest_saved, edit_distance, library_index, normalize_unit, nutrients_for, typo_limit
 from app.services.logs import daily_summary, entries_between
 from app.timeutil import local_today
 
@@ -32,6 +32,53 @@ def _clean(text: str) -> str:
     t = text.strip().lower()
     t = re.sub(r"[.!]+$", "", t).strip()
     return re.sub(r"\s+", " ", t)
+
+
+# --- meal-word typos ("brkfst", "bekfast", "lnch", "mornng snak") ----------------------
+
+_MEALS = ("breakfast", "lunch", "dinner", "snack")
+_MEAL_SHORTHAND = {"bfast": "breakfast", "b'fast": "breakfast", "brekkie": "breakfast", "brekky": "breakfast",
+                   "bkfst": "breakfast"}
+# Only a word right after one of these is read as a meal, so "a bunch of grapes" never becomes lunch.
+_MEAL_CONTEXT = {"for", "at", "in", "as", "my", "same", "yesterday's", "yesterdays"}
+_WORD = re.compile(r"[a-z']+")
+
+
+def _skeleton(w: str) -> str:
+    """Consonants with doubles merged: 'breakfast' and 'brkfst' -> 'brkfst', 'dinner' and 'dinr' -> 'dnr'."""
+    return re.sub(r"(.)\1+", r"\1", re.sub(r"[aeiou']", "", w))
+
+
+def _close_to(word: str, choices: tuple[str, ...]) -> str | None:
+    """The one choice `word` is a typo of: letters off (limit by the real word's length),
+    vowels dropped ('brkfst'), or the plural ('snacks')."""
+    if word in choices:
+        return word
+    hits = {c for c in choices
+            if edit_distance(word, c, typo_limit(c)) <= typo_limit(c)
+            or (len(word) >= 4 and _skeleton(word) == _skeleton(c))}
+    return hits.pop() if len(hits) == 1 else None
+
+
+def _fix_meal_typos(text: str) -> str:
+    """Spell misspelt meal words the standard way, so the rules below recognise them."""
+    words = text.split(" ")
+    for i in range(1, len(words)):
+        if _WORD.sub("", words[i - 1]) or words[i - 1] not in _MEAL_CONTEXT:
+            continue
+        m = _WORD.match(words[i])
+        if not m:
+            continue
+        w, rest = m.group(), words[i][m.end():]
+        nxt = _WORD.match(words[i + 1]) if i + 1 < len(words) else None
+        part = _close_to(w, ("morning", "evening"))
+        if part and nxt and _close_to(nxt.group(), ("snack",)):
+            words[i], words[i + 1] = part, "snack" + words[i + 1][nxt.end():]
+            continue
+        meal = _MEAL_SHORTHAND.get(w) or _close_to(w, _MEALS)
+        if meal:
+            words[i] = meal + rest
+    return " ".join(words)
 
 
 # --- 1. water ------------------------------------------------------------------
@@ -142,7 +189,7 @@ def _library_log(ctx: ToolContext, text: str) -> str | None:
     if not body:
         return None
     index = library_index(ctx.db, ctx.user.id)
-    items = []
+    items, read_as = [], []
     for part in _SPLIT.split(body):
         part = part.strip()
         if not part:
@@ -150,9 +197,12 @@ def _library_log(ctx: ToolContext, text: str) -> str | None:
         m = _ITEM.fullmatch(part)
         if not m or not m.group("num"):
             return None
-        food = index.get(re.sub(r"\s+", " ", m.group("name")).strip())
+        typed = re.sub(r"\s+", " ", m.group("name")).strip()
+        food = closest_saved(index, typed)   # allows a typo: "panner" -> Paneer
         if food is None:
             return None
+        if typed not in index:
+            read_as.append(f"'{typed}' as {food.name}")
         qty = _num(m.group("num"))
         unit = m.group("unit")
         if unit is None:
@@ -176,7 +226,8 @@ def _library_log(ctx: ToolContext, text: str) -> str | None:
     try:
         run_tool(ctx, "propose_entry", {
             "summary": names[:80], "meal_type": meal, "eaten_at": None, "items": items,
-            "note": "All from your saved foods, so the numbers match last time. Confirm if it looks right.",
+            "note": (f"I read {', '.join(read_as)}. " if read_as else "")
+                    + "All from your saved foods, so the numbers match last time. Confirm if it looks right.",
         })
     except ToolInputError:
         return None
@@ -221,7 +272,7 @@ HANDLERS = [("water", _water), ("confirm_nudge", _yes), ("summary", _summary),
 
 def try_fastpath(db: Session, user: User, text: str, ctx: ToolContext) -> tuple[str, str] | None:
     """(handler name, reply text) if a rule handled the message, else None."""
-    cleaned = _clean(text)
+    cleaned = _fix_meal_typos(_clean(text))
     if not cleaned or len(cleaned) > 200:
         return None
     for name, handler in HANDLERS:

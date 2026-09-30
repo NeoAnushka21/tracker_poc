@@ -160,10 +160,53 @@ def library_index(db: Session, user_id: int) -> dict[str, UserFood]:
     return index
 
 
+def _key(name: str) -> str:
+    return re.sub(r"\s+", " ", re.sub(r"[^a-z0-9 ]", " ", name.lower())).strip()
+
+
 def match_saved(db: Session, user_id: int, name: str) -> UserFood | None:
     """The saved food a typed name clearly refers to, else None."""
-    key = re.sub(r"\s+", " ", re.sub(r"[^a-z0-9 ]", " ", name.lower())).strip()
-    return library_index(db, user_id).get(key)
+    return library_index(db, user_id).get(_key(name))
+
+
+# --- typos: plain Python, no AI ------------------------------------------------------
+
+def typo_limit(word: str) -> int:
+    """How many letters may be wrong: none for short words ('egg' vs 'fig' are different
+    foods), one from 5 letters, two from 9."""
+    n = len(word)
+    return 0 if n < 5 else 1 if n < 9 else 2
+
+
+def edit_distance(a: str, b: str, limit: int) -> int:
+    """Letters added, dropped, changed or swapped ('panere' -> 'paneer' is 1) to turn a into b.
+    Stops early and returns limit + 1 once the distance is sure to exceed `limit`."""
+    if abs(len(a) - len(b)) > limit:
+        return limit + 1
+    prev2, prev = None, list(range(len(b) + 1))
+    for i in range(1, len(a) + 1):
+        cur = [i] + [0] * len(b)
+        for j in range(1, len(b) + 1):
+            cur[j] = min(prev[j] + 1, cur[j - 1] + 1, prev[j - 1] + (a[i - 1] != b[j - 1]))
+            if i > 1 and j > 1 and a[i - 1] == b[j - 2] and a[i - 2] == b[j - 1]:
+                cur[j] = min(cur[j], prev2[j - 2] + 1)   # swapped neighbours
+        if min(cur) > limit:
+            return limit + 1
+        prev2, prev = prev, cur
+    return prev[-1]
+
+
+def closest_saved(index: dict[str, UserFood], name: str) -> UserFood | None:
+    """The saved food a misspelt name means ('panner' -> Paneer), else None. Only when exactly
+    one saved food is that close, so a typo never picks between two foods."""
+    key = _key(name)
+    if key in index:
+        return index[key]
+    limit = typo_limit(key)
+    if not limit:
+        return None
+    close = {id(f): f for k, f in index.items() if edit_distance(key, k, limit) <= limit}
+    return next(iter(close.values())) if len(close) == 1 else None
 
 
 def recipes_using(db: Session, food_id: int) -> list[UserFood]:
@@ -229,13 +272,21 @@ _STOPWORDS = {"had", "ate", "the", "and", "for", "with", "some", "cup", "glass",
               "breakfast", "lunch", "dinner", "snack", "morning", "evening", "today", "yesterday"}
 
 
+def _shares_word(food_words: set[str], wanted: set[str]) -> bool:
+    if food_words & wanted:
+        return True
+    return any(edit_distance(w, s, lim) <= lim for s in food_words for w in wanted
+               if (lim := min(typo_limit(w), typo_limit(s))))
+
+
 def library_context(db: Session, user: User, match_text: str | None = None) -> list[str]:
     """Compact lines listing the user's foods for the LLM: 'id | name | kind | measures'.
-    With match_text, only foods sharing a word with it are listed (a big token saving)."""
+    With match_text, only foods sharing a word with it (allowing a typo, see typo_limit) are
+    listed (a big token saving)."""
     foods = list_foods(db, user.id, CONTEXT_FOOD_LIMIT)
     if match_text is not None:
         wanted = _stems(match_text)
-        foods = [f for f in foods if _stems(f"{f.name} {f.brand_name or ''}") & wanted]
+        foods = [f for f in foods if _shares_word(_stems(f"{f.name} {f.brand_name or ''}"), wanted)]
     return [
         f"{f.id} | {f.name}{f' ({f.brand_name})' if f.brand_name else ''}"
         f"{' | RECIPE' if f.kind == 'recipe' else ''} | {_measures(f)}"

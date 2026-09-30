@@ -1098,6 +1098,7 @@ button.danger { color: var(--error); }
 .add-unit { width: 96px; padding: 7px 10px; }
 .add-go { padding: 7px 16px; }
 .add-hint, .add-note { margin: 0; }
+.add-suggest p { margin: 0 0 6px; }
 .add-preview-head { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
 .add-preview-items { list-style: none; margin: 0; padding: 0; font-size: 0.88rem; }
 .add-preview-items li { display: flex; justify-content: space-between; gap: 10px; padding: 3px 0; }

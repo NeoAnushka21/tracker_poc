@@ -4,7 +4,7 @@ OmniAI is a chat-based calorie and macro tracker. In the Chat you talk to **MacB
 
 This guide walks a new user through the app from sign-up to daily use. The same walkthrough appears inside the app as a short tour the first time you log in. You can reopen it any time with the **? Guide** button at the top.
 
-> Last updated: 2026-09-29 (Saved Food renamed Saved Food, a list with Additional info; Body renamed Body Profile; new Explore tab, coming soon; terms page; earlier: health notes and low-target warning, forgot password…). Keep this file in step with the UI (see [docs/README.md](README.md)).
+> Last updated: 2026-09-30 (small typos in saved-food names and meal words are understood without the AI; Dashboard asks "Did you mean …?"; earlier: Saved Food renamed Saved Food, a list with Additional info; Body renamed Body Profile; new Explore tab, coming soon; terms page; earlier: health notes and low-target warning, forgot password…). Keep this file in step with the UI (see [docs/README.md](README.md)).
 
 ---
 
@@ -213,6 +213,7 @@ You can do this **in the chat** (with a confirmation card) or **on the Dashboard
 **Add a food without the chat:** each meal has **+ Add food**. Type the food (your saved foods are suggested as you type), the quantity and the unit, then press **Add**. It goes into that meal on the day you're viewing.
 
 - **A saved food** (one in Saved Food) is added straight away with your saved numbers. The unit list shows only the units it can be measured in (e.g. g, piece).
+- **A small typo of a saved food** (say `panner` for Paneer) asks **Did you mean Paneer?** first, without the AI. **Use Paneer** adds your saved one (if the unit you typed doesn't fit it, pick one from the unit list and press **Add**). **No, add "panner"** treats it as a new food.
 - **A new food** is estimated by the AI. You'll see its calories and macros marked **Not saved yet**, with any assumption it made. Press **Add it** to save it (it's also saved to Saved Food, so next time it's instant), **Change** to edit what you typed, or **Cancel**.
 - If the AI can't estimate it (for example, it isn't a food), you'll see why, with **Ask in chat instead**.
 - An empty meal gets its usual time (breakfast 08:00, morning snack 11:00, lunch 13:00, evening snack 17:00, dinner 20:00, or now if that's later today); a meal that already has food keeps its time.
@@ -241,7 +242,9 @@ Your water target is based on your weight and activity level. The bar shows litr
 
 1. The first time you log a new food (say, pineapple), MacBro's AI estimates it. When you confirm, it's saved to Saved Food per 100 g (or per piece or serving), micronutrients included.
 2. Later, a simple message like `had 40g pineapple` or `2 eggs for breakfast` is answered **straight from Saved Food, without the AI**. The saved numbers, micronutrients included, are scaled to your amount. The card says "All from your saved foods".
-3. The Dashboard's **+ Add food** works the same way: a saved food is added from Saved Food without the AI, and a new one is estimated once and saved when you add it.
+   - **Small typos are fine:** `200g chiken breast` still finds your saved chicken breast, and the card says what it read ("I read 'chiken breast' as chicken breast, cooked"), so you can check before confirming. To avoid wrong guesses, names under 5 letters (egg, oats) must be spelt exactly, longer ones may be off by one letter (two from 9 letters), and if the typo is close to two saved foods the AI handles it instead.
+   - **Meal words too:** `brkfst`, `breakfst`, `bekfast`, `bfast`, `lnch`, `dinr`, `snak` or `mornng snak` are read as the meal, when they come after *for*, *at*, *in*, *as*, *my*, *same* or *yesterday's* (e.g. `3 eggs for brkfst`), so "a bunch of grapes" is never read as lunch.
+3. The Dashboard's **+ Add food** works the same way: a saved food is added from Saved Food without the AI (a small typo asks "Did you mean …?" first), and a new one is estimated once and saved when you add it.
 4. This shortcut needs **an amount for every item** (`40g`, `2`, `1 serving`) and **every item already saved**. A count like `1 apple` also needs the food's **g per piece** (add it in **Edit** if it's missing). Otherwise the message goes to the AI, which still reuses your saved numbers for the foods it recognises.
 
 - **Search** by name or brand, and filter by **All / Foods / Recipes**.

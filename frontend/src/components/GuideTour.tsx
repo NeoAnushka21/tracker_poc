@@ -88,7 +88,7 @@ function steps(name: string | null): Step[] {
     {
       tab: "foods",
       title: "6. Saved Food remembers for you",
-      body: <p>Every food you confirm is saved here with its macros and micronutrients, so the next time you log it (e.g. "40g pineapple") the numbers are exactly the same, straight from your library. Recipes you save show up here too. The list shows each name with its calories; tap <b>Additional info</b> for the other macros and micronutrients. You can search, correct or delete any of them.</p>,
+      body: <p>Every food you confirm is saved here with its macros and micronutrients, so the next time you log it (e.g. "40g pineapple") the numbers are exactly the same, straight from your library, without using an AI message (small typos like "panner" are fine). Recipes you save show up here too. The list shows each name with its calories; tap <b>Additional info</b> for the other macros and micronutrients. You can search, correct or delete any of them.</p>,
     },
     {
       tab: "explore",
