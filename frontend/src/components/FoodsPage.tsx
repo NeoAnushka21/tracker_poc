@@ -417,7 +417,7 @@ export default function FoodsPage({ dataVersion }: { dataVersion: number }) {
           </p>
         </div>
         {!adding && (
-          <button type="button" className="primary add-food-btn" onClick={() => { setAdding(true); setAdded(null); }}>+ Add</button>
+          <button type="button" className="primary foods-add-btn" onClick={() => { setAdding(true); setAdded(null); }}>+ Add</button>
         )}
       </div>
 

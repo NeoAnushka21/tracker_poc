@@ -28,3 +28,20 @@ export function WaterDrop() {
     </svg>
   );
 }
+
+/** Meal icons (Dashboard meal cards): sunrise, apple, bowl, cup, moon. */
+export const SunriseIcon = () => (
+  <Icon size={20}><path d="M3 18h18M6 18a6 6 0 0 1 12 0" /><path d="M12 5v3M4.9 9.9l2.1 2.1M19.1 9.9L17 12M3 14h1.5M19.5 14H21" /></Icon>
+);
+export const AppleIcon = () => (
+  <Icon size={20}><path d="M12 7.5c-1.5-1.3-6-1.8-6.5 3.2-.4 4 2 8.8 4.5 8.8 1 0 1.3-.5 2-.5s1 .5 2 .5c2.5 0 4.9-4.8 4.5-8.8-.5-5-5-4.5-6.5-3.2z" /><path d="M12 7.5c0-2 1-3.5 3-4" /></Icon>
+);
+export const BowlIcon = () => (
+  <Icon size={20}><path d="M3.5 11h17a8.5 8.5 0 0 1-17 0z" /><path d="M9 20h6M8 8c0-1.5 1-2 1-3.5M12 8c0-1.5 1-2 1-3.5M16 8c0-1.5 1-2 1-3.5" /></Icon>
+);
+export const CupIcon = () => (
+  <Icon size={20}><path d="M5 9h11v5a5 5 0 0 1-5 5h-1a5 5 0 0 1-5-5V9z" /><path d="M16 10.5h1.5a2.5 2.5 0 0 1 0 5H16M8 3.5c0 1.5-1 1.5-1 3M11.5 3.5c0 1.5-1 1.5-1 3" /></Icon>
+);
+export const MoonIcon = () => (
+  <Icon size={20}><path d="M19.5 14.5A7.5 7.5 0 0 1 9.5 4.5a7.5 7.5 0 1 0 10 10z" /><path d="M16 4.5v3M14.5 6h3" /></Icon>
+);

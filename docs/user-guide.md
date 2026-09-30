@@ -4,7 +4,7 @@ OmniAI is a chat-based calorie and macro tracker. In the Chat you talk to **MacB
 
 This guide walks a new user through the app from sign-up to daily use. The same walkthrough appears inside the app as a short tour the first time you log in. You can reopen it any time with the **? Guide** button at the top.
 
-> Last updated: 2026-09-30 (Chat is no longer a tab: MacBro's chat opens as a window from Home ("Want to log something? Talk to me"), can be minimized or closed; Saved Food tabs: **Generic**, **Branded**, **My Recipes**; **+ Add** in Saved Food: a branded product, a generic food or a recipe from a form; branded foods: a **Brands** filter in Saved Food, and **Check label** fetches the real pack label from Open Food Facts; Settings reorganised: About you, Targets, Appearance, Account & privacy, Security; India only for now in the country list; optional "About you" questions: diet, allergies, pace, meal times, training, health; country and region in the profile, age in Settings; built-in general food list of ~300 common foods (USDA) used without the AI; "raw or cooked?" asked, never assumed; small typos in saved-food names and meal words are understood without the AI; Dashboard asks "Did you mean …?"; earlier: Saved Food renamed Saved Food, a list with Additional info; Body renamed Body Profile; new Explore tab, coming soon; terms page; earlier: health notes and low-target warning, forgot password…). Keep this file in step with the UI (see [docs/README.md](README.md)).
+> Last updated: 2026-09-30 (Dashboard redesigned: one compact summary tile, colourful meal cards; Chat is no longer a tab: MacBro's chat opens as a window from Home ("Want to log something? Talk to me"), can be minimized or closed; Saved Food tabs: **Generic**, **Branded**, **My Recipes**; **+ Add** in Saved Food: a branded product, a generic food or a recipe from a form; branded foods: a **Brands** filter in Saved Food, and **Check label** fetches the real pack label from Open Food Facts; Settings reorganised: About you, Targets, Appearance, Account & privacy, Security; India only for now in the country list; optional "About you" questions: diet, allergies, pace, meal times, training, health; country and region in the profile, age in Settings; built-in general food list of ~300 common foods (USDA) used without the AI; "raw or cooked?" asked, never assumed; small typos in saved-food names and meal words are understood without the AI; Dashboard asks "Did you mean …?"; earlier: Saved Food renamed Saved Food, a list with Additional info; Body renamed Body Profile; new Explore tab, coming soon; terms page; earlier: health notes and low-target warning, forgot password…). Keep this file in step with the UI (see [docs/README.md](README.md)).
 
 ---
 
@@ -125,7 +125,7 @@ The first time you reach the main screen, a small panel opens at the bottom. It 
 |---|---|
 | Home | Today's summary (macros) on the left; the Water tile and the two streaks stacked on the right |
 | Chat window | Floats at the bottom right, about 440 px wide, over whatever page you are on (on a phone it fills the screen) |
-| Dashboard | The macros, micronutrients and water tiles on the left, your **meals** on the right |
+| Dashboard | The summary tile across the top (five meters side by side), then the meal cards two to a row |
 | Analysis | Charts in two columns: calories beside protein, macro trends beside water, the calorie split beside calories by meal |
 | Saved Food | A full-width list: name and calories on each line, the details opening underneath |
 | Explore | Recipe collection tiles in rows of up to four |
@@ -321,17 +321,25 @@ MacBro answers from your **confirmed** data only:
 
 ## 11. The Dashboard
 
-Each part is its own tile, in this order: day navigation, **macros**, **additional micronutrients** (folded by default), **water**, then **meals** (on a laptop the meals sit beside the other tiles).
+The Dashboard is your day in detail. The big calorie ring lives on **Home**; here the day fits in one **compact summary tile**, and each meal gets its own card below it.
 
-| Tile | What you see |
+**Day summary tile**
+
+| Part | What you see |
 |---|---|
-| **Day navigation** | **‹ ›** to move between days (not into the future). |
-| **Macros: calorie ring** | Calories **eaten / target**. Beside it: **Balance** (calories left) or **Over budget by**, and **Progress %**. |
-| **Macro bars** | Thick bars for Protein (green), Fiber (magenta), Carbs (amber) and Fat (cyan), with current / target above each bar. Bars fill from empty when the tile comes into view. **When you reach a target** the bar turns into a softly moving, glowing gradient. Protein and fiber are goals, so going past them is fine ("goal met ✓"). Carbs and fat are budgets: 100–105% shows "on target ✓", more than that shows how much you're over. |
-| **Where today's calories came from** | A split bar of protein, carbs and fat calories (hover for numbers). |
-| **Additional micronutrients** | Folded by default, so the day's main goals come first; the heading still says how many are tracked and how many are under half (or over a limit). Tap it to open. It remembers open or closed on this device. Inside: iron, calcium, magnesium, potassium, zinc, vitamin C, vitamin B12 and vitamin D, against daily reference values for your age and sex. Sodium is shown as a limit to stay under. |
-| **Water** | Litres against target, quick-add buttons, undo. The bar glows once you reach your goal. |
-| **Meals** | Breakfast, Morning snack, Lunch, Evening snack and Dinner, each with its own calories and macros. Tap a meal to expand it and the **pencil** on an item to move, copy, change or delete it. **+ Add food** adds a food to that meal without the chat (see §7). |
+| **‹ date ›** | Move between days (not into the future). |
+| **Five small meters** | **Calories**, **Protein** (green), **Fiber** (magenta), **Carbs** (amber) and **Fat** (cyan): eaten / target, a thin bar, and what's left. Bars fill from empty when they come into view; **when you reach a target** the bar turns into a softly moving, glowing gradient. Protein and fiber are goals, so going past them is fine ("goal met ✓"). Carbs and fat are budgets: 100–105% shows "on target ✓", more than that shows how much you're over. Calories show what's left, or how much you're over. On a phone the meters sit two to a row, with calories across the top. |
+| **Water** | Litres against target, +250 ml / +500 ml and Undo. The bar glows once you reach your goal. |
+| **Additional micronutrients** | Folded by default; the heading still says how many are tracked and how many are under half (or over a limit). Tap it to open; it remembers open or closed on this device. Inside: iron, calcium, magnesium, potassium, zinc, vitamin C, vitamin B12 and vitamin D, against daily reference values for your age and sex. Sodium is shown as a limit to stay under. |
+
+**Meals:** one card per meal, each with its own colour and icon: **Breakfast** (amber, sunrise), **Morning snack** (pink, apple), **Lunch** (teal, bowl), **Evening snack** (orange, cup) and **Dinner** (violet, moon). On a laptop they sit two to a row.
+
+- The card's header shows the meal's **calories** in large type, how many items it has and its **share of your day** ("24% of your day", also drawn as a thin bar in the meal's colour).
+- Below: protein, fiber, carbs and fat chips, then each food with its amount and calories. Tap the header to fold or unfold the list, and the **pencil** on an item to move, copy, change or delete it.
+- **+ Add food** (in the meal's colour) adds a food to that meal without the chat (see §7). A meal with nothing logged shows a lighter, dashed card with just the button.
+- **+ Log with MacBro** above the meals opens the chat window for the day you're viewing.
+
+The split of the day's calories into protein, carbs and fat is in **Analysis** (the calorie split chart).
 
 Micronutrients are estimates. Treat them as a guide, not a lab result.
 

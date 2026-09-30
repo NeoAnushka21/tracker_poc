@@ -1,12 +1,14 @@
 import { useEffect, useState, type SyntheticEvent } from "react";
 import { api } from "../api";
 import type { Action, DailySummary, Entry, Food, Item, MicroSummary, WaterSummary } from "../types";
-import { MEAL_LABEL, MEAL_ORDER, friendlyDate, grams, kcal, litres, shiftDay } from "../format";
+import { MEAL_LABEL, MEAL_ORDER, friendlyDate, grams, litres, shiftDay } from "../format";
 import { haptic } from "../haptics";
 import { useRevealFill } from "../motion";
-import { StackedBar } from "./charts";
 import MacroChips from "./MacroChips";
-import { ArrowRightIcon, ChatIcon, CheckIcon, CloseIcon, PencilIcon, TrashIcon, WaterDrop } from "./icons";
+import {
+  AppleIcon, ArrowRightIcon, BowlIcon, ChatIcon, CheckIcon, CloseIcon, CupIcon, MoonIcon, PencilIcon, SunriseIcon,
+  TrashIcon, WaterDrop,
+} from "./icons";
 
 /** How a macro stands against its target. Protein and fiber are goals: going past is good.
  *  Carbs and fat are budgets: 100-105% counts as hitting the target, beyond that is over. */
@@ -41,6 +43,34 @@ export function Bar({ label, value, target, unit, tone }: {
       <div className="bar" ref={ref} role="progressbar" aria-valuenow={Math.round(value)} aria-valuemax={target} aria-label={label}>
         <div className={`bar-fill ${state === "under" ? "" : state}`} style={{ width: `${shownPct}%` }} />
       </div>
+    </div>
+  );
+}
+
+/** Dashboard summary: one compact meter (label, eaten / target, a thin bar, what's left).
+ *  The big ring and bars live on Home; here the day fits in one small tile. */
+function Stat({ label, value, target, unit, tone }: {
+  label: string; value: number; target: number; unit: string; tone: "kcal" | "protein" | "fiber" | "carbs" | "fat";
+}) {
+  const pct = target > 0 ? Math.min(100, (value / target) * 100) : 0;
+  const [ref, shownPct] = useRevealFill<HTMLDivElement>(pct);
+  const state = tone === "kcal" ? (value > target ? "over" : "under") : macroState(tone, value, target);
+  const left = Math.round(target - value);
+  const goal = tone === "protein" || tone === "fiber";
+  return (
+    <div className={`stat ${tone} ${state}`}>
+      <span className="stat-label"><i className="swatch" aria-hidden="true" />{label}</span>
+      <span className="stat-value num">
+        <b>{Math.round(value).toLocaleString()}</b><span className="muted"> / {target.toLocaleString()} {unit}</span>
+      </span>
+      <div className="bar stat-bar" ref={ref} role="progressbar" aria-label={label}
+           aria-valuenow={Math.round(value)} aria-valuemax={target}>
+        <div className={`bar-fill ${state === "under" ? "" : state}`} style={{ width: `${shownPct}%` }} />
+      </div>
+      <span className={`stat-note ${state === "over" ? "warn" : state === "reached" ? "ok" : "muted"}`}>
+        {state === "reached" ? (goal ? "goal met ✓" : "on target ✓")
+          : state === "over" ? `${(-left).toLocaleString()} ${unit} over` : `${left.toLocaleString()} ${unit} left`}
+      </span>
     </div>
   );
 }
@@ -466,29 +496,46 @@ function AddFoodPanel({ day, meal, onChanged, onAskMacBro, onClose }: {
   );
 }
 
-/** One meal: its own macro breakdown, then each food on its own line. */
-function MealSection({ day, meal, entries, isToday, onChanged, onAskMacBro }: {
-  day: string; meal: string; entries: Entry[]; isToday: boolean; onChanged: () => void; onAskMacBro: (text: string, date?: string) => void;
+const MEAL_ICON: Record<string, () => React.JSX.Element> = {
+  breakfast: SunriseIcon, morning_snack: AppleIcon, lunch: BowlIcon, evening_snack: CupIcon, dinner: MoonIcon, snack: AppleIcon,
+};
+
+/** One meal as its own card: a coloured icon badge (each meal has a hue, styles.css "meal cards"),
+ *  the meal's calories and its share of the day, macro chips, then each food on its own line. */
+function MealSection({ day, meal, entries, isToday, dayTarget, onChanged, onAskMacBro }: {
+  day: string; meal: string; entries: Entry[]; isToday: boolean; dayTarget: number | null;
+  onChanged: () => void; onAskMacBro: (text: string, date?: string) => void;
 }) {
   const [menuFor, setMenuFor] = useState<number | null>(null);
   const [adding, setAdding] = useState(false);
   const items = entries.flatMap((e) => e.items);
   const t = sumItems(items);
   const [open, setOpen] = useState(true);
+  const Icon = MEAL_ICON[meal] ?? BowlIcon;
+  const share = dayTarget ? Math.round((t.calories / dayTarget) * 100) : null;
+  const label = MEAL_LABEL[meal] ?? meal;
   return (
-    <div className={`meal-card ${items.length ? "" : "empty"}`}>
-      <button
-        type="button" className="meal-head meal-toggle" onClick={() => setOpen(!open)}
-        aria-expanded={open} disabled={!items.length}
-      >
-        <span className="meal-name">
-          {items.length > 0 && <span className={`chevron ${open ? "open" : ""}`} aria-hidden="true">›</span>}
-          {MEAL_LABEL[meal] ?? meal}
-          {items.length > 0 && <span className="muted meal-count"> · {items.length} item{items.length === 1 ? "" : "s"}</span>}
+    <article className={`meal-card meal-${meal}${items.length ? "" : " empty"}`} aria-label={label}>
+      <button type="button" className="meal-head meal-toggle" onClick={() => setOpen(!open)}
+              aria-expanded={items.length ? open : undefined} disabled={!items.length}>
+        <span className="meal-badge" aria-hidden="true"><Icon /></span>
+        <span className="meal-title">
+          <span className="meal-name">{label}</span>
+          <span className="muted small">
+            {items.length
+              ? `${items.length} item${items.length === 1 ? "" : "s"}${share != null ? ` · ${share}% of your day` : ""}`
+              : "Nothing logged yet"}
+          </span>
         </span>
-        <span className="num">{items.length ? kcal(t.calories) : "–"}</span>
+        {items.length > 0 && (
+          <span className="meal-kcal num"><b>{Math.round(t.calories).toLocaleString()}</b><span className="muted"> kcal</span></span>
+        )}
+        {items.length > 0 && <span className={`chevron ${open ? "open" : ""}`} aria-hidden="true">›</span>}
       </button>
-      {items.length > 0 ? (
+      {items.length > 0 && share != null && (
+        <div className="meal-share" aria-hidden="true"><i style={{ width: `${Math.min(100, share)}%` }} /></div>
+      )}
+      {items.length > 0 && (
         <>
           <div className="meal-macros">
             <span className="macro-chip protein"><i />P {grams(t.protein_g)}</span>
@@ -518,17 +565,15 @@ function MealSection({ day, meal, entries, isToday, onChanged, onAskMacBro }: {
             ))}
           </ul>}
         </>
-      ) : (
-        <p className="muted small">Nothing logged</p>
       )}
       {adding ? (
         <AddFoodPanel day={day} meal={meal} onChanged={onChanged} onAskMacBro={onAskMacBro} onClose={() => setAdding(false)} />
       ) : (
-        <button type="button" className="ghost add-food-btn" onClick={() => { setMenuFor(null); setAdding(true); }}>
+        <button type="button" className="meal-add-btn" onClick={() => { setMenuFor(null); setAdding(true); }}>
           + Add food
         </button>
       )}
-    </div>
+    </article>
   );
 }
 
@@ -560,64 +605,39 @@ export default function Dashboard({ dataVersion, onDataChanged, onAskMacBro }: D
 
   return (
     <div className="dashboard">
-      <section className="card day-card">
+      {/* One compact tile for the day (Home has the big ring), then a card per meal. */}
+      <section className="card day-summary" aria-label="Day summary">
         <div className="day-nav">
           <button className="ghost" onClick={() => setDay(shiftDay(data.date, -1))} aria-label="Previous day">‹</button>
           <span className="day-label">{friendlyDate(data.date, today)}</span>
           <button className="ghost" onClick={() => setDay(shiftDay(data.date, 1))} disabled={data.date >= today} aria-label="Next day">›</button>
         </div>
+        {t ? (
+          <div className="stat-strip">
+            <Stat label="Calories" value={c.calories} target={t.calories} unit="kcal" tone="kcal" />
+            <Stat label="Protein" value={c.protein_g} target={t.protein_g} unit="g" tone="protein" />
+            <Stat label="Fiber" value={c.fiber_g} target={t.fiber_g} unit="g" tone="fiber" />
+            <Stat label="Carbs" value={c.carbs_g} target={t.carbs_g} unit="g" tone="carbs" />
+            <Stat label="Fat" value={c.fat_g} target={t.fat_g} unit="g" tone="fat" />
+          </div>
+        ) : (
+          <p className="muted">No targets set.</p>
+        )}
+        {data.water && <Water w={data.water} isToday={data.date === today} onChanged={onDataChanged} />}
+        {data.micronutrients && <Micronutrients m={data.micronutrients} />}
       </section>
 
-      {/* Separate tiles: macros, then micronutrients, then water; meals beside them on laptops
-          (styles.css, "wide screens"), below them on phones. */}
-      <div className="dash-cols">
-        <div className="dash-summary">
-          <section className="card dash-macros" aria-label="Calories and macros">
-            {t ? (
-              <>
-                <CalorieRing eaten={c.calories} target={t.calories} />
-                <Bar label="Protein" value={c.protein_g} target={t.protein_g} unit="g" tone="protein" />
-                <Bar label="Fiber" value={c.fiber_g} target={t.fiber_g} unit="g" tone="fiber" />
-                <Bar label="Carbs" value={c.carbs_g} target={t.carbs_g} unit="g" tone="carbs" />
-                <Bar label="Fat" value={c.fat_g} target={t.fat_g} unit="g" tone="fat" />
-                <div className="calorie-split">
-                  <h3>Where today's calories came from</h3>
-                  <StackedBar
-                    ariaLabel="Share of today's calories from protein, carbs and fat"
-                    segments={[
-                      { key: "p", label: "Protein", value: c.protein_g * 4, color: "var(--protein)", detail: `${Math.round(c.protein_g * 4)} kcal` },
-                      { key: "c", label: "Carbs", value: c.carbs_g * 4, color: "var(--carbs)", detail: `${Math.round(c.carbs_g * 4)} kcal` },
-                      { key: "f", label: "Fat", value: c.fat_g * 9, color: "var(--fat)", detail: `${Math.round(c.fat_g * 9)} kcal` },
-                    ]}
-                  />
-                </div>
-              </>
-            ) : (
-              <p className="muted">No targets set.</p>
-            )}
-          </section>
-
-          {data.micronutrients && <div className="card"><Micronutrients m={data.micronutrients} /></div>}
-
-          {data.water && (
-            <div className="card"><Water w={data.water} isToday={data.date === today} onChanged={onDataChanged} /></div>
-          )}
-        </div>
-
-        <section className="card dash-meals">
-          <div className="meals-head">
-            <h3>Meals</h3>
-            <button type="button" className="ghost log-day-btn" onClick={() => onAskMacBro("", data.date)}>
-              + Log food{data.date === today ? "" : ` for ${friendlyDate(data.date, today)}`}
-            </button>
-          </div>
-          <div className="meals">
-            {[...MEAL_ORDER, ...Object.keys(byMeal).filter((m) => !MEAL_ORDER.includes(m))].map((meal) => (
-              <MealSection key={meal} day={data.date} meal={meal} entries={byMeal[meal] ?? []} isToday={data.date === today}
-                           onChanged={onDataChanged} onAskMacBro={onAskMacBro} />
-            ))}
-          </div>
-        </section>
+      <div className="meals-head">
+        <h2>Meals</h2>
+        <button type="button" className="ghost log-day-btn" onClick={() => onAskMacBro("", data.date)}>
+          + Log with MacBro{data.date === today ? "" : ` for ${friendlyDate(data.date, today)}`}
+        </button>
+      </div>
+      <div className="meals">
+        {[...MEAL_ORDER, ...Object.keys(byMeal).filter((m) => !MEAL_ORDER.includes(m))].map((meal) => (
+          <MealSection key={meal} day={data.date} meal={meal} entries={byMeal[meal] ?? []} isToday={data.date === today}
+                       dayTarget={t?.calories ?? null} onChanged={onDataChanged} onAskMacBro={onAskMacBro} />
+        ))}
       </div>
       <p className="muted small health-note">Calories, nutrients and targets are estimates to help you track, not medical advice. <a href="/privacy#health" target="_blank" rel="noopener">More</a></p>
     </div>

@@ -74,8 +74,8 @@ function steps(name: string | null): Step[] {
       title: "4. Your day on the Dashboard",
       body: (
         <ul>
-          <li>Tiles in order: <b>macros</b> (the ring shows <b>eaten / target</b> calories and your <b>balance</b>, with bars for protein, fiber, carbs and fat; a bar glows once you hit its target), then <b>micronutrients</b> (folded; tap to open), then <b>water</b> (tap +250 ml or +500 ml).</li>
-          <li>Meals are split into breakfast, snacks, lunch and dinner. Tap the <b>pencil</b> on an item to move, copy, change the amount or delete it, or <b>+ Add food</b> to add one without the chat.</li>
+          <li>A compact <b>summary tile</b>: small meters for calories, protein, fiber, carbs and fat (a bar glows once you hit its target), your <b>water</b> (tap +250 ml or +500 ml) and <b>micronutrients</b> (folded; tap to open).</li>
+          <li>Below it, a colourful card per <b>meal</b> with its calories and share of your day. Tap the <b>pencil</b> on an item to move, copy, change the amount or delete it, or <b>+ Add food</b> to add one without the chat.</li>
           <li>Use <b>‹ ›</b> to look at earlier days.</li>
         </ul>
       ),
