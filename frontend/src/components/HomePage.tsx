@@ -4,7 +4,8 @@ import type { DailySummary, Streak, Streaks, User } from "../types";
 import { greeting } from "../format";
 import { haptic } from "../haptics";
 import { Bar, CalorieRing, Water } from "./Dashboard";
-import { AppLogo } from "./Avatar";
+import { AppLogo, MacBroAvatar } from "./Avatar";
+import { BOT_NAME } from "../brand";
 
 type Props = {
   user: User;
@@ -130,7 +131,10 @@ export default function HomePage({ user, dataVersion, onDataChanged, onOpenChat,
           <h1>{greeting()}{user.preferred_name ? `, ${user.preferred_name}` : ""}!</h1>
           <p className="muted">{subline(day)}</p>
         </div>
-        <button className="primary home-cta" onClick={onOpenChat}>Log a meal</button>
+        <button type="button" className="macbro-invite" onClick={onOpenChat} aria-label={`Log a meal: chat with ${BOT_NAME}`}>
+          <span className="macbro-invite-bubble">Want to log something? <b>Talk to me</b></span>
+          <MacBroAvatar size={56} />
+        </button>
       </section>
 
       {error && <p className="error">{error}</p>}

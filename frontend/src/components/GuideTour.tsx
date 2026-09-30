@@ -3,7 +3,7 @@ import { AppLogo } from "./Avatar";
 import { APP_NAME, BOT_NAME } from "../brand";
 
 // Keep these steps in sync with docs/user-guide.md whenever the UI changes.
-export type GuideTab = "home" | "chat" | "dashboard" | "analysis" | "foods" | "explore" | "body";
+export type GuideTab = "home" | "dashboard" | "analysis" | "foods" | "explore" | "body";
 
 type Step = { tab: GuideTab; title: string; body: ReactNode };
 
@@ -26,22 +26,22 @@ function steps(name: string | null): Step[] {
       ),
     },
     {
-      tab: "chat",
+      tab: "home",
       title: `1. Tell ${BOT_NAME} what you ate`,
       body: (
         <>
-          <p><b>{BOT_NAME}</b> is your nutrition assistant in the <b>Chat</b> tab. Type, or tap the <b>mic</b> and speak. Plain language is fine:</p>
+          <p><b>{BOT_NAME}</b> is your nutrition assistant. On <b>Home</b>, tap {BOT_NAME} ("Want to log something? Talk to me") to open the chat window. Type, or tap the <b>mic</b> and speak. Plain language is fine:</p>
           <ul>
             <li>"2 eggs and a slice of toast for breakfast"</li>
             <li>"150g grilled chicken with a cup of rice"</li>
             <li>"two glasses of water"</li>
           </ul>
-          <p className="muted small">Quantities help. If something is unclear, {BOT_NAME} asks before guessing. You get a daily number of AI messages (shown above the message box); quick replies like water and foods you've saved don't use them.</p>
+          <p className="muted small">The chat opens over the page: <b>–</b> minimizes it to a small {BOT_NAME} bubble (tap it to come back, even from another tab), <b>✕</b> closes it. Quantities help. If something is unclear, {BOT_NAME} asks before guessing. You get a daily number of AI messages (shown above the message box); quick replies like water and foods you've saved don't use them.</p>
         </>
       ),
     },
     {
-      tab: "chat",
+      tab: "home",
       title: "2. Nothing is saved until you confirm",
       body: (
         <>
@@ -57,7 +57,7 @@ function steps(name: string | null): Step[] {
       ),
     },
     {
-      tab: "chat",
+      tab: "home",
       title: "3. Ask, edit, move or delete",
       body: (
         <ul>
@@ -88,7 +88,7 @@ function steps(name: string | null): Step[] {
     {
       tab: "foods",
       title: "6. Saved Food remembers for you",
-      body: <p>Every food you confirm is saved here with its macros and micronutrients, so the next time you log it (e.g. "40g pineapple") the numbers are exactly the same, straight from your library, without using an AI message (small typos like "panner" are fine). About 300 common foods (fruit, dals, rice, milk, chicken…) are built in too, and for foods like rice or chicken MacBro asks whether the weight was raw or cooked instead of guessing. Recipes you save show up here too. The list shows each name with its calories; tap <b>Additional info</b> for the other macros and micronutrients. You can search, correct or delete any of them. Packaged foods you log with their brand ("10 g Amul butter") are grouped under <b>Brands</b>: press <b>Check label</b> to pick the real pack label from Open Food Facts, or type it in with the pencil. <b>+ Add</b> lets you add a branded product, a generic food or a recipe yourself.</p>,
+      body: <p>Every food you confirm is saved here with its macros and micronutrients, so the next time you log it (e.g. "40g pineapple") the numbers are exactly the same, straight from your library, without using an AI message (small typos like "panner" are fine). About 300 common foods (fruit, dals, rice, milk, chicken…) are built in too, and for foods like rice or chicken MacBro asks whether the weight was raw or cooked instead of guessing. The list has three tabs: <b>Generic</b> foods, <b>Branded</b> products and <b>My Recipes</b>. It shows each name with its calories; tap <b>Additional info</b> for the other macros and micronutrients. You can search, correct or delete any of them. Packaged foods you log with their brand ("10 g Amul butter") are grouped by brand under <b>Branded</b>: press <b>Check label</b> to pick the real pack label from Open Food Facts, or type it in with the pencil. <b>+ Add</b> lets you add a branded product, a generic food or a recipe yourself.</p>,
     },
     {
       tab: "explore",
@@ -107,12 +107,12 @@ function steps(name: string | null): Step[] {
       ),
     },
     {
-      tab: "chat",
+      tab: "home",
       title: "9. Settings",
       body: (
         <>
           <p>Open <b>⚙ Settings</b> for <b>About you</b> (your details, and optional answers such as diet, allergies, pace, meal times and training), your calorie and macro <b>targets</b>, <b>light or dark</b> theme, your account and data, password, or deleting your account.</p>
-          <p>That's it. Head to <b>Chat</b> and tell {BOT_NAME} what you had today!</p>
+          <p>That's it. Tap {BOT_NAME} on <b>Home</b> and tell {BOT_NAME} what you had today!</p>
         </>
       ),
     },

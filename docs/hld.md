@@ -1,6 +1,6 @@
 # OmniAI high-level design (HLD)
 
-> Last updated: 2026-09-30 (Saved Food + Add: §4.6; branded foods: Open Food Facts label check, §2, §3, §4.5, §5; optional "About you" answers: targets, meal times, MacBro context; country/region step in the sign-in flow; database hardening phase 1: public user UUIDs, items linked to foods, ON DELETE rules, timestamptz, composite indexes; built-in general food list (USDA) between Saved Food and the AI; raw/cooked asked, never assumed; typo-tolerant saved-food and meal-word matching, Dashboard "Did you mean …?"; earlier: tabs: Saved Food, Explore, Body Profile; admin two-step sign-in; tool allow-list; terms page; earlier: health notes, Alembic, forgot password…).Update the diagrams whenever a component, data flow, table or external service changes (see [docs/README.md](README.md)).
+> Last updated: 2026-09-30 (Chat moved from a tab to a floating chat window opened from Home; Saved Food tabs: Generic / Branded / My Recipes; Saved Food + Add: §4.6; branded foods: Open Food Facts label check, §2, §3, §4.5, §5; optional "About you" answers: targets, meal times, MacBro context; country/region step in the sign-in flow; database hardening phase 1: public user UUIDs, items linked to foods, ON DELETE rules, timestamptz, composite indexes; built-in general food list (USDA) between Saved Food and the AI; raw/cooked asked, never assumed; typo-tolerant saved-food and meal-word matching, Dashboard "Did you mean …?"; earlier: tabs: Saved Food, Explore, Body Profile; admin two-step sign-in; tool allow-list; terms page; earlier: health notes, Alembic, forgot password…).Update the diagrams whenever a component, data flow, table or external service changes (see [docs/README.md](README.md)).
 > Diagrams are Mermaid. They render on GitHub and in VS Code with a Mermaid preview extension.
 
 ## 1. Purpose and principles
@@ -40,7 +40,7 @@ flowchart LR
 ```mermaid
 flowchart TB
     subgraph Browser
-        SPA[React 19 + Vite SPA<br/>Home · Chat · Dashboard · Analysis · Saved Food · Explore · Body Profile<br/>Settings · Guide tour · Admin console<br/>public /privacy page<br/>wake screen while the server wakes]
+        SPA[React 19 + Vite SPA<br/>Home with MacBro chat window · Dashboard · Analysis · Saved Food · Explore · Body Profile<br/>Settings · Guide tour · Admin console<br/>public /privacy page<br/>wake screen while the server wakes]
         STT[Web Speech API]
         SPA --- STT
     end
@@ -178,7 +178,7 @@ flowchart TD
     Me -->|About you not answered or skipped| About[A bit more about you: optional, Skip for now]
     About --> Me
     Me -->|guide not seen| Guide[First-run guide tour]
-    Me --> Tabs[Home default · Chat · Dashboard · Analysis · Saved Food]
+    Me --> Tabs[Home default, MacBro chat window · Dashboard · Analysis · Saved Food]
     Guide --> Tabs
 ```
 
@@ -220,7 +220,7 @@ A branded food first comes from the AI's memory of its label, so it is saved wit
 
 ```mermaid
 flowchart TB
-    B[Saved Food → Brands<br/>Check label] -->|GET /api/foods/label-search?q=brand name or barcode| LS[services/labels]
+    B[Saved Food → Branded<br/>Check label] -->|GET /api/foods/label-search?q=brand name or barcode| LS[services/labels]
     LS -->|search or product by barcode| OFF[(Open Food Facts)]
     OFF --> LS
     LS -->|complete labels only, per 100 g/ml<br/>sold in India first| P[User compares with the pack<br/>and picks one]

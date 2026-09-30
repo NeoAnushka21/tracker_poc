@@ -6,7 +6,13 @@ import AddFoodPanel, { type AddKind } from "./AddFoodPanel";
 import { grams } from "../format";
 import { PencilIcon, TrashIcon } from "./icons";
 
-type Filter = "all" | "food" | "recipe" | "brand";
+type Filter = "generic" | "brand" | "recipe";
+
+const TABS: { id: Filter; label: string }[] = [
+  { id: "generic", label: "Generic" },
+  { id: "brand", label: "Branded" },
+  { id: "recipe", label: "My Recipes" },
+];
 
 const SOURCE_LABEL: Record<Food["source"], string> = {
   estimate: "learned from your logs",
@@ -24,6 +30,9 @@ function sourceText(f: Food): string {
 }
 
 const isBranded = (f: Food) => f.kind === "food" && !!f.brand_name;
+
+/** Which tab a food lives in: recipes, branded foods, everything else is generic. */
+const tabOf = (f: Food): Filter => (f.kind === "recipe" ? "recipe" : isBranded(f) ? "brand" : "generic");
 
 /** "Amul" and "amul " are one brand. */
 const brandKey = (f: Food) => (f.brand_name ?? "").trim().toLowerCase();
@@ -325,11 +334,17 @@ function FoodRow({ food, fields, onChanged, onDeleted }: {
   );
 }
 
+const EMPTY_TAB: Record<Filter, string> = {
+  generic: "No generic foods yet. They're saved when you confirm a meal, or add one with + Add.",
+  brand: 'No branded foods yet. Name the brand when you log, e.g. "10 g Amul butter", or add one with + Add.',
+  recipe: 'No recipes yet. Add one with + Add → Recipe, or tell the chat, e.g. "save my chapati as a recipe".',
+};
+
 export default function FoodsPage({ dataVersion }: { dataVersion: number }) {
   const [foods, setFoods] = useState<Food[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [query, setQuery] = useState("");
-  const [filter, setFilter] = useState<Filter>("all");
+  const [filter, setFilter] = useState<Filter>("generic");
   const [microFields, setMicroFields] = useState<MicroField[]>([]);
   const [adding, setAdding] = useState(false);
   const [added, setAdded] = useState<string | null>(null);
@@ -342,15 +357,22 @@ export default function FoodsPage({ dataVersion }: { dataVersion: number }) {
     api.foods().then((f) => { setFoods(f); setError(null); }).catch((e) => setError(e.message));
   }, [dataVersion]);
 
-  const shown = useMemo(() => {
+  const matching = useMemo(() => {
     const q = query.trim().toLowerCase();
     return (foods ?? []).filter((f) =>
-      (filter === "all" || (filter === "brand" ? isBranded(f) : f.kind === filter)) &&
-      (!q || f.name.toLowerCase().includes(q) || (f.brand_name ?? "").toLowerCase().includes(q)),
-    );
-  }, [foods, query, filter]);
+      !q || f.name.toLowerCase().includes(q) || (f.brand_name ?? "").toLowerCase().includes(q));
+  }, [foods, query]);
 
-  /** Brands view: one group per brand, A to Z; in each, foods whose label isn't checked come first. */
+  /** Foods per tab (after the search), for the counts and the "found in" hint. */
+  const counts = useMemo(() => {
+    const c: Record<Filter, number> = { generic: 0, brand: 0, recipe: 0 };
+    for (const f of matching) c[tabOf(f)] += 1;
+    return c;
+  }, [matching]);
+
+  const shown = useMemo(() => matching.filter((f) => tabOf(f) === filter), [matching, filter]);
+
+  /** Branded tab: one group per brand, A to Z; in each, foods whose label isn't checked come first. */
   const brandGroups = useMemo(() => {
     if (filter !== "brand") return [];
     const groups = new Map<string, Food[]>();
@@ -360,11 +382,9 @@ export default function FoodsPage({ dataVersion }: { dataVersion: number }) {
       .sort((a, b) => (a[0].brand_name ?? "").localeCompare(b[0].brand_name ?? ""));
   }, [shown, filter]);
 
-  const recipeCount = foods?.filter((f) => f.kind === "recipe").length ?? 0;
-  const brandCount = foods?.filter(isBranded).length ?? 0;
   const toCheck = foods?.filter((f) => isBranded(f) && !f.label_checked).length ?? 0;
 
-  const SHOW_AFTER_ADD: Record<AddKind, Filter> = { brand: "brand", generic: "food", recipe: "recipe" };
+  const SHOW_AFTER_ADD: Record<AddKind, Filter> = { brand: "brand", generic: "generic", recipe: "recipe" };
 
   async function onAdded(f: Food, kind: AddKind) {
     setAdding(false);
@@ -409,10 +429,9 @@ export default function FoodsPage({ dataVersion }: { dataVersion: number }) {
       <div className="foods-tools">
         <input type="search" placeholder="Search foods" value={query} onChange={(e) => setQuery(e.target.value)} aria-label="Search foods" />
         <div className="segmented" role="radiogroup" aria-label="Show">
-          {(["all", "food", "recipe", "brand"] as const).map((f) => (
+          {TABS.map(({ id: f, label }) => (
             <button key={f} type="button" className={filter === f ? "on" : ""} onClick={() => setFilter(f)} aria-pressed={filter === f}>
-              {f === "all" ? `All (${foods?.length ?? 0})` : f === "food" ? "Foods"
-                : f === "recipe" ? `Recipes (${recipeCount})` : `Brands (${brandCount})`}
+              {label} ({counts[f]})
               {f === "brand" && toCheck > 0 && (
                 <span className="to-check" title={`${toCheck} label${toCheck === 1 ? "" : "s"} not checked`}
                       aria-label={`${toCheck} not checked`}>{toCheck}</span>
@@ -428,11 +447,18 @@ export default function FoodsPage({ dataVersion }: { dataVersion: number }) {
         <p className="muted empty-foods">Nothing saved yet. Log a meal in the chat and confirm it, and its foods will show up here, or press <b>+ Add</b>.</p>
       )}
       {foods && foods.length > 0 && shown.length === 0 && (
-        <p className="muted">
-          {filter === "brand" && !query.trim()
-            ? 'No branded foods yet. Name the brand when you log, e.g. "10 g Amul butter", and it will show up here.'
-            : "No matches."}
-        </p>
+        query.trim() ? (
+          <p className="muted">
+            No matches in {TABS.find((t) => t.id === filter)!.label}.
+            {TABS.filter((t) => counts[t.id] > 0).map((t) => (
+              <button key={t.id} type="button" className="link found-in" onClick={() => setFilter(t.id)}>
+                {t.label} has {counts[t.id]}
+              </button>
+            ))}
+          </p>
+        ) : (
+          <p className="muted">{EMPTY_TAB[filter]}</p>
+        )
       )}
 
       {filter === "brand" ? (

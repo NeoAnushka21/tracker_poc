@@ -5,7 +5,7 @@ import AuthScreen from "./components/AuthScreen";
 import Onboarding from "./components/Onboarding";
 import { LocationGate } from "./components/LocationFields";
 import { AboutYouGate } from "./components/AboutYou";
-import Chat from "./components/Chat";
+import ChatWidget, { type ChatWindow } from "./components/ChatWidget";
 import Dashboard from "./components/Dashboard";
 import SettingsDialog from "./components/SettingsDialog";
 import HomePage from "./components/HomePage";
@@ -23,7 +23,6 @@ import { useServerWaking } from "./wake";
 
 const TABS = [
   { id: "home", label: "Home" },
-  { id: "chat", label: "Chat" },
   { id: "dashboard", label: "Dashboard" },
   { id: "analysis", label: "Analysis" },
   { id: "foods", label: "Saved Food" },
@@ -37,6 +36,9 @@ function tabFromHash(): TabId {
   return (TABS.find((t) => t.id === h)?.id ?? "home") as TabId;
 }
 
+/** Chat was a tab until 2026-09-30; an old #chat link opens the chat window on Home. */
+const chatFromHash = () => window.location.hash === "#chat";
+
 export default function App() {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
@@ -47,13 +49,17 @@ export default function App() {
   const [showSettings, setShowSettings] = useState(false);
   const [tab, setTab] = useState<TabId>(tabFromHash);
   const [chatDraft, setChatDraft] = useState<{ text: string; nonce: number; date?: string } | null>(null);
+  const [chatWindow, setChatWindow] = useState<ChatWindow>(() => (chatFromHash() ? "open" : "closed"));
   const [guideOpen, setGuideOpen] = useState(false);
   // Sliding underline under the active tab: measured from the button itself.
   const tabsRef = useRef<HTMLDivElement>(null);
   const [indicator, setIndicator] = useState<{ left: number; width: number } | null>(null);
 
   useEffect(() => {
-    const onHash = () => setTab(tabFromHash());
+    const onHash = () => {
+      setTab(tabFromHash());
+      if (chatFromHash()) setChatWindow("open");
+    };
     window.addEventListener("hashchange", onHash);
     return () => window.removeEventListener("hashchange", onHash);
   }, []);
@@ -179,19 +185,16 @@ export default function App() {
                             style={{ transform: `translateX(${indicator.left}px)`, width: indicator.width }} />}
       </div>
       </div></div>
-      {/* Panels stay mounted so the chat keeps its scroll position and draft text. */}
+      {/* Panels stay mounted so each keeps its state when you switch tabs. */}
       <main className="page" id="panel-home" role="tabpanel" aria-labelledby="tab-home" hidden={current !== "home"}>
         <HomePage user={user} dataVersion={dataVersion} onDataChanged={() => setDataVersion((v) => v + 1)}
-                  onOpenChat={() => openTab("chat")} onOpenDashboard={() => openTab("dashboard")} />
-      </main>
-      <main className="page page-chat" id="panel-chat" role="tabpanel" aria-labelledby="tab-chat" hidden={current !== "chat"}>
-        <Chat user={user} onDataChanged={() => setDataVersion((v) => v + 1)} draft={chatDraft} active={current === "chat"} />
+                  onOpenChat={() => setChatWindow("open")} onOpenDashboard={() => openTab("dashboard")} />
       </main>
       <main className="page" id="panel-dashboard" role="tabpanel" aria-labelledby="tab-dashboard" hidden={current !== "dashboard"}>
         <Dashboard
           dataVersion={dataVersion}
           onDataChanged={() => setDataVersion((v) => v + 1)}
-          onAskMacBro={(text, date) => { setChatDraft({ text, nonce: Date.now(), date }); openTab("chat"); }}
+          onAskMacBro={(text, date) => { setChatDraft({ text, nonce: Date.now(), date }); setChatWindow("open"); }}
         />
       </main>
       {/* Analysis and Admin load only when opened (admin views are audited). */}
@@ -209,6 +212,8 @@ export default function App() {
       <main className="page" id="panel-body" role="tabpanel" aria-labelledby="tab-body" hidden={current !== "body"}>
         <BodyPage user={user} onUserChanged={(u) => { setUser(u); setDataVersion((v) => v + 1); }} />
       </main>
+      <ChatWidget state={chatWindow} onState={setChatWindow} user={user}
+                  onDataChanged={() => setDataVersion((v) => v + 1)} draft={chatDraft} />
       {settings}
       {guideOpen && <GuideTour name={user.preferred_name} onTab={openTab} onClose={closeGuide} />}
     </div>

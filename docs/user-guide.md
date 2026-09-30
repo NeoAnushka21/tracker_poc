@@ -4,7 +4,7 @@ OmniAI is a chat-based calorie and macro tracker. In the Chat you talk to **MacB
 
 This guide walks a new user through the app from sign-up to daily use. The same walkthrough appears inside the app as a short tour the first time you log in. You can reopen it any time with the **? Guide** button at the top.
 
-> Last updated: 2026-09-30 (**+ Add** in Saved Food: a branded product, a generic food or a recipe from a form; branded foods: a **Brands** filter in Saved Food, and **Check label** fetches the real pack label from Open Food Facts; Settings reorganised: About you, Targets, Appearance, Account & privacy, Security; India only for now in the country list; optional "About you" questions: diet, allergies, pace, meal times, training, health; country and region in the profile, age in Settings; built-in general food list of ~300 common foods (USDA) used without the AI; "raw or cooked?" asked, never assumed; small typos in saved-food names and meal words are understood without the AI; Dashboard asks "Did you mean …?"; earlier: Saved Food renamed Saved Food, a list with Additional info; Body renamed Body Profile; new Explore tab, coming soon; terms page; earlier: health notes and low-target warning, forgot password…). Keep this file in step with the UI (see [docs/README.md](README.md)).
+> Last updated: 2026-09-30 (Chat is no longer a tab: MacBro's chat opens as a window from Home ("Want to log something? Talk to me"), can be minimized or closed; Saved Food tabs: **Generic**, **Branded**, **My Recipes**; **+ Add** in Saved Food: a branded product, a generic food or a recipe from a form; branded foods: a **Brands** filter in Saved Food, and **Check label** fetches the real pack label from Open Food Facts; Settings reorganised: About you, Targets, Appearance, Account & privacy, Security; India only for now in the country list; optional "About you" questions: diet, allergies, pace, meal times, training, health; country and region in the profile, age in Settings; built-in general food list of ~300 common foods (USDA) used without the AI; "raw or cooked?" asked, never assumed; small typos in saved-food names and meal words are understood without the AI; Dashboard asks "Did you mean …?"; earlier: Saved Food renamed Saved Food, a list with Additional info; Body renamed Body Profile; new Explore tab, coming soon; terms page; earlier: health notes and low-target warning, forgot password…). Keep this file in step with the UI (see [docs/README.md](README.md)).
 
 ---
 
@@ -113,7 +113,7 @@ After you submit, **Your daily targets** shows the calories, protein, carbs, fat
 
 ## 3. The first-run tour
 
-The first time you reach the main screen, a small panel opens at the bottom. It steps through the tabs (Home → Chat → Dashboard → Analysis → Saved Food → Explore → Body Profile) and explains each one.
+The first time you reach the main screen, a small panel opens at the bottom. It steps through the tabs (Home, with MacBro's chat → Dashboard → Analysis → Saved Food → Explore → Body Profile) and explains each one.
 
 - Use **Next** and **Back** (or the ← → keys) to move between steps.
 - **Skip**, **✕** or **Esc** closes the tour.
@@ -124,7 +124,7 @@ The first time you reach the main screen, a small panel opens at the bottom. It 
 | Page | On a laptop |
 |---|---|
 | Home | Today's summary (macros) on the left; the Water tile and the two streaks stacked on the right |
-| Chat | Wider conversation; messages keep a comfortable reading width |
+| Chat window | Floats at the bottom right, about 440 px wide, over whatever page you are on (on a phone it fills the screen) |
 | Dashboard | The macros, micronutrients and water tiles on the left, your **meals** on the right |
 | Analysis | Charts in two columns: calories beside protein, macro trends beside water, the calorie split beside calories by meal |
 | Saved Food | A full-width list: name and calories on each line, the details opening underneath |
@@ -138,7 +138,7 @@ On very wide screens, content stays at a comfortable width (about 1,200 px) in t
 **Home** is the first tab you see after logging in.
 
 - **Greeting:** "Good morning", "Good afternoon" or "Good evening" with your name, today's date, and a one-line status (e.g. "979 kcal in, 681 kcal to go").
-- **Log a meal** takes you straight to the Chat.
+- **MacBro** sits at the right of the greeting, saying **"Want to log something? Talk to me"**. Tap MacBro to open the chat window (see §5).
 - **Today's summary** tile: the calorie ring (**eaten / target**, with **Balance** and **Progress**), then protein, fiber, carbs and fat bars. **Open dashboard →** shows the full day, including meals and micronutrients.
 - **Water** tile, separate from the macros: litres against your goal with +250 ml / +500 ml / Undo.
 - **Streaks:**
@@ -152,7 +152,12 @@ Each card shows the current streak, your best streak, and the last 7 days as tic
 
 ## 5. Log food in the Chat
 
-The **Chat** tab is where you talk to MacBro.
+The chat is where you talk to MacBro. It isn't a tab: it opens as a **chat window** over the page, the way many websites show a chat assistant.
+
+- **Open it:** on **Home**, tap MacBro ("Want to log something? Talk to me"). The Dashboard's **Edit in chat** buttons open it too, with the message ready to send.
+- **Minimize** (**–** in the chat's top corner, or **Esc**): the window folds into a small **MacBro** bubble at the bottom right, which stays there on every tab. Tap it to come back exactly where you were, with your draft and any reply on its way.
+- **Close** (**✕**): the window and bubble go away. Your chat is kept; open it again from Home.
+- On a laptop the window sits at the bottom right over the page; on a phone it fills the screen.
 
 - **Type** what you ate and press **Enter** (Shift+Enter adds a new line), or press **Send**.
 - **Speak:** tap the **mic** button, talk, and tap it again when you're done. This needs a browser with speech recognition, such as Chrome or Edge.
@@ -272,7 +277,8 @@ Your water target is based on your weight and activity level. The bar shows litr
 - **Raw or cooked is never assumed.** Meat, chicken, fish, prawns, rice, other grains (oats, quinoa, millet, dalia, pasta, noodles) and dals/beans have very different calories raw and cooked (cooked rice is about 130 kcal per 100 g, raw rice 365). If you give a weight without saying which (`200 g rice`), MacBro asks **"Was the rice weighed raw or cooked?"** with **Raw** / **Cooked** buttons. You can also type the answer, or for two foods `chicken raw, rice cooked`. Saying it upfront (`200 g cooked rice`, `150 g raw chicken breast`, `boiled dal`) skips the question. The same applies to a food you saved as, say, "chicken breast, cooked": typing just `chicken breast` asks, so a raw weight isn't logged with cooked numbers.
 - Counted pieces without a weight (`2 chicken drumsticks`) and dishes (`chicken curry`, `dal tadka`, `paneer butter masala`) aren't on the list; the AI handles them as before. Not on the list yet: paneer, poha, jaggery, ragi, idli, dosa and other cooked dishes.
 
-- **Search** by name or brand, and filter by **All / Foods / Recipes / Brands**.
+- Three tabs: **Generic** (foods without a brand, shown first), **Branded** (packaged products, grouped by brand) and **My Recipes**. Each shows how many it holds.
+- **Search** by name or brand. It searches the open tab; if nothing matches there but another tab has matches, a link takes you to it (e.g. "Branded has 2").
 - **+ Add** (top right) adds a food yourself, without the chat. First pick what you're adding, then fill in its form:
   - **Branded product:** brand and product name. **Search Open Food Facts** finds the pack label (by brand and name, or the barcode number) and **Use this** fills in the form; or copy the **nutrition table** from the pack: per 100 g or ml, energy (kcal), protein, carbohydrate, fibre, total fat, sodium, and the serving size. **More nutrients from the label** takes the rest. Keep **These values are from the pack label** ticked when you copied them from the pack, and the food shows **label ✓**. If you change a number after picking a product, your typed numbers are saved instead.
   - **Generic food:** a loose or home food (paneer, a sabzi…): name, the amount the numbers are for (per 100 g, 100 ml, 1 piece or 1 serving), kcal, protein, carbs, fat, and optionally fiber, g per piece, g per serving and micronutrients. Common foods (banana, rice, ghee, dals…) are already on the general food list, so you only need this for foods that aren't, or to use your own numbers.
@@ -283,10 +289,10 @@ Your water target is based on your weight and activity level. The bar shows litr
 - **Edit** (pencil icon) a food to fix its values (per 100 g/ml, or per piece/serving with the gram weight). **Additional nutrients** lets you add or correct its micronutrients for the same amount; leave a box blank if you don't know it (blank means unknown, not zero). Foods you edit by hand are never overwritten by later estimates.
 - **Delete** (trash icon) a food you no longer want. With a mouse, the icons appear when you hover over a line; on touch screens they're always visible. Past logs keep their numbers.
 
-**Branded foods (Brands):** a packaged product has a pack label, and its numbers should come from that label, not a guess.
+**Branded foods (the Branded tab):** a packaged product has a pack label, and its numbers should come from that label, not a guess.
 
 1. Name the brand when you log it: `10 g Amul butter`, `1 Britannia Nutrichoice biscuit`. MacBro saves it with its brand. Until you check the label, the numbers are the AI's memory of the label, and the chat card marks the item **check label**.
-2. Open **Saved Food → Brands**. Branded foods are grouped by brand (Amul → Butter, Paneer…), and each one shows **label ✓** or **label not checked**. The small number on the **Brands** filter counts the ones still to check.
+2. Open **Saved Food → Branded**. Branded foods are grouped by brand (Amul → Butter, Paneer…), and each one shows **label ✓** or **label not checked**. The small number on the **Branded** tab counts the ones still to check.
 3. Press **Check label** under a food. OmniAI searches **Open Food Facts**, a free, open database of food labels, for the brand and name, and lists the products it finds with their calories, protein, carbs and fat **per 100 g** (or 100 ml for drinks), the pack size and serving size. Products sold in India come first. Not the right one? Change the words, or type the **barcode number** printed under the pack's barcode for an exact match.
 4. Compare with your pack, then press **Use this**. The food now uses the label's numbers (and micronutrients the label lists, like sodium and calcium), plus the serving weight when the label gives one. Nothing changes until you press it.
 5. **Also correct the times I've already logged it** (ticked by default) recomputes your past logs of this food with the label's numbers, so your earlier days add up correctly too. Untick it to leave past days as they were.

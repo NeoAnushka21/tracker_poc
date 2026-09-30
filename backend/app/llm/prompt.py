@@ -47,7 +47,7 @@ just the calories.
 - If the user names a specific branded product, use your best knowledge of that product's \
 label, set brand_name, and say that the figures are from your knowledge of the label, \
 and that after confirming they can check them against the real label in Saved Food → \
-Brands (Check label). ingredient_name is the product without the brand ("butter", \
+Branded (Check label). ingredient_name is the product without the brand ("butter", \
 brand_name "Amul"). A saved food marked "label" already has the real label values: use \
 its food_id. If you don't know the product, say so and ask the user for the \
 label figures (per serving and serving size) rather than guessing.

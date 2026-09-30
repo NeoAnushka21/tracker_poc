@@ -279,14 +279,42 @@ button.link { background: none; border: none; color: var(--accent); padding: 6px
 .page { flex: 1; min-height: 0; overflow-y: auto; padding: 20px; }
 .page > * { max-width: var(--content-max); margin-left: auto; margin-right: auto; }
 .page[hidden] { display: none; }
-.page-chat { display: flex; flex-direction: column; gap: 12px; overflow: hidden; }
-.page-chat > .chat { flex: 1; width: 100%; }
 
 
 /* ---------- chat ---------- */
 .chat { display: flex; flex-direction: column; padding: 0; min-height: 0; overflow: hidden; }
 .chat-head { display: flex; align-items: center; gap: 12px; padding: 14px 22px; border-bottom: 1px solid var(--border); }
 .chat-title { font-weight: 700; font-size: 1.05rem; }
+.chat-head-text { flex: 1; min-width: 0; }
+.chat-window-actions { display: flex; gap: 2px; margin-right: -8px; }
+.minimize-glyph { display: block; width: 12px; height: 2px; border-radius: 2px; background: currentColor; }
+
+/* MacBro's chat window (ChatWidget): floating bottom-right; full screen on phones. Below
+   dialogs (.backdrop, z 10) and the guide (z 20). */
+.chat-widget {
+  position: fixed; right: 20px; bottom: 20px; z-index: 8;
+  width: min(440px, calc(100vw - 40px)); height: min(680px, calc(100dvh - 40px));
+  display: flex; box-shadow: 0 18px 48px rgb(15 23 42 / 0.25); border-radius: var(--radius);
+  animation: chat-pop 0.22s var(--ease-out) both; transform-origin: bottom right;
+}
+.chat-widget[hidden] { display: none; }
+.chat-widget > .chat { flex: 1; width: 100%; margin: 0; }
+.chat-widget .chat-head { padding: 12px 16px; }
+.chat-widget .messages { padding: 16px; }
+.chat-widget .msg-row { max-width: 100%; }
+@keyframes chat-pop { from { opacity: 0; transform: translateY(12px) scale(0.97); } to { opacity: 1; transform: none; } }
+.chat-launcher {
+  position: fixed; right: 20px; bottom: 20px; z-index: 8;
+  display: inline-flex; align-items: center; gap: 10px; padding: 6px 18px 6px 6px; border-radius: 999px;
+  border: 1px solid var(--border); background: var(--surface); color: var(--text); font-weight: 700;
+  box-shadow: 0 10px 28px rgb(15 23 42 / 0.2); animation: chat-pop 0.22s var(--ease-out) both;
+}
+.chat-launcher:hover { border-color: var(--accent); }
+@media (max-width: 640px) {
+  .chat-widget { inset: 0; width: auto; height: 100dvh; border-radius: 0; }
+  .chat-widget > .chat { border-radius: 0; border: none; }
+  .chat-launcher { right: 12px; bottom: 12px; }
+}
 .messages { flex: 1; overflow-y: auto; padding: 22px; display: flex; flex-direction: column; gap: 18px; background: var(--bg); }
 .msg-row { display: flex; gap: 10px; align-items: flex-end; max-width: min(92%, 780px); }
 .msg-row.user { align-self: flex-end; flex-direction: row-reverse; }
@@ -940,7 +968,8 @@ button.danger { color: var(--error); }
 .mchip.fiber { --tone: var(--fiber); }
 
 @media (prefers-reduced-motion: reduce) {
-  .tab-indicator, .tabs button::after, .ring-fill, .bar-fill, .chart-tooltip, .stat-tile, .food-row, .food-info, .chevron { transition: none; animation: none; }
+  .tab-indicator, .tabs button::after, .ring-fill, .bar-fill, .chart-tooltip, .stat-tile, .food-row, .food-info, .chevron,
+  .chat-widget, .chat-launcher, .macbro-invite-bubble { transition: none; animation: none; }
   .bar-fill.reached { animation: none; }
 }
 @media (max-width: 860px) {
@@ -959,7 +988,20 @@ button.danger { color: var(--error); }
 .home-hero-text { flex: 1; min-width: 220px; }
 .home-hero h1 { font-size: 1.9rem; margin: 2px 0 4px; }
 .home-hero p { margin: 0; }
-.home-cta { border-radius: 999px; padding: 12px 26px; }
+/* Home: MacBro invites you to log (opens the chat window). */
+.macbro-invite {
+  display: inline-flex; align-items: center; gap: 12px; padding: 0; border: none; background: none; color: var(--text);
+  cursor: pointer; text-align: right;
+}
+.macbro-invite-bubble {
+  position: relative; padding: 10px 16px; border-radius: 18px; border-bottom-right-radius: 6px;
+  background: var(--surface); border: 1px solid var(--border); box-shadow: 0 4px 14px rgb(15 23 42 / 0.08);
+  font-size: 0.95rem; line-height: 1.35; transition: border-color 0.15s, transform 0.2s var(--ease-out);
+}
+.macbro-invite-bubble b { color: var(--accent); }
+.macbro-invite:hover .macbro-invite-bubble, .macbro-invite:focus-visible .macbro-invite-bubble { border-color: var(--accent); transform: translateY(-2px); }
+.macbro-invite:focus-visible { outline: none; }
+.macbro-invite:focus-visible .macbro-invite-bubble { box-shadow: 0 0 0 3px var(--accent-soft); }
 .home-section-head .link { white-space: nowrap; }
 .home-section-head { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; margin-bottom: 8px; }
 .home-summary .kcal-ring-wrap { margin-top: 4px; }
@@ -991,7 +1033,7 @@ button.danger { color: var(--error); }
 @media (max-width: 860px) {
   .streaks { grid-template-columns: 1fr; }
   .home-hero h1 { font-size: 1.5rem; }
-  .home-cta { width: 100%; }
+  .macbro-invite { width: 100%; justify-content: flex-end; }
 }
 
 /* ---------- app logo (placeholder until the name is final) ---------- */
@@ -1307,3 +1349,4 @@ button.danger { color: var(--error); }
 .chip-choices { display: flex; flex-wrap: wrap; gap: 8px; }
 .chip-choices .chip.on { background: color-mix(in srgb, var(--accent) 10%, var(--surface)); color: var(--accent); box-shadow: inset 0 0 0 1.5px var(--accent); font-weight: 600; }
 .suggest-targets { display: grid; gap: 8px; margin-bottom: 12px; }
+.found-in { margin-left: 10px; padding: 0; font-weight: 600; }

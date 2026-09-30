@@ -22,8 +22,11 @@ type Props = {
   onDataChanged: () => void;
   /** Text (and optionally a day) handed over from elsewhere, e.g. the dashboard's "Edit in chat". */
   draft?: { text: string; nonce: number; date?: string } | null;
-  /** True while the Chat tab is showing; opening it jumps to the latest message. */
+  /** True while the chat window is open; opening it jumps to the latest message. */
   active: boolean;
+  /** The chat window's header buttons (ChatWidget). */
+  onMinimize?: () => void;
+  onClose?: () => void;
 };
 
 type DayBlock = { day: string; messages: ChatMessage[] };
@@ -156,7 +159,7 @@ function MicIcon() {
   );
 }
 
-export default function Chat({ user, onDataChanged, draft, active }: Props) {
+export default function Chat({ user, onDataChanged, draft, active, onMinimize, onClose }: Props) {
   // Today's chat (a fresh one each day); earlier days load on request, oldest first.
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [earlier, setEarlier] = useState<DayBlock[]>([]);
@@ -223,7 +226,7 @@ export default function Chat({ user, onDataChanged, draft, active }: Props) {
     if (messages.length) firstScroll.current = false;
   }, [messages, sending]); // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => {
-    if (active) requestAnimationFrame(() => scrollToLatest(false));
+    if (active) requestAnimationFrame(() => { scrollToLatest(false); inputRef.current?.focus(); });
   }, [active, draft]);
 
   async function showEarlier() {
@@ -419,10 +422,24 @@ export default function Chat({ user, onDataChanged, draft, active }: Props) {
     <section className="chat card">
       <div className="chat-head">
         <MacBroAvatar size={36} />
-        <div>
-          <div className="chat-title">MacBro</div>
+        <div className="chat-head-text">
+          <div className="chat-title" id="chat-title">MacBro</div>
           <div className="muted small">Your macro bro. Tell me what you ate; I'll do the maths.</div>
         </div>
+        {(onMinimize || onClose) && (
+          <div className="chat-window-actions">
+            {onMinimize && (
+              <button type="button" className="ghost icon-btn" onClick={onMinimize} aria-label="Minimize chat" title="Minimize">
+                <span aria-hidden="true" className="minimize-glyph" />
+              </button>
+            )}
+            {onClose && (
+              <button type="button" className="ghost icon-btn" onClick={onClose} aria-label="Close chat" title="Close">
+                <span aria-hidden="true">✕</span>
+              </button>
+            )}
+          </div>
+        )}
       </div>
 
       <div className="messages" ref={messagesRef}>

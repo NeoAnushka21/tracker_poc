@@ -38,7 +38,7 @@ function title(action: Action): string {
 const SOURCE_TAG: Record<string, { label: string; hint: string }> = {
   library: { label: "saved", hint: "Numbers from your saved foods" },
   recipe: { label: "recipe", hint: "Numbers from your saved recipe" },
-  unchecked: { label: "check label", hint: "The AI's memory of this product's label. After saving, check it in Saved Food → Brands" },
+  unchecked: { label: "check label", hint: "The AI's memory of this product's label. After saving, check it in Saved Food → Branded" },
 };
 
 function tagFor(it: Item): { key: string; label: string; hint: string } | undefined {
