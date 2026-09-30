@@ -1,8 +1,8 @@
 # Deploying OmniAI (Render + Neon)
 
-> Last updated: 2026-09-30 (keep-awake monitor steps, `/api/health` answers HEAD; monthly USDA food list check; earlier: always-on launcher page).
+> Last updated: 2026-09-30 (UptimeRobot monitor live, server kept awake; keep-awake monitor steps, `/api/health` answers HEAD; monthly USDA food list check; earlier: always-on launcher page).
 
-**Open the app from the launcher:** https://omniai-app.onrender.com (static site `omniai-app`, never sleeps; the exact address is shown on its Render page). **App:** https://omniai-hkv2.onrender.com (Render service `omniai`, Singapore) · Neon project `young-star-73873699` (AWS Singapore). Local data was copied into Neon on 2026-09-29 (159 rows, 13 tables); Neon is now the real database. The NVIDIA backup is off in production, and there's no uptime pinger yet. Update this file whenever the deployment setup changes (see [README.md](README.md)).
+**Open the app from the launcher:** https://omniai-app.onrender.com (static site `omniai-app`, never sleeps; the exact address is shown on its Render page). **App:** https://omniai-hkv2.onrender.com (Render service `omniai`, Singapore) · Neon project `young-star-73873699` (AWS Singapore). Local data was copied into Neon on 2026-09-29 (159 rows, 13 tables); Neon is now the real database. The NVIDIA backup is off in production. An UptimeRobot monitor (free, since 2026-09-30) pings `/api/health` every 5 minutes, so the app stays awake and down alerts go by email. Update this file whenever the deployment setup changes (see [README.md](README.md)).
 
 OmniAI runs as **one free Render web service** that builds the React app and runs the FastAPI backend, which serves both the site and `/api`. The data lives in a **free Neon Postgres** database. Both are in **Singapore**, close to India and to each other. The setup is in [`render.yaml`](../render.yaml) at the repo root (a Render "Blueprint").
 
@@ -98,7 +98,7 @@ The free web service sleeps after about 15 minutes idle, and Render shows its ow
 
 **Adding it the first time (You):** after this change is pushed, Render → **Blueprints** → the OmniAI Blueprint → it shows the new `omniai-app` service → **Sync** / **Apply**. No secrets are needed. If the app's address ever changes, update `VITE_APP_URL` in `render.yaml`.
 
-Opening the app's own address directly after it has slept still shows Render's page; the launcher is the way in. Keeping the server awake with a pinger is parked in [open-points.md](open-points.md).
+Since 2026-09-30 an uptime monitor keeps the server awake (see below), so the app's own address normally loads straight away too. Only after a restart or redeploy can Render's page still appear on the direct link; the launcher is still the safest link to share.
 
 ## Continue with Google (set up 2026-09-29)
 
@@ -163,7 +163,7 @@ The app sends a Content-Security-Policy and other security headers itself (see t
 
 | What | Why | Effect |
 |---|---|---|
-| First visit after about 15 min idle takes **30–60 s** | Render's free service sleeps when idle | The launcher shows the dancing-MacBro wake screen instead of Render's page. Later requests are fast. An uptime pinger could keep it awake ([open-points.md](open-points.md)). |
+| First visit after about 15 min idle takes **30–60 s** | Render's free service sleeps when idle | The launcher shows the dancing-MacBro wake screen instead of Render's page. Later requests are fast. Rare since 2026-09-30: the UptimeRobot monitor keeps it awake; it can still happen right after a redeploy. |
 | Database wakes in about a second after 5 min idle | Neon scales to zero | Barely noticeable. `/api/health` doesn't touch the database, so pingers don't keep Neon awake. |
 | Limits | Render: 750 hours and 5 GB bandwidth a month. Neon: 0.5 GB storage, 100 compute hours a month. | Plenty for a beta |
 | A push to `main` deploys **after CI passes** | `autoDeployTrigger: checksPass` (both services) | CI takes a few minutes, then the deploy about 3–6 min. A failed check means no deploy: the live app stays on the last good version. Tables and new columns are created on startup; data is kept. |

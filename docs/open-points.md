@@ -1,6 +1,6 @@
 # Open points
 
-> Last updated: 2026-09-30 (keep-awake: code ready, monitor to set up; staging environment plan parked; Settings reorganised; country list narrowed to India; optional About you questions built; country and region in onboarding; profile question ideas logged; database hardening phase 1 done; monthly USDA food list check built; general food list built with raw/cooked questions; follow-ups logged; general food list idea logged; typo-tolerant saved-food and meal-word matching done, learning your spellings parked; Render waking page seen on the app's direct link, noted under section 4; Saved Food list, Body Profile rename, Explore tab placeholder and its recipe-collection follow-up; reward-style UI pass done, its follow-ups in section 5; Continue with Google built; phone app and open-source licence parked; standards gap review, section 8; #1 limits, #3 privacy, #5 headers and #4 sessions, #6 CI and #7 monitoring (code) and #8 password hashing and #9 forgot password (code) and #10 Alembic and #11 pinned dependencies and #12 health wording done; #13/#14 lint + a11y fixes, #15, #16, #20 done; #17, #18 need decisions).Until at least 2026-10-06 the app is used by one person (the owner), and the focus is the single-user experience, UI and features.
+> Last updated: 2026-09-30 (keep-awake done: UptimeRobot monitor live; staging environment plan parked; Settings reorganised; country list narrowed to India; optional About you questions built; country and region in onboarding; profile question ideas logged; database hardening phase 1 done; monthly USDA food list check built; general food list built with raw/cooked questions; follow-ups logged; general food list idea logged; typo-tolerant saved-food and meal-word matching done, learning your spellings parked; Render waking page seen on the app's direct link, noted under section 4; Saved Food list, Body Profile rename, Explore tab placeholder and its recipe-collection follow-up; reward-style UI pass done, its follow-ups in section 5; Continue with Google built; phone app and open-source licence parked; standards gap review, section 8; #1 limits, #3 privacy, #5 headers and #4 sessions, #6 CI and #7 monitoring (code) and #8 password hashing and #9 forgot password (code) and #10 Alembic and #11 pinned dependencies and #12 health wording done; #13/#14 lint + a11y fixes, #15, #16, #20 done; #17, #18 need decisions).Until at least 2026-10-06 the app is used by one person (the owner), and the focus is the single-user experience, UI and features.
 
 **How this doc works (standing rule, 2026-09-29):** every idea, option or follow-up that comes up in a discussion but isn't built goes here, in the same change as the discussion's work, so nothing gets lost. Each item is either **open** (may be built later), **on hold**, or **decided against** (kept with the reason, so it isn't re-discussed from scratch). When an item is built, it moves to **Done** at the bottom with the date, and the feature itself is documented in the relevant doc.
 
@@ -23,7 +23,7 @@ Check the real numbers in **Admin → AI usage** before deciding.
 1. **Invite-only sign-up:** the admin creates invite codes, so the admin controls each wave.
 2. ~~**Daily AI allowance per user**~~ **Done 2026-09-29**: 20 AI messages a day per user (`AI_DAILY_MESSAGE_LIMIT`), resets at local midnight; fast paths, saved foods and buttons don't count. Still open: change it per user or from **Admin**, and show each user's use in Admin.
 3. ~~**Wait instead of failing**~~ **Done 2026-09-29** for solo use: the server now waits out short rate limits (see Done). Still open: a visible "MacBro is busy…" hint while it waits.
-4. **Keep-awake pinger** on `/api/health` (it doesn't touch the database), so new users don't wait 30–60 s.
+4. ~~**Keep-awake pinger**~~ **Done 2026-09-30**: UptimeRobot pings `/api/health` every 5 minutes (it doesn't touch the database), so nobody waits 30–60 s.
 5. **Feedback button** and **per-user usage** in Admin.
 
 *During the waves:*
@@ -81,9 +81,9 @@ Separate and also free: **"Sign in with Google"** for OmniAI accounts (built 202
 | Phase-5 real-model evaluation | On hold; costs free-tier quota |
 | Embeddings / vector search | Not needed yet. pgvector is available on Neon when saved-food matching needs it. |
 | Custom domain | Paid; wait for the final app name (`brand.ts`, `APP_DOMAIN`) |
-| Keep-awake pinger ("Option 1") | See 4 below |
+| ~~Keep-awake pinger ("Option 1")~~ | Done 2026-09-30, see 4 below |
 
-## 4. Keep the server awake with a pinger ("Option 1"; code ready 2026-09-30, monitor to set up)
+## 4. Keep the server awake with a pinger ("Option 1"; done 2026-09-30)
 
 The launcher (live since 2026-09-29) replaces Render's waking page with our dancing-MacBro screen, but the wait is still 30–60 s after ~15 min idle. A pinger would remove most waits.
 
@@ -95,7 +95,8 @@ The launcher (live since 2026-09-29) replaces Render's waking page with our danc
 - **Also fixes the direct link (seen 2026-09-30):** opening the app's own address (`omniai-hkv2.onrender.com`, e.g. from an old bookmark) after it has slept shows Render's black "SERVICE WAKING UP" page, because our code isn't running yet; only the launcher (`https://omniai-app.onrender.com`) shows MacBro. For now: bookmark and share the launcher. A pinger would make the direct link almost always fast too. Status: **parked**.
 - **Caveat:** Render's docs don't mention whether keep-alive pings are allowed; it's common practice, but the policy could change.
 - **Effort:** about 5 minutes (an account on the pinger site, one monitor).
-- **2026-09-30:** `/api/health` now also answers `HEAD` (UptimeRobot's free plan pings with it; it used to get 405, which the monitor would show as "down"). Step-by-step setup in [deployment.md](deployment.md) ("Uptime alerts + keeping the server awake"). **Status: waiting for the owner to create the UptimeRobot monitor.** Only one free web service can stay always-on within Render's 750 hours, so a future staging service must not be pinged.
+- **Why an outside pinger, not Render itself (asked 2026-09-30):** the free web service has no always-on switch; Render's own options cost money (a Starter instance, about $7/month, never sleeps; Render cron jobs have no free tier); the app can't ping itself (asleep = not running) and the static launcher runs no server code. Later option: move to Starter once there are real users (official, no third-party dependency), keeping UptimeRobot for down alerts. Owner's decision (paid).
+- **2026-09-30:** `/api/health` now also answers `HEAD` (UptimeRobot's free plan pings with it; it used to get 405, which the monitor would show as "down"). Step-by-step setup in [deployment.md](deployment.md) ("Uptime alerts + keeping the server awake"). **Status: done.** The owner created the UptimeRobot monitor (HTTP(s), 5 minutes) and the live endpoint answers `HEAD` with 200 since the deploy on 2026-09-30. Only one free web service can stay always-on within Render's 750 hours, so a future staging service must not be pinged.
 
 ## 5. Feature follow-ups (discussed, not built)
 
@@ -201,6 +202,7 @@ Checked against OWASP ASVS / Top 10, OWASP API Security Top 10, OWASP Top 10 for
 
 | Item | Done | Where it's documented |
 |---|---|---|
+| **Server kept awake:** UptimeRobot (free) pings `/api/health` every 5 minutes, which now answers `HEAD` too; also gives down alerts by email. Only one free Render service may stay always-on (750 h/month) | 2026-09-30 | deployment "Uptime alerts + keeping the server awake"; technical overview §4 |
 | **Settings reorganised:** About you (basics + optional answers, opens first), Targets, Appearance, Account & privacy, Security, Delete account (set apart); grouped cards with label / value / action rows | 2026-09-30 | user guide §2, §15; technical overview §7; tour step 9; privacy page |
 | **India only for now:** the country dropdown offers only India (pre-selected), the API refuses others; `config.SUPPORTED_COUNTRIES` | 2026-09-30 | user guide §2; technical overview §3, §7 |
 | **Optional "About you" questions:** diet, allergies (+ card heads-up), pace (calorie target, 25% cap), meal times (meal guessing, Dashboard default time), training, health conditions and pregnancy/breastfeeding (explicit tick; no deficit while pregnant/breastfeeding); skippable in onboarding and for existing accounts, editable in Settings → About you; migration 0005 | 2026-09-30 | user guide §2, §15; technical overview §3, §4, §5, §7, §10; HLD §4, §5; privacy page; tour step 9 |
