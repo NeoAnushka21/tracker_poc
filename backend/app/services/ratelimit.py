@@ -39,6 +39,15 @@ def check_ip(request: Request) -> None:
     q.append(time.monotonic())
 
 
+def check_waitlist(request: Request) -> None:
+    """The "Join the community" form: a few sends per address per hour, so it can't flood the list or
+    the admin's inbox."""
+    q = _recent(f"waitlist:{client_ip(request)}", config.WAITLIST_REQUEST_WINDOW_S)
+    if len(q) >= config.WAITLIST_REQUESTS_PER_IP:
+        raise _too_many(q[0] + config.WAITLIST_REQUEST_WINDOW_S - time.monotonic())
+    q.append(time.monotonic())
+
+
 def check_reset_requests(email: str) -> None:
     """At most a few reset emails per address per hour, so nobody can flood someone's inbox."""
     q = _recent(f"reset:{email}", config.PASSWORD_RESET_WINDOW_S)

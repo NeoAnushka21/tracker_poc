@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { api } from "../api";
-import type { AdminUserDetail, AdminUserRow, AuditRow, ChatMessage, LlmUsageReport } from "../types";
+import type { AdminUserDetail, AdminUserRow, AdminWaitlist, AuditRow, ChatMessage, LlmUsageReport, WaitlistRow } from "../types";
 import { StatTile } from "./charts";
 import { GOALS, MEAL_LABEL, grams, kcal } from "../format";
 import { UserAvatar } from "./Avatar";
@@ -179,6 +179,7 @@ export default function AdminPage() {
 
       {selected && <UserDetail user={selected} onClose={() => setSelected(null)} />}
 
+      <WaitlistPanel />
       <LlmUsagePanel />
       <TwoStepPanel />
 
@@ -197,6 +198,97 @@ export default function AdminPage() {
 }
 
 const n = (v: number) => v.toLocaleString();
+
+/** People who joined the waitlist on the welcome page. Approve lets their email create an
+ *  account and emails them the invitation; Remove takes them off the list. */
+function WaitlistPanel() {
+  const [data, setData] = useState<AdminWaitlist | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [busy, setBusy] = useState<string | null>(null);   // id of the row being changed
+  const [note, setNote] = useState<string | null>(null);
+
+  const fetchList = () => api.adminWaitlist().then(setData).catch((e) => setError(e.message));
+  useEffect(() => { fetchList(); }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  function load() {
+    setError(null);
+    setNote(null);
+    fetchList();
+  }
+
+  async function change(row: WaitlistRow, action: "approve" | "remove") {
+    if (action === "remove" && !window.confirm(`Take ${row.email} off the waitlist?`)) return;
+    setBusy(row.id);
+    setError(null);
+    setNote(null);
+    try {
+      if (action === "approve") {
+        const updated = await api.adminWaitlistApprove(row.id);
+        setData((d) => d && { ...d, entries: d.entries.map((e) => (e.id === row.id ? updated : e)) });
+        setNote(data?.email_enabled ? `Invitation emailed to ${row.email}.`
+          : `${row.email} can now sign up. Email isn't set up, so tell them yourself.`);
+      } else {
+        await api.adminWaitlistRemove(row.id);
+        setData((d) => d && { ...d, entries: d.entries.filter((e) => e.id !== row.id) });
+      }
+    } catch (e) {
+      setError((e as Error).message);
+    } finally {
+      setBusy(null);
+    }
+  }
+
+  const waiting = data?.entries.filter((e) => !e.approved_at).length ?? 0;
+  return (
+    <section className="card waitlist" aria-labelledby="waitlist-title">
+      <div className="analysis-head">
+        <div>
+          <h2 id="waitlist-title">Waitlist</h2>
+          <p className="muted small">
+            {data?.join_mode === "waitlist"
+              ? "Sign-up is by invitation (JOIN_MODE=waitlist): only approved emails can create an account."
+              : "Sign-up is open to everyone (JOIN_MODE=open), so the welcome page doesn't show the form right now."}
+          </p>
+        </div>
+        <button type="button" className="ghost" onClick={load}>Refresh</button>
+      </div>
+      {error && <p className="error">{error}</p>}
+      {!data && !error && <p className="muted">Loading…</p>}
+      {note && <p className="ok small" role="status">{note}</p>}
+      {data && (data.entries.length === 0 ? <p className="muted">Nobody on the list yet.</p> : (
+        <>
+          <p className="small"><b>{waiting}</b> waiting · <b>{data.entries.length - waiting}</b> approved</p>
+          <div className="table-scroll">
+            <table className="admin-table">
+              <thead><tr><th>Person</th><th>Wants to track</th><th>Joined</th><th>Status</th><th>Actions</th></tr></thead>
+              <tbody>
+                {data.entries.map((e) => (
+                  <tr key={e.id}>
+                    <td><b>{e.name}</b><br /><span className="muted small">{e.email}</span></td>
+                    <td className="small">{e.interest ?? <span className="muted">–</span>}</td>
+                    <td>{when(e.created_at)}</td>
+                    <td>{e.has_account ? <span className="ok">● has an account</span>
+                      : e.approved_at ? <span className="ok">● approved {when(e.approved_at)}</span>
+                      : <span className="warn">● waiting</span>}</td>
+                    <td>
+                      <div className="row tight">
+                        {!e.has_account && (
+                          <button type="button" className={e.approved_at ? "ghost" : "primary"} disabled={busy === e.id}
+                                  onClick={() => change(e, "approve")}>{e.approved_at ? "Resend invite" : "Approve"}</button>
+                        )}
+                        <button type="button" className="ghost" disabled={busy === e.id}
+                                onClick={() => change(e, "remove")} aria-label={`Remove ${e.email}`}>Remove</button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </>
+      ))}
+    </section>
+  );
+}
 
 /** Model calls, tokens and the state of each model in the pool (open-source models only). */
 function LlmUsagePanel() {

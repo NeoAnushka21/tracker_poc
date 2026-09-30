@@ -38,6 +38,8 @@
   <div class="wrap">
     <a class="brand" href="#top" aria-label="Tandurust, back to top"><span class="emblem" aria-hidden="true"></span>Tandurust</a>
     <nav class="topnav" aria-label="Sections">
+      <a href="#demo">Demo</a>
+      <a href="#for">Who it's for</a>
       <a href="#meet">MacBro</a>
       <a href="#ways">How you log</a>
       <a href="#pantry">My Foods</a>
@@ -55,6 +57,7 @@
         <p class="eyebrow">AI meal &amp; wellness tracker</p>
         <h1 id="hero-title">Track your food by just <span class="hl">saying</span> what you ate.</h1>
         <p class="lede">Tell MacBro, your Tandurust assistant, what you ate and how much, typed or spoken. He works out the calories and protein, asks when something is missing, and logs it when you tap once. Prefer to add food yourself? You can do that too.</p>
+        <p class="for-line">Made for <a href="#for">gym regulars, athletes and anyone keeping an eye on their meals and macros</a>, with a water tracker built in.</p>
         <div class="join">
           <p class="join-label" id="join-label">
             Join the Tandurust community
@@ -64,9 +67,11 @@
             </svg>
           </p>
           <div class="join-row">
-            <button type="button" class="btn btn-primary" data-go="signup" id="join-hero" aria-describedby="join-label">Join</button>
-            <p class="fine">Already a member? <a href="/#login" data-go="login">Log in</a></p>
+            <button type="button" class="btn btn-primary" data-go="signup" id="join-hero" aria-describedby="join-label invite-hero"><span data-mode="waitlist">Join the waitlist</span><span data-mode="open">Join</span></button>
+            <a class="btn btn-ghost" href="#demo">See the demo</a>
           </div>
+          <p class="invite-only" id="invite-hero" data-mode="waitlist"><b>Invite-only for now.</b> Joining doesn't open the app straight away: it puts you on the waitlist. We're in our first phase and letting people in a few at a time, and we'll email you an invitation when there's a spot.</p>
+          <p class="fine">Already a member or invited? <a href="/#login" data-go="login">Log in</a></p>
         </div>
         <p class="fine">Free to use. India only for now, for adults (18+).</p>
       </div>
@@ -176,6 +181,267 @@
     </div>
   </section>
 
+  <!-- ======================= demo: a walkthrough of the app ======================= -->
+  <!-- Example screens drawn in HTML (made-up numbers), so they follow the theme and cost no AI quota.
+       Keep them in step with the app and docs/user-guide.md. -->
+  <section class="band tint" id="demo" aria-labelledby="demo-title">
+    <div class="wrap">
+      <div class="section-head">
+        <p class="kicker">Demo</p>
+        <h2 id="demo-title">Take a tour of the app</h2>
+        <p>Seven stops, about a minute. These are example screens with made-up numbers; the app itself looks just like this.</p>
+      </div>
+
+      <div class="tour">
+        <div class="tour-steps" role="tablist" aria-label="Demo steps" aria-orientation="vertical">
+          <button type="button" role="tab" id="step-1" aria-controls="stop-1" aria-selected="true" tabindex="0"><span class="num" aria-hidden="true">1</span><span><b>Home</b><small>Your day at a glance</small></span></button>
+          <button type="button" role="tab" id="step-2" aria-controls="stop-2" aria-selected="false" tabindex="-1"><span class="num" aria-hidden="true">2</span><span><b>Chat with MacBro</b><small>Log a meal in one sentence</small></span></button>
+          <button type="button" role="tab" id="step-3" aria-controls="stop-3" aria-selected="false" tabindex="-1"><span class="num" aria-hidden="true">3</span><span><b>Meals</b><small>Your day, meal by meal</small></span></button>
+          <button type="button" role="tab" id="step-4" aria-controls="stop-4" aria-selected="false" tabindex="-1"><span class="num" aria-hidden="true">4</span><span><b>Progress</b><small>7, 14 or 30 days</small></span></button>
+          <button type="button" role="tab" id="step-5" aria-controls="stop-5" aria-selected="false" tabindex="-1"><span class="num" aria-hidden="true">5</span><span><b>My Foods</b><small>Your personal pantry</small></span></button>
+          <button type="button" role="tab" id="step-6" aria-controls="stop-6" aria-selected="false" tabindex="-1"><span class="num" aria-hidden="true">6</span><span><b>Body Stats</b><small>Weight, BMI, measurements</small></span></button>
+          <button type="button" role="tab" id="step-7" aria-controls="stop-7" aria-selected="false" tabindex="-1"><span class="num" aria-hidden="true">7</span><span><b>Explore</b><small>Recipes and workouts</small></span></button>
+        </div>
+
+        <div class="tour-stage">
+          <!-- 1: Home -->
+          <div class="stop" role="tabpanel" id="stop-1" aria-labelledby="step-1">
+            <div class="stop-copy">
+              <h3>Home: your day at a glance</h3>
+              <ul>
+                <li>A greeting and <b>today's summary</b>: calories eaten against your target, then protein, fiber, carbs and fat.</li>
+                <li>A <b>Water</b> tile with one-tap +250 ml and +500 ml.</li>
+                <li>Two <b>streaks</b>: days in a row you logged a meal, and days you reached at least 85% of your protein target.</li>
+                <li>Tap <b>MacBro</b> to open the chat and log something.</li>
+              </ul>
+            </div>
+            <div class="screen" aria-label="Example Home screen" role="img">
+              <div class="screen-bar"><span class="emblem" aria-hidden="true"></span>Tandurust</div>
+              <div class="screen-tabs" aria-hidden="true"><span class="on">Home</span><span>Meals</span><span>My Foods</span><span>Body Stats</span><span>Explore</span></div>
+              <div class="screen-body" aria-hidden="true">
+                <p class="s-hello">Good evening, Priya</p>
+                <div class="s-card">
+                  <div class="s-row"><span class="s-big">1,240</span><span class="muted">/ 1,850 kcal</span><span class="s-pill">610 left</span></div>
+                  <div class="s-meter"><i style="--w:67%"></i></div>
+                  <div class="s-macros">
+                    <div><span>Protein</span><b>68 / 110 g</b><div class="s-meter p"><i style="--w:62%"></i></div></div>
+                    <div><span>Fiber</span><b>18 / 26 g</b><div class="s-meter fi"><i style="--w:69%"></i></div></div>
+                    <div><span>Carbs</span><b>150 / 210 g</b><div class="s-meter c"><i style="--w:71%"></i></div></div>
+                    <div><span>Fat</span><b>38 / 55 g</b><div class="s-meter f"><i style="--w:69%"></i></div></div>
+                  </div>
+                </div>
+                <div class="s-two">
+                  <div class="s-card s-water"><span class="muted">Water</span><b>1.5 / 2.8 L</b><div class="s-meter w"><i style="--w:54%"></i></div><div class="s-btns"><span>+250 ml</span><span>+500 ml</span></div></div>
+                  <div class="s-card s-streaks"><div><b>6</b><span>days logging</span></div><div><b>4</b><span>days protein</span></div></div>
+                </div>
+                <div class="s-invite"><span class="mb"><svg><use href="#macbro"/></svg></span><span><b>Want to log something?</b><br>Talk to me</span></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- 2: chat -->
+          <div class="stop is-off" role="tabpanel" id="stop-2" aria-labelledby="step-2" inert>
+            <div class="stop-copy">
+              <h3>Tell MacBro what you ate</h3>
+              <ul>
+                <li>Type it, or tap the <b>mic</b> and say it. Plain words and Hindi food names are fine.</li>
+                <li>He replies with a card: <b>calories and protein first</b>, then each food and amount.</li>
+                <li><b>Nothing is saved</b> until you tap <b>Looks good</b>. <b>Needs changes</b> lets you correct it in words, like "the toast was 2 slices".</li>
+                <li>Ask questions too: "How much protein this week?" 20 AI messages a day; your saved foods don't count.</li>
+              </ul>
+            </div>
+            <div class="screen" aria-label="Example chat with MacBro" role="img">
+              <div class="screen-bar"><span class="mb" aria-hidden="true"><svg><use href="#macbro"/></svg></span>MacBro<span class="s-x">– ✕</span></div>
+              <div class="screen-body s-chat" aria-hidden="true">
+                <p class="msg-user">2 eggs, 1 toast with Amul butter and a cup of chai</p>
+                <div class="msg-bot">
+                  <span class="mb"><svg><use href="#macbro"/></svg></span>
+                  <div class="msg-bot-body">
+                    <p class="bubble-bot">Solid breakfast! Check it and tap Looks good.</p>
+                    <div class="proposal">
+                      <div class="proposal-head"><b>Breakfast · 8:30 AM</b><span class="pill-warn">Not saved yet</span></div>
+                      <div class="bottom-line"><div><strong>392</strong><span>kcal</span></div><div><strong>17 g</strong><span>protein</span></div></div>
+                      <ul class="items">
+                        <li><span>Egg, boiled</span><span class="qty">2 pieces</span><span class="kcal">155</span></li>
+                        <li><span>Bread, whole wheat</span><span class="qty">1 slice</span><span class="kcal">80</span></li>
+                        <li><span>Butter · Amul</span><span class="qty">10 g</span><span class="kcal">72</span></li>
+                        <li><span>Tea with milk and sugar</span><span class="qty">1 cup</span><span class="kcal">85</span></li>
+                      </ul>
+                      <div class="proposal-actions"><span class="fake-btn primary">Looks good</span><span class="fake-btn">Needs changes</span><span class="fake-btn">Cancel</span></div>
+                    </div>
+                  </div>
+                </div>
+                <div class="s-input"><span>Message MacBro…</span><span class="s-mic">🎙</span></div>
+                <p class="s-left">17 AI messages left today</p>
+              </div>
+            </div>
+          </div>
+
+          <!-- 3: Meals -->
+          <div class="stop is-off" role="tabpanel" id="stop-3" aria-labelledby="step-3" inert>
+            <div class="stop-copy">
+              <h3>Meals: your day, meal by meal</h3>
+              <ul>
+                <li>A compact <b>summary</b> of calories, protein, fiber, carbs and fat; a bar glows once you reach its target. Water and <b>micronutrients</b> are here too.</li>
+                <li>A card per <b>meal</b> with its calories and share of your day.</li>
+                <li>Tap the <b>pencil</b> on a food to change the amount, move or copy it to another meal, or delete it. <b>+ Add food</b> adds one without the chat.</li>
+                <li>Use <b>‹ ›</b> to look at earlier days.</li>
+              </ul>
+            </div>
+            <div class="screen" aria-label="Example Meals screen" role="img">
+              <div class="screen-bar"><span class="emblem" aria-hidden="true"></span>Tandurust</div>
+              <div class="screen-tabs" aria-hidden="true"><span>Home</span><span class="on">Meals</span><span>My Foods</span><span>Body Stats</span><span>Explore</span></div>
+              <div class="screen-body" aria-hidden="true">
+                <div class="s-date"><span>‹</span><b>Today, 1 Oct</b><span>›</span></div>
+                <div class="s-card s-mini">
+                  <div><span>kcal</span><div class="s-meter"><i style="--w:67%"></i></div></div>
+                  <div><span>P</span><div class="s-meter p"><i style="--w:62%"></i></div></div>
+                  <div><span>Fiber</span><div class="s-meter fi"><i style="--w:69%"></i></div></div>
+                  <div><span>C</span><div class="s-meter c"><i style="--w:71%"></i></div></div>
+                  <div><span>F</span><div class="s-meter f"><i style="--w:100%"></i></div></div>
+                </div>
+                <div class="s-meal b">
+                  <div class="s-row"><b>Breakfast</b><span class="muted">392 kcal · 32%</span></div>
+                  <ul><li><span>Egg, boiled</span><span class="muted">2 pieces</span><span class="s-pen">✎</span></li><li><span>Bread, whole wheat</span><span class="muted">1 slice</span><span class="s-pen">✎</span></li><li><span>Tea with milk and sugar</span><span class="muted">1 cup</span><span class="s-pen">✎</span></li></ul>
+                  <span class="s-add">+ Add food</span>
+                </div>
+                <div class="s-meal l">
+                  <div class="s-row"><b>Lunch</b><span class="muted">548 kcal · 44%</span></div>
+                  <ul><li><span>Roti, whole wheat</span><span class="muted">2 pieces</span><span class="s-pen">✎</span></li><li><span>Toor dal, cooked</span><span class="muted">100 g</span><span class="s-pen">✎</span></li><li><span>White rice, cooked</span><span class="muted">150 g</span><span class="s-pen">✎</span></li></ul>
+                  <span class="s-add">+ Add food</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- 4: progress -->
+          <div class="stop is-off" role="tabpanel" id="stop-4" aria-labelledby="step-4" inert>
+            <div class="stop-copy">
+              <h3>Check your progress</h3>
+              <ul>
+                <li>At the bottom of <b>Meals</b>, <b>Check your progress</b> opens your trends.</li>
+                <li>Switch between <b>7, 14 or 30 days</b>: calories and protein against your target, macro trends, calories by meal, and water.</li>
+                <li>Hover or tap any chart for the exact numbers.</li>
+              </ul>
+            </div>
+            <div class="screen" aria-label="Example progress chart: calories for the last 7 days against the target" role="img">
+              <div class="screen-bar"><span class="emblem" aria-hidden="true"></span>Tandurust</div>
+              <div class="screen-tabs" aria-hidden="true"><span>Home</span><span class="on">Meals</span><span>My Foods</span><span>Body Stats</span><span>Explore</span></div>
+              <div class="screen-body" aria-hidden="true">
+                <div class="s-row"><b>Your progress</b><span class="s-seg"><span class="on">7 days</span><span>14</span><span>30</span></span></div>
+                <div class="s-card">
+                  <p class="s-label">Calories vs target</p>
+                  <div class="s-bars" style="--t:82%">
+                    <i style="--h:78%"></i><i style="--h:88%"></i><i style="--h:70%"></i><i style="--h:84%"></i><i style="--h:95%"></i><i style="--h:76%"></i><i style="--h:56%" class="today"></i>
+                  </div>
+                  <div class="s-days"><span>Thu</span><span>Fri</span><span>Sat</span><span>Sun</span><span>Mon</span><span>Tue</span><span>Today</span></div>
+                </div>
+                <div class="s-two">
+                  <div class="s-card"><span class="muted">Avg calories</span><b>1,780</b><span class="muted small">target 1,850</span></div>
+                  <div class="s-card"><span class="muted">Avg protein</span><b>96 g</b><span class="muted small">target 110 g</span></div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- 5: My Foods -->
+          <div class="stop is-off" role="tabpanel" id="stop-5" aria-labelledby="step-5" inert>
+            <div class="stop-copy">
+              <h3>My Foods remembers for you</h3>
+              <ul>
+                <li>Every food you confirm is saved here. Next time, it's logged with <b>exactly the same numbers</b>, instantly, without using an AI message.</li>
+                <li>About <b>300 common foods</b> are built in, and for rice or chicken MacBro asks whether the weight was raw or cooked.</li>
+                <li>Three tabs: <b>Generic</b>, <b>Branded</b> (check the real pack label from Open Food Facts) and <b>My Recipes</b>.</li>
+                <li>Search, correct or delete anything, or add your own with <b>+ Add</b>.</li>
+              </ul>
+            </div>
+            <div class="screen" aria-label="Example My Foods screen" role="img">
+              <div class="screen-bar"><span class="emblem" aria-hidden="true"></span>Tandurust</div>
+              <div class="screen-tabs" aria-hidden="true"><span>Home</span><span>Meals</span><span class="on">My Foods</span><span>Body Stats</span><span>Explore</span></div>
+              <div class="screen-body" aria-hidden="true">
+                <div class="s-row"><span class="s-search">Search your foods</span><span class="s-addbtn">+ Add</span></div>
+                <div class="tabs"><span class="on">Generic (42)</span><span>Branded (6)</span><span>My Recipes (2)</span></div>
+                <ul class="shelf-list">
+                  <li><span class="name">Paneer</span><span class="kc"><b>265</b> kcal <span class="muted">per 100 g</span></span></li>
+                  <li><span class="name">Poha, cooked</span><span class="kc"><b>130</b> kcal <span class="muted">per 100 g</span></span></li>
+                  <li><span class="name">Egg, boiled <small>· 50 g per piece</small></span><span class="kc"><b>155</b> kcal <span class="muted">per 100 g</span></span></li>
+                  <li><span class="name">Banana <small>· 118 g per piece</small></span><span class="kc"><b>89</b> kcal <span class="muted">per 100 g</span></span></li>
+                  <li><span class="name">Toor dal, cooked</span><span class="kc"><b>113</b> kcal <span class="muted">per 100 g</span></span></li>
+                </ul>
+                <p class="s-label">Additional info shows the other macros and micronutrients.</p>
+              </div>
+            </div>
+          </div>
+
+          <!-- 6: Body Stats -->
+          <div class="stop is-off" role="tabpanel" id="stop-6" aria-labelledby="step-6" inert>
+            <div class="stop-copy">
+              <h3>Your Body Stats</h3>
+              <ul>
+                <li>Your <b>weight</b>, <b>height</b> and <b>BMI</b>, and an estimated <b>body fat</b> once you add your neck and waist (and hips for women).</li>
+                <li>Tap a body part on the figure to see <b>how to measure it</b> and add a value.</li>
+                <li>Every measurement is dated, so you can watch it change. All of it is optional.</li>
+              </ul>
+            </div>
+            <div class="screen" aria-label="Example Body Stats screen" role="img">
+              <div class="screen-bar"><span class="emblem" aria-hidden="true"></span>Tandurust</div>
+              <div class="screen-tabs" aria-hidden="true"><span>Home</span><span>Meals</span><span>My Foods</span><span class="on">Body Stats</span><span>Explore</span></div>
+              <div class="screen-body" aria-hidden="true">
+                <div class="s-three">
+                  <div class="s-card"><span class="muted">Weight</span><b>64.2 kg</b><span class="s-down">−1.3 kg in 4 weeks</span></div>
+                  <div class="s-card"><span class="muted">BMI</span><b>23.6</b><span class="s-ok">Healthy weight</span></div>
+                  <div class="s-card"><span class="muted">Body fat</span><b>~26%</b><span class="muted small">estimate</span></div>
+                </div>
+                <div class="s-card s-measure">
+                  <p class="s-label">Measurements</p>
+                  <ul>
+                    <li><span>Waist</span><b>76 cm</b><span class="muted">28 Sep</span></li>
+                    <li><span>Hips</span><b>98 cm</b><span class="muted">28 Sep</span></li>
+                    <li><span>Neck</span><b>32 cm</b><span class="muted">28 Sep</span></li>
+                    <li><span>Biceps</span><b>27 cm</b><span class="muted">14 Sep</span></li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- 7: Explore -->
+          <div class="stop is-off" role="tabpanel" id="stop-7" aria-labelledby="step-7" inert>
+            <div class="stop-copy">
+              <h3>Explore (coming soon)</h3>
+              <ul>
+                <li><b>Recipes</b>: ready-made collections such as high protein, non-veg quick &amp; easy and healthy desserts, with the macros already worked out.</li>
+                <li><b>Workouts</b>: strength basics, simple routines and tips.</li>
+                <li>Tell us what you'd like to see here: it shapes what we build next.</li>
+              </ul>
+            </div>
+            <div class="screen" aria-label="Example Explore screen" role="img">
+              <div class="screen-bar"><span class="emblem" aria-hidden="true"></span>Tandurust</div>
+              <div class="screen-tabs" aria-hidden="true"><span>Home</span><span>Meals</span><span>My Foods</span><span>Body Stats</span><span class="on">Explore</span></div>
+              <div class="screen-body" aria-hidden="true">
+                <div class="s-card s-explore r"><div class="s-row"><b>Recipes</b><span class="s-soon">Coming soon</span></div><div class="s-chips"><span>High protein</span><span>Non-veg quick &amp; easy</span><span>Healthy desserts</span></div></div>
+                <div class="s-card s-explore w"><div class="s-row"><b>Workouts</b><span class="s-soon">Coming soon</span></div><div class="s-chips"><span>Strength basics</span><span>Simple routines</span><span>Tips</span></div></div>
+              </div>
+            </div>
+          </div>
+
+          <div class="tour-nav">
+            <button type="button" class="btn btn-ghost btn-small" id="tour-prev">‹ Back</button>
+            <span class="slide-count" id="tour-count" aria-live="polite">Stop 1 of 7</span>
+            <button type="button" class="btn btn-primary btn-small" id="tour-next">Next ›</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="tour-end">
+        <p><b>Like what you see?</b> Tandurust is free to use.
+          <span data-mode="waitlist">It's invite-only for now: join the waitlist and we'll email you an invitation when there's a spot.</span>
+          <span data-mode="open">Create your account in a minute.</span></p>
+        <button type="button" class="btn btn-primary" data-go="signup" id="join-demo"><span data-mode="waitlist">Join the waitlist</span><span data-mode="open">Join</span></button>
+      </div>
+    </div>
+  </section>
+
   <!-- ======================= why ======================= -->
   <section class="band alt" aria-labelledby="why-title">
     <div class="wrap">
@@ -201,6 +467,44 @@
           <p class="say">"2 rotis, 100 g dal and 150 g cooked rice for lunch"</p>
           <p>MacBro splits the meal into foods and works out calories, protein, carbs, fat and fiber. Foods you've logged before come straight from your own saved numbers.</p>
           <p class="tally">One sentence, one tap</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ======================= who it's for ======================= -->
+  <section class="band tint" id="for" aria-labelledby="for-title">
+    <div class="wrap">
+      <div class="section-head">
+        <p class="kicker">Who it's for</p>
+        <h2 id="for-title">For anyone who wants to keep an eye on their meals and macros</h2>
+        <p>Whether you train most days or just want to eat a little better, Tandurust keeps your numbers in view without the chore.</p>
+      </div>
+      <div class="who">
+        <div class="who-card">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6.5 6.5v11M17.5 6.5v11M3.5 9v6M20.5 9v6M6.5 12h11"/></svg>
+          <h3>Gym regulars</h3>
+          <p>Hit your <b>protein</b> and <b>fiber</b> every day. Targets are set from your weight and goal (muscle gain, recomposition, fat loss), and the protein streak counts the days you reach at least 85% of it.</p>
+          <q>200 g chicken breast and a cup of rice after the gym</q>
+        </div>
+        <div class="who-card">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="14.5" cy="4.5" r="2"/><path d="M8 21l3-6 3 2v5M6 11l4-3 4 1 2 4h3M11 15l-2-4"/></svg>
+          <h3>Athletes and people in training</h3>
+          <p>Fuel your training: <b>calories, protein, carbs and fat</b> against targets that follow your activity level. Tell us your training days and type, and see over 7, 14 or 30 days whether you're eating enough.</p>
+          <q>How much protein did I have this week?</q>
+        </div>
+        <div class="who-card">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="13" r="7"/><circle cx="12" cy="13" r="3.5"/><path d="M4 3v5M2.5 3v3a1.5 1.5 0 0 0 3 0V3M20 3c-1.5 1-2 3-2 5h2v13"/></svg>
+          <h3>Anyone watching their meals</h3>
+          <p>Losing weight, keeping it steady, or just curious: <b>calories and all four macros</b>, plus nine micronutrients, for every day. Home food like rotis, dal and poha is understood as you say it.</p>
+          <q>2 rotis, a katori of dal and some salad</q>
+        </div>
+        <div class="who-card extra">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3c3.5 4.4 6 7.9 6 11a6 6 0 0 1-12 0c0-3.1 2.5-6.6 6-11z"/></svg>
+          <p class="tag-extra">Also included</p>
+          <h3>A water tracker, if you want it</h3>
+          <p>A daily water goal from your weight and activity, <b>+250 ml / +500 ml</b> in one tap, or just tell MacBro. Use it when you like; it stays out of the way when you don't.</p>
+          <q>drank 1 L water</q>
         </div>
       </div>
     </div>
@@ -427,7 +731,8 @@
       <div class="closing">
         <div style="display:grid;gap:10px">
           <h2 id="closing-title">Start with your next meal.</h2>
-          <p class="fine">It takes a minute to sign up. Your targets are worked out for you.</p>
+          <p class="fine" data-mode="open">It takes a minute to sign up. Your targets are worked out for you.</p>
+          <p class="invite-only" data-mode="waitlist"><b>Invite-only for now.</b> Joining puts you on the waitlist; it doesn't create an account yet. When your invitation arrives, signing up takes a minute and your targets are worked out for you.</p>
         </div>
         <div class="join">
           <p class="join-label" id="join-label-2">
@@ -438,8 +743,8 @@
             </svg>
           </p>
           <div class="join-row">
-            <button type="button" class="btn btn-primary" data-go="signup" id="join-closing" aria-describedby="join-label-2">Join</button>
-            <p class="fine">Already a member? <a href="/#login" data-go="login">Log in</a></p>
+            <button type="button" class="btn btn-primary" data-go="signup" id="join-closing" aria-describedby="join-label-2"><span data-mode="waitlist">Join the waitlist</span><span data-mode="open">Join</span></button>
+            <p class="fine">Already a member or invited? <a href="/#login" data-go="login">Log in</a></p>
           </div>
         </div>
       </div>
@@ -460,6 +765,46 @@
     <p class="legal">Contact: <span style="user-select:all">mhatre.anushka.work@gmail.com</span> · Tandurust™ © 2026. All rights reserved. Made in India. MacBro is Tandurust's chat assistant.</p>
   </div>
 </footer>
+
+<!-- "Join the waitlist" (JOIN_MODE=waitlist): the Join buttons open this instead of Create account. -->
+<dialog class="join-dialog" id="join-dialog" aria-labelledby="join-title">
+  <form id="join-form" method="dialog" novalidate>
+    <div class="jd-head">
+      <span class="emblem" aria-hidden="true"></span>
+      <div>
+        <h2 id="join-title">Join the Tandurust waitlist</h2>
+        <p class="muted">We're in our first phase, so Tandurust is <b>invite-only</b>: we let people in a few at a time to keep the free AI fast for everyone.</p>
+      </div>
+      <button type="button" class="jd-close" id="join-close" aria-label="Close">✕</button>
+    </div>
+    <div class="jd-fields" id="join-fields">
+      <p class="jd-what"><b>What joining means:</b> you're registering to be invited. It doesn't create an account or open the app yet. When there's a spot, we email you an invitation, and you sign up with the same email.</p>
+      <label>Your name<input name="name" id="join-name" autocomplete="name" maxlength="80" required></label>
+      <label>Email<input name="email" id="join-email" type="email" autocomplete="email" maxlength="255" required></label>
+      <label><span>What would you like to track? <span class="muted">(optional)</span></span>
+        <input name="interest" id="join-interest" maxlength="300" placeholder="e.g. protein for the gym, weight loss, eating on time">
+      </label>
+      <!-- Hidden from people; bots that fill in every field give themselves away. -->
+      <div class="hp" aria-hidden="true"><label>Website<input name="website" id="join-website" tabindex="-1" autocomplete="off"></label></div>
+      <label class="jd-consent">
+        <input type="checkbox" id="join-consent" required>
+        <span>Email me about access to Tandurust. My name and email are used only for that, and I can ask to be removed any time (<a href="/privacy" data-app-link target="_blank" rel="noopener">Privacy</a>).</span>
+      </label>
+      <p class="jd-error" id="join-error" role="alert" hidden></p>
+      <button type="submit" class="btn btn-primary" id="join-submit">Join the waitlist</button>
+      <p class="fine">Already have an invitation or an account? <a href="/#login" data-go="login">Log in</a></p>
+    </div>
+    <div class="jd-done" id="join-done" hidden tabindex="-1">
+      <p class="jd-tick" aria-hidden="true">✓</p>
+      <h3 id="join-done-title">You're on the list!</h3>
+      <p class="muted" id="join-done-text">We'll email you as soon as there's a spot.</p>
+      <div class="join-row">
+        <button type="button" class="btn btn-primary" id="join-done-close">Done</button>
+        <a class="btn btn-ghost" href="#demo" id="join-done-demo">Take the demo tour</a>
+      </div>
+    </div>
+  </form>
+</dialog>
 
 <div class="status" id="status" role="status" aria-live="polite" hidden>
   <span class="spinner" aria-hidden="true"></span>

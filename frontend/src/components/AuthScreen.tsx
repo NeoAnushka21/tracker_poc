@@ -1,6 +1,6 @@
 import { useEffect, useState, type FormEvent } from "react";
 import { api } from "../api";
-import type { User } from "../types";
+import type { JoinMode, User } from "../types";
 import { AppLogo } from "./Avatar";
 import { APP_NAME, APP_TAGLINE } from "../brand";
 import ThemeToggle from "./ThemeToggle";
@@ -31,6 +31,7 @@ export default function AuthScreen({ onAuthed, initialMode = "login" }: {
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [googleClientId, setGoogleClientId] = useState<string | null>(null);
+  const [joinMode, setJoinMode] = useState<JoinMode>("open");   // "waitlist": new accounts need an invitation
   // A Google sign-in waiting for the user's OK: link to an existing email account, or consent for a new one.
   const [pending, setPending] = useState<{ credential: string; kind: "link" | "consent"; email: string } | null>(null);
   const [pendingConsent, setPendingConsent] = useState(false);
@@ -38,7 +39,7 @@ export default function AuthScreen({ onAuthed, initialMode = "login" }: {
   useEffect(() => {
     api.consentText().then((c) => setConsentText(c.text)).catch(() => setConsentText(null));
     api.authOptions()
-      .then((o) => { setGoogleClientId(o.google_client_id); setResetAvailable(o.password_reset); })
+      .then((o) => { setGoogleClientId(o.google_client_id); setResetAvailable(o.password_reset); setJoinMode(o.join_mode ?? "open"); })
       .catch(() => setGoogleClientId(null));
   }, []);
 
@@ -197,10 +198,18 @@ export default function AuthScreen({ onAuthed, initialMode = "login" }: {
         {mode === "forgot" ? (
           notice && <p className="ok small" role="status">{notice}</p>
         ) : mode === "register" ? (
+          <>
+          {joinMode === "waitlist" && (
+            <p className="invite-note small">
+              {APP_NAME} is invite-only for now. <b>Invited?</b> Create your account with the email address we wrote to.
+              {" "}<b>Not yet?</b> <a href="/welcome#join">Join the waitlist</a> and we'll email you an invitation when there's a spot.
+            </p>
+          )}
           <label className="consent-box">
             <input type="checkbox" checked={consent} onChange={(e) => setConsent(e.target.checked)} required />
             <span>{consentText ?? "I agree that the data I share is used for my recommendations and to develop the app."}</span>
           </label>
+          </>
         ) : mode === "admin" ? null : (
           <p className="consent-note muted small">
             By logging in, you agree that the data you share with {APP_NAME} is used for your recommendations and to

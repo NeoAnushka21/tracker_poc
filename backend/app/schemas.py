@@ -71,6 +71,33 @@ class RegisterIn(Credentials):
     consent: bool = False
 
 
+class WaitlistJoinIn(BaseModel):
+    """The welcome page's "Join the community" form."""
+    name: str = Field(min_length=1, max_length=80)
+    email: str = Field(min_length=3, max_length=255)
+    interest: str | None = Field(default=None, max_length=300)
+    consent: bool = False
+    website: str = Field(default="", max_length=200)   # honeypot: hidden from people, bots fill it in
+
+    @field_validator("email")
+    @classmethod
+    def normalize_email(cls, v: str) -> str:
+        return Credentials.normalize_email(v)
+
+    @field_validator("name")
+    @classmethod
+    def clean_name(cls, v: str) -> str:
+        v = " ".join(v.split())
+        if not v:
+            raise ValueError("Enter your name")
+        return v
+
+    @field_validator("interest")
+    @classmethod
+    def clean_interest(cls, v: str | None) -> str | None:
+        return " ".join(v.split()) or None if v else None
+
+
 class OnboardingIn(BaseModel):
     preferred_name: str | None = Field(default=None, max_length=80)
     date_of_birth: date

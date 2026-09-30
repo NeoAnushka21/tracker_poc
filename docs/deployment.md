@@ -1,6 +1,6 @@
 # Deploying Tandurust (Render + Neon)
 
-> Last updated: 2026-10-01 (the static site's start page is now the welcome page, not the launcher; the app serves it at /welcome; 2026-09-30: UptimeRobot monitor live, server kept awake; keep-awake monitor steps, `/api/health` answers HEAD; monthly USDA food list check; earlier: always-on launcher page).
+> Last updated: 2026-10-01 (invite-only sign-up with a waitlist: `JOIN_MODE`, `LAUNCHER_ORIGIN`, how to open sign-up again; the static site's start page is now the welcome page, not the launcher; the app serves it at /welcome; 2026-09-30: UptimeRobot monitor live, server kept awake; keep-awake monitor steps, `/api/health` answers HEAD; monthly USDA food list check; earlier: always-on launcher page).
 
 **Open the app from the welcome page:** https://omniai-app.onrender.com (static site `omniai-app`, never sleeps; the exact address is shown on its Render page). **App:** https://omniai-hkv2.onrender.com (Render service `omniai`, Singapore) · Neon project `young-star-73873699` (AWS Singapore). Local data was copied into Neon on 2026-09-29 (159 rows, 13 tables); Neon is now the real database. The NVIDIA backup is off in production. An UptimeRobot monitor (free, since 2026-09-30) pings `/api/health` every 5 minutes, so the app stays awake and down alerts go by email. Update this file whenever the deployment setup changes (see [README.md](README.md)).
 
@@ -162,6 +162,15 @@ Without it, **Forgot password?** stays hidden on the live site. About 10 minutes
 5. Test: on the live site, **Forgot password?** with your own email.
 
 Emails sent from a free-mail address (Gmail) through another service can land in spam; with our own domain later, verify the domain in Brevo for better delivery. Menu names in Brevo may differ slightly. If sending fails, the reason is in Render → **Logs** (`omniai.email`).
+
+## Invite-only sign-up and the waitlist (2026-10-01)
+
+`render.yaml` sets **`JOIN_MODE=waitlist`**: on the welcome page, **Join the waitlist** opens the waitlist form (with a clear "invite-only for now" note) instead of Create account, and new accounts (email or Google) are only allowed for emails approved in **Admin → Waitlist**. Existing accounts log in as usual. **`LAUNCHER_ORIGIN`** (`https://omniai-app.onrender.com`) lets the always-on welcome site send the form to the app, and is the start of the link in invitation emails.
+
+- **Emails:** each sign-up emails an alert to the admin address (`WAITLIST_ALERT_EMAIL`, default the fixed admin email), and **Approve** emails the person their invitation. Both use Brevo (section above). Until `BREVO_API_KEY` and `EMAIL_FROM` are set, nothing is sent (only logged): the list still fills up in **Admin → Waitlist**, and you tell approved people yourself (the panel says so).
+- **Letting people in:** Admin → Waitlist → **Approve** (again: **Resend invite**). They create their account with the same email.
+- **Open sign-up to everyone again:** Render → **omniai** → **Environment** → `JOIN_MODE` = `open` → **Save** (the service restarts). Join goes back to Create account; the welcome page picks the change up on its next visit.
+- **Test after a deploy:** open the static site in a private window → **Join** → the form appears → send it with a test address → the row shows in Admin → Waitlist (and the alert arrives, with Brevo set up) → **Remove** it.
 
 ## Security headers
 

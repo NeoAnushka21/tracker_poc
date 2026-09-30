@@ -2,7 +2,7 @@ import { APP_NAME, PRIVACY_CONTACT } from "../brand";
 import { AppLogo } from "./Avatar";
 import ThemeToggle from "./ThemeToggle";
 
-const UPDATED = "30 September 2026";
+const UPDATED = "1 October 2026";
 
 /** Public privacy notice at /privacy (no login needed). Keep it in step with what the app really does:
  *  the consent text (backend config.py), the export (services/export.py) and deletion (services/accounts.py). */
@@ -32,6 +32,7 @@ export default function PrivacyPage() {
           <li><b>What you log:</b> meals and their nutrients, water, saved foods and recipes, targets, body measurements.</li>
           <li><b>Chat:</b> your messages and the assistant's replies, and the suggestions you confirmed or cancelled.</li>
           <li><b>Usage:</b> when you sign in, how many AI requests you made each day, and technical details of each AI call (model, size, timing), used to share the free AI allowance fairly.</li>
+          <li><b>Waitlist (only if you use "Join the waitlist" on the welcome page):</b> your name, email, what you'd like to track (optional), and when you joined and were let in. It's used only to email you about access and to plan how many people we can let in. Write to us to be taken off the list; deleting your account also removes it.</li>
           <li><b>On your device:</b> one sign-in cookie (needed to keep you logged in) and your light/dark theme choice. No advertising or tracking cookies, and no analytics.</li>
         </ul>
 
@@ -48,7 +49,7 @@ export default function PrivacyPage() {
           <li><b>Render</b> (Singapore) runs the app, and <b>Neon</b> (Singapore) hosts the database.</li>
           <li><b>Groq</b> (United States) runs the open-source AI models. To answer a chat message it receives that message with related context: your name if you set one, goal, weight, targets, today's or the picked day's logs, and matching saved foods. It doesn't receive your email or password. Groq doesn't keep it by default; under its terms it may keep logs for up to 30 days, only to fix errors or investigate abuse.</li>
           <li><b>Google</b>, only if you use Continue with Google: Google tells us your email, that it's verified, and your name. Google's sign-in button follows Google's own privacy and cookie rules.</li>
-          <li><b>Brevo</b> sends password-reset emails when you ask for one; it receives your email address and the email's text.</li>
+          <li><b>Brevo</b> sends our emails: password-reset links when you ask for one, and waitlist invitations. It receives your email address and the email's text (for a waitlist sign-up, the administrator's alert also contains your name and what you'd like to track).</li>
           <li><b>Open Food Facts</b> (a non-profit open food database, France), only when you press <b>Check label</b> on a branded food: our server sends it the product words or barcode you search for. It receives nothing about you: no name, email or logs.</li>
           <li><b>Error reports:</b> if error reporting is switched on, <b>Sentry</b> receives technical reports when something breaks (the error and where in the code it happened). They don't include your chat messages, food logs, cookies or IP address. An uptime service also checks every few minutes that the app answers; it sees no personal data.</li>
           <li><b>The app's administrator</b> can view account data read-only, for support and development. Every such view is recorded, and it's included when you download your data.</li>

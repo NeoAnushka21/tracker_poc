@@ -1,6 +1,6 @@
 import type {
-  Action, AdminUserDetail, AdminUserRow, AuditRow, ChatMessage, DailySummary, Food, Item, RangeSummary, User,
-  Streaks, ChatDay, Label, LlmUsageReport, MicroField, RecipeInput, RecipePreview,
+  Action, AdminUserDetail, AdminUserRow, AdminWaitlist, AuditRow, ChatMessage, DailySummary, Food, Item, RangeSummary, User,
+  Streaks, ChatDay, JoinMode, Label, LlmUsageReport, MicroField, RecipeInput, RecipePreview, WaitlistRow,
 } from "./types";
 import { recoverServer, serverAwake, SLOW_REQUEST_MS } from "./wake";
 
@@ -184,7 +184,7 @@ export const api = {
     request<{ ok: boolean }>("POST", "/api/auth/delete-account", { password, confirm_email }),
   /** Download my data: everything stored about the account (DPDP right of access). */
   exportData: () => request<Record<string, unknown>>("GET", "/api/profile/export"),
-  authOptions: () => request<{ google_client_id: string | null; password_reset: boolean }>("GET", "/api/auth/options"),
+  authOptions: () => request<{ google_client_id: string | null; password_reset: boolean; join_mode: JoinMode }>("GET", "/api/auth/options"),
   /** Always answers the same message, whether or not the account exists. */
   forgotPassword: (email: string) => request<{ ok: boolean; message: string }>("POST", "/api/auth/forgot-password", { email }),
   resetPassword: (token: string, new_password: string) =>
@@ -264,6 +264,9 @@ export const api = {
   adminChat: (id: string) => request<ChatMessage[]>("GET", `/api/admin/users/${id}/chat`),
   adminAudit: () => request<AuditRow[]>("GET", "/api/admin/audit"),
   adminLlmUsage: (hours = 24) => request<LlmUsageReport>("GET", `/api/admin/llm-usage?hours=${hours}`),
+  adminWaitlist: () => request<AdminWaitlist>("GET", "/api/admin/waitlist"),
+  adminWaitlistApprove: (id: string) => request<WaitlistRow>("POST", `/api/admin/waitlist/${id}/approve`),
+  adminWaitlistRemove: (id: string) => request<{ ok: boolean }>("DELETE", `/api/admin/waitlist/${id}`),
 
   streaks: () => request<Streaks>("GET", "/api/dashboard/streaks"),
   daily: (day?: string) => request<DailySummary>("GET", `/api/dashboard/daily${day ? `?day=${day}` : ""}`),

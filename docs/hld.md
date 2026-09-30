@@ -1,6 +1,6 @@
 # Tandurust high-level design (HLD)
 
-> Last updated: 2026-10-01 (welcome page as the start for signed-out visitors, on the static site and at /welcome; new logo and theme, display only; 2026-09-30: tab order Home, Meals, My Foods, Body Stats, Explore; tabs renamed: Saved Food → **My Foods**, Body Profile → **Body Stats**; app renamed Tandurust, display only; Dashboard tab renamed Meals, Analysis moved into it; Chat moved from a tab to a floating chat window opened from Home; Saved Food tabs: Generic / Branded / My Recipes; Saved Food + Add: §4.6; branded foods: Open Food Facts label check, §2, §3, §4.5, §5; optional "About you" answers: targets, meal times, MacBro context; country/region step in the sign-in flow; database hardening phase 1: public user UUIDs, items linked to foods, ON DELETE rules, timestamptz, composite indexes; built-in general food list (USDA) between Saved Food and the AI; raw/cooked asked, never assumed; typo-tolerant saved-food and meal-word matching, Dashboard "Did you mean …?"; earlier: tabs: Saved Food, Explore, Body Profile; admin two-step sign-in; tool allow-list; terms page; earlier: health notes, Alembic, forgot password…).Update the diagrams whenever a component, data flow, table or external service changes (see [docs/README.md](README.md)).
+> Last updated: 2026-10-01 (welcome page: Demo tour and **Join the community** waitlist with invite-only sign-up (`JOIN_MODE`), §2, §3.1, §4.3a, §5; welcome page as the start for signed-out visitors, on the static site and at /welcome; new logo and theme, display only; 2026-09-30: tab order Home, Meals, My Foods, Body Stats, Explore; tabs renamed: Saved Food → **My Foods**, Body Profile → **Body Stats**; app renamed Tandurust, display only; Dashboard tab renamed Meals, Analysis moved into it; Chat moved from a tab to a floating chat window opened from Home; Saved Food tabs: Generic / Branded / My Recipes; Saved Food + Add: §4.6; branded foods: Open Food Facts label check, §2, §3, §4.5, §5; optional "About you" answers: targets, meal times, MacBro context; country/region step in the sign-in flow; database hardening phase 1: public user UUIDs, items linked to foods, ON DELETE rules, timestamptz, composite indexes; built-in general food list (USDA) between Saved Food and the AI; raw/cooked asked, never assumed; typo-tolerant saved-food and meal-word matching, Dashboard "Did you mean …?"; earlier: tabs: Saved Food, Explore, Body Profile; admin two-step sign-in; tool allow-list; terms page; earlier: health notes, Alembic, forgot password…).Update the diagrams whenever a component, data flow, table or external service changes (see [docs/README.md](README.md)).
 > Diagrams are Mermaid. They render on GitHub and in VS Code with a Mermaid preview extension.
 
 ## 1. Purpose and principles
@@ -26,12 +26,16 @@ flowchart LR
     APP -->|OpenAI-compatible API<br/>tool calling| LLM[(Open-source models<br/>Groq: gpt-oss-20b / 120b<br/>backup: NVIDIA DeepSeek V4.1 Flash)]
     APP -->|label search by product words or barcode<br/>only on Check label| OFF[(Open Food Facts<br/>open food-label database)]
     U -.->|Web Speech API<br/>voice to text, in browser| U
+    V([Visitor<br/>welcome page]) -->|Join the waitlist form| APP
+    APP -->|new sign-up alert · invitation| BR[(Brevo<br/>transactional email)]
 ```
 
 | Actor | Uses |
 |---|---|
 | **User** | Home (summary, meal-logging and protein streaks), Chat logging, Meals (day summary, meal cards, Check your progress), My Foods, Settings |
-| **Admin** (emails in `ADMIN_EMAILS`) | Admin console only: user list, per-user read-only data, audit log |
+| **Visitor** | The welcome page: Demo tour; **Join the waitlist** form while sign-up is by invitation (the page says plainly that joining is registering to be invited) |
+| **Admin** (emails in `ADMIN_EMAILS`) | Admin console only: user list, per-user read-only data, audit log, **Waitlist** (approve / remove) |
+| **Brevo** | Transactional email: password-reset links, waitlist alerts to the admin, invitations |
 | **LLM provider** | Nutrition estimation, clarifying questions, choosing tools. It never writes data. |
 | **Open Food Facts** | Pack-label values for branded foods, searched only when the user presses **Check label**. It receives the search words or barcode, nothing about the user. |
 
@@ -73,7 +77,7 @@ In development, Vite serves the SPA on `:5173` and proxies `/api` to Uvicorn on 
 ```mermaid
 flowchart LR
     U[Browser] -->|1. open| L["Render static site omniai-app<br/>welcome page, never sleeps"]
-    L -->|2. poll /api/health until awake| R
+    L -->|2. poll /api/health until awake,<br/>then /api/waitlist/options; the form posts to /api/waitlist| R
     U -->|3. app + /api over HTTPS| R["Render free web service · Singapore<br/>FastAPI serves the built SPA and /api<br/>sleeps after ~15 min idle"]
     R -->|SSL, pooled connections| N[("Neon Postgres · Singapore<br/>free, scales to zero")]
     R -->|HTTPS| G[(Groq: gpt-oss-20b / 120b)]
@@ -184,6 +188,32 @@ flowchart TD
 
 Admin emails can't register, use the normal login or Continue with Google.
 
+### 4.3a Joining while sign-up is by invitation (`JOIN_MODE=waitlist`)
+
+```mermaid
+sequenceDiagram
+    actor V as Visitor
+    participant W as Welcome page
+    participant API as FastAPI
+    participant DB as Database
+    participant E as Brevo
+    actor A as Admin
+    W->>API: GET /api/waitlist/options
+    API-->>W: join_mode = waitlist
+    V->>W: Join → form (name, email, interest, consent)
+    W->>API: POST /api/waitlist (CORS: launcher origin only)
+    API->>DB: insert waitlist row (skip if already listed or has an account)
+    API-->>W: ok (same reply either way)
+    API->>E: alert to WAITLIST_ALERT_EMAIL
+    A->>API: Admin → Waitlist → Approve
+    API->>DB: approved_at = now
+    API->>E: invitation with the sign-up link
+    V->>API: Create account / Continue with Google (same email)
+    API->>DB: approved? then create the account, else 403 "invite-only"
+```
+
+`JOIN_MODE=open` keeps today's behaviour: Join goes to Create account and anyone can sign up. The gate is only where a new account would be created (register, a first Google sign-in), so existing accounts are unaffected. The form reply never says whether an email was already listed or has an account; a hidden honeypot field and a per-address limit (5 an hour) keep bots out.
+
 **Google sign-in** uses Google Identity Services: the browser receives Google's signed ID token, and the backend checks the signature (Google's public keys), our client ID, the expiry and a verified email, then sets our own session cookie. There's no client secret, only the `openid email profile` scopes, and no Google review or billing. A Google sign-in is linked to an existing email + password account only after the user confirms, and a new account needs the data consent.
 
  Admin accounts are hidden from the admin user list, and every admin view of a user's data is written to `admin_audit`.
@@ -272,11 +302,14 @@ erDiagram
     users ||--o{ ai_requests : "daily AI allowance"
     users ||--o{ password_resets : "forgot-password links"
     users ||--o| user_preferences : "optional about-you answers"
+    waitlist }o..o| users : "same email, once they sign up (not linked)"
 ```
 
 **Identity and integrity (migration 0003, 2026-09-30):** `users.id` is the internal key every table joins on; `users.public_id` (UUID v7) is what the API and admin screens show. Every foreign key has an ON DELETE rule, so deleting a user row removes everything they own in the database itself (model-usage and admin-audit rows are kept, unlinked). Logged items point at the saved food they came from, so "most eaten" is a count. Timestamps are `timestamptz` (UTC); per-user tables are indexed on (user_id, date) or (user_id, status).
 
 **Branded foods (migration 0006, 2026-09-30):** `user_foods.label_checked` says whether a food's numbers come from its pack label, and `off_code` keeps the Open Food Facts barcode it was matched to (§4.5).
+
+**Waitlist (migration 0007, 2026-10-01):** `waitlist` holds the "Join the community" sign-ups (name, email, optional interest, consent and approval times). It isn't linked to `users` by key: most people on it have no account; the admin list matches by email, and deleting an account deletes its waitlist row (§4.3a).
 
 Column-level detail is in [technical-overview.md](technical-overview.md#5-data-model).
 

@@ -38,6 +38,10 @@ services:
         sync: false
       - key: SENTRY_DSN           # optional error reports; paste the DSN from sentry.io (docs/deployment.md)
         sync: false
+      - key: JOIN_MODE             # waitlist: Join opens the "Join the community" form, new accounts need an invite; open: anyone
+        value: waitlist
+      - key: LAUNCHER_ORIGIN       # the always-on welcome site below: may send the waitlist form; base of invite links
+        value: https://omniai-app.onrender.com
       - key: AI_DAILY_MESSAGE_LIMIT   # AI messages per user per day (0 = unlimited)
         value: "20"
       - key: GOOGLE_CLIENT_ID      # Continue with Google; public, so kept here

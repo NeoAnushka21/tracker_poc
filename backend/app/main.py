@@ -9,7 +9,7 @@ from app import config, models, observability  # noqa: F401  (models registers t
 from app.data_migrations import run_all as run_data_migrations
 from app.db import SessionLocal, _is_sqlite, engine
 from app.migrate import migrate
-from app.routers import actions, admin, auth, chat, dashboard, entries, foods, profile, water
+from app.routers import actions, admin, auth, chat, dashboard, entries, foods, profile, waitlist, water
 
 
 @asynccontextmanager
@@ -71,6 +71,25 @@ async def security_headers(request: Request, call_next):
         response.headers.setdefault("Strict-Transport-Security", "max-age=31536000")
     return response
 
+
+@app.middleware("http")
+async def waitlist_cors(request: Request, call_next):
+    """The always-on welcome site (LAUNCHER_ORIGIN, another address) sends the "Join the community"
+    form here. Only /api/waitlist is opened to it, without cookies; every other route stays same-origin."""
+    origin = request.headers.get("origin", "")
+    allowed = (config.LAUNCHER_ORIGIN and origin == config.LAUNCHER_ORIGIN
+               and request.url.path.startswith("/api/waitlist"))
+    if allowed and request.method == "OPTIONS":
+        return Response(status_code=204, headers={
+            "Access-Control-Allow-Origin": origin, "Access-Control-Allow-Methods": "GET, POST",
+            "Access-Control-Allow-Headers": "Content-Type", "Access-Control-Max-Age": "600", "Vary": "Origin"})
+    response = await call_next(request)
+    if allowed:
+        response.headers["Access-Control-Allow-Origin"] = origin
+        response.headers["Vary"] = "Origin"
+    return response
+
+
 app.include_router(auth.router)
 app.include_router(profile.router)
 app.include_router(chat.router)
@@ -80,6 +99,7 @@ app.include_router(foods.router)
 app.include_router(water.router)
 app.include_router(admin.router)
 app.include_router(entries.router)
+app.include_router(waitlist.router)
 
 
 # GET and HEAD: uptime monitors (e.g. UptimeRobot's free plan) ping with HEAD, and a 405 would

@@ -6,7 +6,7 @@ admin_audit so there's a record of who looked at what.
 import uuid
 from datetime import timedelta
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, status
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
@@ -14,14 +14,17 @@ from app import config
 from app.db import get_db
 from app.deps import admin_user, is_admin
 from app.llm.chat import message_to_dict, recent_messages
-from app.models import AdminAudit, ChatMessage, LlmUsage, LogEntry, User, UserFood, WaterLog, WeightLog, utcnow
+from app.models import (
+    AdminAudit, ChatMessage, LlmUsage, LogEntry, User, UserFood, WaitlistEntry, WaterLog, WeightLog, utcnow,
+)
 from app.routers.profile import body_profile, user_to_dict
 from app.services.foods import food_to_dict, list_foods
 from app.services.logs import logs_by_day
 from app.timeutil import local_today
 from app.schemas import TotpCodeIn, TotpDisableIn
 from app.security import verify_password
-from app.services import totp
+from app.services import email, totp
+from app.services import waitlist as wl
 
 router = APIRouter(prefix="/api/admin", tags=["admin"])
 
@@ -175,6 +178,52 @@ def llm_usage(hours: int = 24, admin: User = Depends(admin_user), db: Session = 
         "fastpath": {name: sum(1 for r in fast if r.model == name) for name in sorted({r.model for r in fast})},
         "pool": pool,
     }
+
+
+# --- waitlist ("Join the community" while sign-up is by invitation) -----------------------------
+
+def _waitlist_row(e: WaitlistEntry, has_account: bool) -> dict:
+    return {"id": str(e.public_id), "email": e.email, "name": e.name, "interest": e.interest,
+            "created_at": _iso(e.created_at), "approved_at": _iso(e.approved_at), "has_account": has_account}
+
+
+def _waitlist_entry(db: Session, entry_id: uuid.UUID) -> WaitlistEntry:
+    entry = db.scalar(select(WaitlistEntry).where(WaitlistEntry.public_id == entry_id))
+    if entry is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Not on the waitlist")
+    return entry
+
+
+@router.get("/waitlist")
+def waitlist(admin: User = Depends(admin_user), db: Session = Depends(get_db)):
+    """Everyone on the list, newest first, and whether each has made an account yet."""
+    entries = list(db.scalars(select(WaitlistEntry).order_by(WaitlistEntry.created_at.desc(), WaitlistEntry.id.desc())))
+    emails = [e.email for e in entries]
+    with_account = set(db.scalars(select(User.email).where(User.email.in_(emails)))) if emails else set()
+    _audit(db, admin, None, "view_waitlist")
+    return {"join_mode": config.JOIN_MODE, "email_enabled": email.enabled(),
+            "entries": [_waitlist_row(e, e.email in with_account) for e in entries]}
+
+
+@router.post("/waitlist/{entry_id}/approve")
+def approve_waitlist(entry_id: uuid.UUID, background: BackgroundTasks, admin: User = Depends(admin_user),
+                     db: Session = Depends(get_db)):
+    """Let this email create an account, and email them the invitation (sent again if pressed again)."""
+    entry = _waitlist_entry(db, entry_id)
+    entry.approved_at = entry.approved_at or utcnow()
+    _audit(db, admin, None, f"waitlist approved: {entry.email}")
+    background.add_task(email.send, entry.email, f"You're in: your {config.APP_NAME} invitation", wl.invite_text(entry))
+    has_account = db.scalar(select(User.id).where(User.email == entry.email)) is not None
+    return _waitlist_row(entry, has_account)
+
+
+@router.delete("/waitlist/{entry_id}")
+def remove_waitlist(entry_id: uuid.UUID, admin: User = Depends(admin_user), db: Session = Depends(get_db)):
+    """Take someone off the list (e.g. they asked to be removed). An account they made stays."""
+    entry = _waitlist_entry(db, entry_id)
+    db.delete(entry)
+    _audit(db, admin, None, f"waitlist removed: {entry.email}")
+    return {"ok": True}
 
 
 # --- two-step sign-in for the admin account ------------------------------------------------

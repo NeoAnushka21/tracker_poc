@@ -757,6 +757,12 @@ button.danger { color: var(--error); }
 }
 .consent-box input { width: auto; margin-top: 2px; flex-shrink: 0; }
 .consent-note { margin: 8px 0 2px; line-height: 1.4; }
+/* Create account while sign-up is by invitation (JOIN_MODE=waitlist) */
+.invite-note {
+  margin: 0; line-height: 1.45; padding: 10px 12px; border-radius: 8px;
+  background: var(--accent-soft); border: 1px solid color-mix(in srgb, var(--accent) 30%, transparent);
+}
+.invite-note a { font-weight: 700; }
 
 /* ---------- charts ---------- */
 .chart { position: relative; width: 100%; }

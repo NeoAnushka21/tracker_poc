@@ -14,7 +14,7 @@ from app.google_auth import GoogleTokenError, verify_google_token
 from app.schemas import (
     AdminLoginIn, Credentials, DeleteAccountIn, ForgotPasswordIn, GoogleLoginIn, PasswordChangeIn, RegisterIn, ResetPasswordIn,
 )
-from app.services import email, password_reset, ratelimit, totp
+from app.services import email, password_reset, ratelimit, totp, waitlist
 from app.services.accounts import delete_user_and_data
 from app.security import (
     COOKIE_NAME, burn_verify_time, create_session_token, hash_password, needs_rehash, verify_password,
@@ -51,7 +51,8 @@ def consent_text():
 @router.get("/options")
 def options():
     """Sign-in options for the login screen (the Google button shows only when configured)."""
-    return {"google_client_id": GOOGLE_CLIENT_ID or None, "password_reset": email.enabled()}
+    return {"google_client_id": GOOGLE_CLIENT_ID or None, "password_reset": email.enabled(),
+            "join_mode": config.JOIN_MODE}
 
 
 @router.post("/register", status_code=status.HTTP_201_CREATED)
@@ -63,6 +64,7 @@ def register(body: RegisterIn, request: Request, response: Response, db: Session
         raise HTTPException(status.HTTP_403_FORBIDDEN, "This email is reserved. Use Admin login.")
     if db.scalars(select(User).where(User.email == body.email)).first():
         raise HTTPException(status.HTTP_409_CONFLICT, "An account with this email already exists")
+    waitlist.require_invite(db, body.email)
     user = User(email=body.email, hashed_password=hash_password(body.password),
                 consent_at=utcnow(), consent_version=CONSENT_VERSION)
     _record_login(user)
@@ -147,6 +149,7 @@ def google_login(body: GoogleLoginIn, request: Request, response: Response, db: 
                 return {"status": "link_required", "email": google["email"]}
             user.google_sub = google["sub"]
         else:
+            waitlist.require_invite(db, google["email"])
             if not body.consent:
                 return {"status": "consent_required", "email": google["email"]}
             user = User(email=google["email"], hashed_password="", google_sub=google["sub"],

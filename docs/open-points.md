@@ -1,6 +1,6 @@
 # Open points
 
-> Last updated: 2026-10-01 (welcome page live: start page for signed-out visitors; barcode scanning marked next up; photo logging added as experimental; MacBro avatar shows the logo; new logo and theme done; 2026-09-30: duplicate pack labels handled; parked: sharing foods between users, staged plan in §5; tabs renamed: Saved Food → **My Foods**, Body Profile → **Body Stats**; renamed to Tandurust, display only; Explore split into Recipes and Workouts; Meals tab, Check your progress, guide spotlight, chevron fix done; Dashboard redesign done; Chat tab → chat window on Home done; Saved Food tabs Generic / Branded / My Recipes done; Saved Food + Add done, follow-ups in §5; branded foods: Brands filter + Open Food Facts label check done; follow-ups logged in §5; keep-awake done: UptimeRobot monitor live; staging environment plan parked; Settings reorganised; country list narrowed to India; optional About you questions built; country and region in onboarding; profile question ideas logged; database hardening phase 1 done; monthly USDA food list check built; general food list built with raw/cooked questions; follow-ups logged; general food list idea logged; typo-tolerant saved-food and meal-word matching done, learning your spellings parked; Render waking page seen on the app's direct link, noted under section 4; Saved Food list, Body Profile rename, Explore tab placeholder and its recipe-collection follow-up; reward-style UI pass done, its follow-ups in section 5; Continue with Google built; phone app and open-source licence parked; standards gap review, section 8; #1 limits, #3 privacy, #5 headers and #4 sessions, #6 CI and #7 monitoring (code) and #8 password hashing and #9 forgot password (code) and #10 Alembic and #11 pinned dependencies and #12 health wording done; #13/#14 lint + a11y fixes, #15, #16, #20 done; #17, #18 need decisions).Until at least 2026-10-06 the app is used by one person (the owner), and the focus is the single-user experience, UI and features.
+> Last updated: 2026-10-01 (welcome page: invite-only made explicit at every Join, "Who it's for" section; launch plan §1a built: Demo tour, Join the community waitlist, invite-only sign-up with Admin → Waitlist; follow-ups in §1a; launch plan parked in §1a: Demo walkthrough, Join-the-community waitlist, invite-only access; welcome page live: start page for signed-out visitors; barcode scanning marked next up; photo logging added as experimental; MacBro avatar shows the logo; new logo and theme done; 2026-09-30: duplicate pack labels handled; parked: sharing foods between users, staged plan in §5; tabs renamed: Saved Food → **My Foods**, Body Profile → **Body Stats**; renamed to Tandurust, display only; Explore split into Recipes and Workouts; Meals tab, Check your progress, guide spotlight, chevron fix done; Dashboard redesign done; Chat tab → chat window on Home done; Saved Food tabs Generic / Branded / My Recipes done; Saved Food + Add done, follow-ups in §5; branded foods: Brands filter + Open Food Facts label check done; follow-ups logged in §5; keep-awake done: UptimeRobot monitor live; staging environment plan parked; Settings reorganised; country list narrowed to India; optional About you questions built; country and region in onboarding; profile question ideas logged; database hardening phase 1 done; monthly USDA food list check built; general food list built with raw/cooked questions; follow-ups logged; general food list idea logged; typo-tolerant saved-food and meal-word matching done, learning your spellings parked; Render waking page seen on the app's direct link, noted under section 4; Saved Food list, Body Profile rename, Explore tab placeholder and its recipe-collection follow-up; reward-style UI pass done, its follow-ups in section 5; Continue with Google built; phone app and open-source licence parked; standards gap review, section 8; #1 limits, #3 privacy, #5 headers and #4 sessions, #6 CI and #7 monitoring (code) and #8 password hashing and #9 forgot password (code) and #10 Alembic and #11 pinned dependencies and #12 health wording done; #13/#14 lint + a11y fixes, #15, #16, #20 done; #17, #18 need decisions).Until at least 2026-10-06 the app is used by one person (the owner), and the focus is the single-user experience, UI and features.
 
 **How this doc works (standing rule, 2026-09-29):** every idea, option or follow-up that comes up in a discussion but isn't built goes here, in the same change as the discussion's work, so nothing gets lost. Each item is either **open** (may be built later), **on hold**, or **decided against** (kept with the reason, so it isn't re-discussed from scratch). When an item is built, it moves to **Done** at the bottom with the date, and the feature itself is documented in the relevant doc.
 
@@ -20,7 +20,7 @@ Check the real numbers in **Admin → AI usage** before deciding.
 **Proposed rollout plan (free, open source):**
 
 *Before the first wave:*
-1. **Invite-only sign-up:** the admin creates invite codes, so the admin controls each wave.
+1. ~~**Invite-only sign-up**~~ **Done 2026-10-01** as a waitlist instead of invite codes: the admin approves emails in Admin → Waitlist (§1a). Still open: a cap on active users per wave.
 2. ~~**Daily AI allowance per user**~~ **Done 2026-09-29**: 20 AI messages a day per user (`AI_DAILY_MESSAGE_LIMIT`), resets at local midnight; fast paths, saved foods and buttons don't count. Still open: change it per user or from **Admin**, and show each user's use in Admin.
 3. ~~**Wait instead of failing**~~ **Done 2026-09-29** for solo use: the server now waits out short rate limits (see Done). Still open: a visible "MacBro is busy…" hint while it waits.
 4. ~~**Keep-awake pinger**~~ **Done 2026-09-30**: UptimeRobot pings `/api/health` every 5 minutes (it doesn't touch the database), so nobody waits 30–60 s.
@@ -38,6 +38,46 @@ Check the real numbers in **Admin → AI usage** before deciding.
 - Cerebras: advertised as "1M tokens/day free", but now appears to be a 30-day $5 trial.
 - OpenRouter free models: 50 requests a day, or 1,000 after a one-time $10 purchase.
 - A CPU-only self-hosted model: too slow for our prompts.
+
+## 1a. Launch: Demo walkthrough, "Join the community" waitlist, invite-only access (discussed 2026-10-01, parked)
+
+**Idea (owner, 2026-10-01):** before opening sign-up, collect the emails of people who want to use the app. The website gets a detailed **Demo** tab that walks through the app. **Join the community** opens a short form instead of the sign-in page, and the admin gets an email for each interested person. The list shows how much demand there is, so we can prepare for the traffic, then let people in by invitation, a few at a time (fits the Groq limits in §1). The owner first suggested two sites (the live one linked to the app, and a copy whose Join button opens the form), both with the Demo.
+
+**Status: built 2026-10-01** (owner: "proceed with your recommended changes for demo and website"), as recommended below; see Done. The open decisions were settled with defaults, listed under "Follow-ups". Production switched to `JOIN_MODE=waitlist` in `render.yaml`.
+
+**Recommended shape (Claude, 2026-10-01; built as described):**
+
+| Part | Recommendation | Why |
+|---|---|---|
+| One site or two | **One** welcome page (`frontend/welcome.html`) with a setting for the Join button: `open` (sign-in, today) / `waitlist` (form) / `invite` (form; approved emails can sign in). If two public links are really needed, serve both from the same source (e.g. `/` and `/join`). | Two copies drift apart. And while the live link's Join still goes to sign-in, anyone who finds it skips the waitlist. |
+| Gate | Enforce it **at sign-in on the server**: an allowlist of approved emails. Anyone not approved sees "You're on the waitlist" instead of the app. | A gate that's only on the page can be bypassed. |
+| Sign-ups | Store them in a `waitlist` table (email, name, optional "what would you track", date, status), with an **Admin → Waitlist** list and an **Approve** button that adds the email to the allowlist. The email to the admin inbox is only an alert. | Email alone leaves the list in the inbox, with no counts and no approving. |
+| Email | Reuse **Brevo** (`backend/app/services/email.py`, already used for forgot password) for the admin alert and the invite email. | Render's free plan is believed to block SMTP, so Gmail SMTP likely won't work. Brevo is free. |
+| Form safety | Consent line ("we'll only email you about access"), a hidden honeypot field, a rate limit, and a way to be removed. Mention the waitlist on `/privacy`. | Bots, and the DPDP Act (§2a legal review). |
+| Demo | A **step-by-step screenshot walkthrough** with captions (log a meal → macros → MacBro chat with confirm buttons → My Foods → Body Stats → Explore), reusing the wording from the GuideTour and user guide. Maybe a short GIF or video later. | No LLM calls. A live demo account would use the shared Groq quota on every visitor. |
+
+**Flow:** visitor → welcome page → Demo → Join the community form → `waitlist` row + alert email → admin approves → invite email → Google sign-in lets them in.
+
+**Suggested order:** (1) Demo walkthrough (useful whatever is decided), (2) waitlist form + Admin list, (3) invite gating + invite emails.
+
+**Decisions (defaults taken when building; the owner can change any):**
+1. **One site with a switch** (`JOIN_MODE`), not two copies. Both public links (static site and `/welcome`) show the same page.
+2. **Form fields:** name, email, optional "what would you like to track?". Not asked: "how did you hear about us".
+3. **Invite email sent automatically on Approve** (Brevo), with **Resend invite**. Until Brevo is set up, emails are only logged and the owner tells people by hand.
+4. **No cap per wave yet**: the owner approves by hand, so the owner decides each wave's size.
+
+**Follow-ups (open):**
+
+| Item | Status | Notes |
+|---|---|---|
+| Set up Brevo | Open (owner) | Needed for the waitlist alert and invitation emails too, not only Forgot password (deployment.md). |
+| Automatic cap on active users | Open | e.g. refuse new accounts past N active users even if approved; today approval is the only gate. |
+| "How did you hear about us?" field | Open, optional | Useful for knowing which channel works; left out to keep the form short. |
+| Demo as a short video or GIF | Open, later | The demo is drawn in HTML (follows the theme, no quota). A recorded walkthrough could sit next to it. |
+| Waitlist row in Download my data | Open, small | The export doesn't include a user's waitlist row yet (people without an account can't download anything; they email us). Deleting an account removes the row. |
+| Unsubscribe / self-removal link | Open | Today: email us to be removed. A one-click link in emails would need a signed token. |
+| Waitlist export (CSV) for the admin | Open, small | For planning waves outside the app. |
+| Test on a throwaway Postgres | Done in CI | Docker wasn't running locally on 2026-10-01; CI runs the whole suite on Postgres 17 before every deploy. |
 
 ## 2. Users' own AI keys
 
@@ -217,6 +257,8 @@ Checked against OWASP ASVS / Top 10, OWASP API Security Top 10, OWASP Top 10 for
 
 | Item | Done | Where it's documented |
 |---|---|---|
+| **Invite-only said plainly, and who it's for** (owner, 2026-10-01): while `JOIN_MODE=waitlist` every Join button reads **Join the waitlist** with an "Invite-only for now" note (joining registers you to be invited, it doesn't open the app), the form is **Join the Tandurust waitlist** with a "What joining means" box, and the closing and demo calls say the same; if the mode can't be read, the page assumes invite-only. New **Who it's for** section (top bar link, hero line): gym regulars (protein, fiber, protein streak), athletes and people in training, anyone watching meals and macros, and the water tracker as an optional extra | 2026-10-01 | user-guide "Opening Tandurust", technical-overview §7 |
+| **Demo tour and Join the community waitlist** (§1a): welcome page **Demo** (seven stops of example screens drawn in HTML, Back / Next, arrow keys) and **See the demo** / **Join the community** buttons; `JOIN_MODE=waitlist` turns Join into a form (name, email, interest, consent, honeypot) that stores a `waitlist` row and alerts the admin; new accounts (email or Google) only for approved emails, with a note on Create account; **Admin → Waitlist** with Approve (emails the invitation), Resend invite, Remove; CORS for the static site on `/api/waitlist` only; privacy page updated | 2026-10-01 | user-guide "Opening Tandurust", hld §4.3a, technical-overview §3/§4/§5/§7/§9, deployment "Invite-only sign-up and the waitlist" |
 | **Welcome page** (owner's design, reviewed as drafts 1-12): what Tandurust is, three auto-playing example chats with MacBro (amounts given / missing / raw or cooked), Meet MacBro, chat or by hand, My Foods, pricing (free today, 20 AI messages a day, a paid plan maybe later), About (2026, India, principles), early days and feedback email, Join / Log in. The start page of the always-on static site (replaces the launcher; wakes the app in the background, spinner only if needed) and of the app for everyone signed out (`/welcome`); `#login` / `#signup` open the sign-in page in that mode | 2026-10-01 | user guide "Opening Tandurust", §1; technical overview §2, §7, §9; HLD §3.1; deployment; README; CLAUDE.md |
 | **Light green app background:** page `#f6faf3`, top bar and tabs `#e4efdc` (two shades darker; dark mode `#1a2217`), matching the welcome page draft; the collar line on MacBro's shirt removed | 2026-10-01 | technical overview (styles.css header comment) |
 | **MacBro's avatar carries the logo:** the emblem replaces "MB" on his t-shirt; the shirt is charcoal `#1f2937` and his circle pale green `#edf6e6` in both themes (a white or cream shirt hid the logo's amber and yellow-green; a dark circle in dark mode hid the shirt) | 2026-10-01 | technical overview §7 |

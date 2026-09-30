@@ -336,6 +336,22 @@ class PasswordReset(Base):
     used_at: Mapped[datetime | None] = mapped_column(UTCDateTime)
 
 
+class WaitlistEntry(Base):
+    """Someone who pressed "Join the community" on the welcome page while sign-up is by invitation
+    (config.JOIN_MODE = "waitlist"). The admin approves them in Admin → Waitlist; an approved email
+    may then create an account. Not linked to `users`: most people on the list have no account yet."""
+    __tablename__ = "waitlist"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    public_id: Mapped[uuid.UUID] = mapped_column(Uuid, unique=True, default=new_public_id)
+    email: Mapped[str] = mapped_column(String(255), unique=True, index=True)
+    name: Mapped[str] = mapped_column(String(80))
+    interest: Mapped[str | None] = mapped_column(String(300))       # "what would you like to track?"
+    consent_at: Mapped[datetime] = mapped_column(UTCDateTime, default=utcnow)
+    created_at: Mapped[datetime] = mapped_column(UTCDateTime, default=utcnow)
+    approved_at: Mapped[datetime | None] = mapped_column(UTCDateTime)
+
+
 class UserPreferences(Base):
     """Optional "about you" answers (2026-09-30), one row per user; every field can stay empty.
     A row with only `skipped_at` means the user pressed Skip, so they aren't asked again.

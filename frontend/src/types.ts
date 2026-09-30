@@ -297,6 +297,14 @@ export type AdminUserDetail = {
 
 export type AuditRow = { at: string; admin: string | null; action: string; user: string | null };
 
+/** Who can create an account: anyone ("open"), or only emails the admin approved from the waitlist. */
+export type JoinMode = "open" | "waitlist";
+export type WaitlistRow = {
+  id: string; email: string; name: string; interest: string | null;
+  created_at: string; approved_at: string | null; has_account: boolean;
+};
+export type AdminWaitlist = { join_mode: JoinMode; email_enabled: boolean; entries: WaitlistRow[] };
+
 export type Streak = { current: number; best: number; today_done: boolean };
 
 export type Streaks = {
