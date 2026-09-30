@@ -1,5 +1,7 @@
 """The built-in general food list (USDA): first logs of common foods without the AI, and
 "raw or cooked?" asked, never assumed."""
+import json
+
 import pytest
 
 from app.services import general_foods
@@ -150,3 +152,23 @@ def test_dashboard_general_food_preview_and_state_question(client, user, fake_ll
     assert r["status"] == "estimate" and r["action"]["payload"]["totals"]["calories"] == 260
     assert no.calls == [] and allowance(client)["used"] == 0
 
+
+# --- monthly USDA check (offline: USDA calls replaced) ---------------------------------------------
+
+def test_monthly_check_reports_only_new_usda_foods(tmp_path, monkeypatch):
+    import sys
+    from pathlib import Path
+    sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "scripts"))
+    import check_usda_updates as check
+
+    seen = tmp_path / "seen.json"
+    seen.write_text('{"1": "Apples, raw", "2": "Kale, raw"}', encoding="utf-8")
+    monkeypatch.setattr(check, "SEEN", seen)
+    monkeypatch.setattr(check, "rebuild", lambda: [])
+    monkeypatch.setattr(check, "foundation_foods", lambda: {"1": "Apples, raw", "3": "Jackfruit, raw"})
+    report = tmp_path / "report.md"
+    check.main(report)
+    text = report.read_text(encoding="utf-8")
+    assert "- Jackfruit, raw (fdc 3)" in text and "- Kale, raw (fdc 2)" in text   # new, and removed
+    assert "Apples" not in text                                                  # already seen
+    assert json.loads(seen.read_text(encoding="utf-8")) == {"1": "Apples, raw", "3": "Jackfruit, raw"}

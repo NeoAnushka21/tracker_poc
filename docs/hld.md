@@ -75,6 +75,8 @@ flowchart LR
     R -->|HTTPS| G[(Groq: gpt-oss-20b / 120b)]
     GH[GitHub main] -->|push| CI[GitHub Actions: tests SQLite + Postgres,<br/>build, dependency audit]
     CI -->|all pass = build + deploy| R
+    M[Monthly GitHub Action:<br/>USDA food list check] -->|download + free list API| USDA[(USDA FoodData Central)]
+    M -->|pull request with a report, only if something changed| GH
 ```
 
 The free web service sleeps when idle, and Render shows its own page while it wakes. So people open the always-on **launcher** (a free static site). It shows our wake screen until the app answers, then opens it. Inside the app, a request that hits the sleeping server shows the same wake screen as an overlay and is retried once the server is back. The app itself stays one service, keeping the site and the API on one address (simple same-site cookie, one cold start). The server and the database share a region because one chat message makes many database round trips. Secrets are set in the Render dashboard. Step-by-step: [deployment.md](deployment.md).
@@ -235,7 +237,7 @@ Column-level detail is in [technical-overview.md](technical-overview.md#5-data-m
 | Prompt | Stable system prompt (MacBro persona and rules, cacheable) plus per-turn dynamic context (date, time, targets, today's totals, my foods, item ids) |
 | History | Today's chat only (+3 h grace): last 6 messages on the small tier, 12 on the large |
 | Per-call size | Only the tools and prompt sections the intent needs, and only saved foods and general-list foods named in the message, typos allowed (25–87% fewer instruction tokens per call) |
-| General food list | ~300 common foods per 100 g from USDA FoodData Central (SR Legacy, public domain), a JSON file shipped with the backend (`app/data/general_foods.json`, built by `scripts/build_general_foods.py` from our curated `general_foods_spec.py`). Read-only, loaded once, no table. Order: Saved Food → general list → AI. Raw/cooked pairs are asked, never assumed. Confirmed foods are copied into Saved Food (`source = general`). |
+| General food list | ~300 common foods per 100 g from USDA FoodData Central (SR Legacy, public domain), a JSON file shipped with the backend (`app/data/general_foods.json`, built by `scripts/build_general_foods.py` from our curated `general_foods_spec.py`). Read-only, loaded once, no table. Order: Saved Food → general list → AI. Raw/cooked pairs are asked, never assumed. Confirmed foods are copied into Saved Food (`source = general`). A monthly GitHub Action rebuilds it from USDA and opens a pull request only when numbers change or USDA adds foods ([deployment.md](deployment.md)). |
 | Observability | `llm_usage` table and the admin **AI usage** panel (calls, tokens, fast-path share, cooldowns) |
 | Guards | Energy balance, quantity cleanup, false "Logged" claim nudge, missed-water nudge, move-vs-delete guard, tool allow-list per routed intent (other tool names are refused) |
 | Failure | Any provider error → HTTP 503 with a friendly message (`SHOW_LLM_ERRORS=true` shows details in dev) |

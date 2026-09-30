@@ -1,0 +1,62 @@
+# Monthly check of the general food list (backend/app/data/general_foods.json) against USDA.
+# Rebuilds the list from the latest USDA download and lists new USDA Foundation Foods. When
+# anything changed it opens (or updates) one pull request with a report; nothing is deployed
+# until you review and merge it. Free: GitHub Actions minutes + the free USDA API.
+#
+# One-time setup (GitHub → Settings):
+# - Actions → General → Workflow permissions: allow "GitHub Actions to create pull requests".
+# - Optional: Secrets → Actions → USDA_API_KEY (free key from https://api.data.gov/signup);
+#   without it the shared DEMO_KEY is used, which is enough for one run a month.
+name: USDA food list refresh
+
+on:
+  schedule:
+    - cron: "0 3 1 * *"           # 03:00 UTC on the 1st of every month
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+concurrency:
+  group: usda-refresh
+  cancel-in-progress: false
+
+jobs:
+  refresh:
+    name: Rebuild the list and look for new USDA foods
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      BRANCH: usda-refresh
+      GH_TOKEN: ${{ github.token }}
+      USDA_API_KEY: ${{ secrets.USDA_API_KEY }}
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version-file: .python-version
+          cache: pip
+          cache-dependency-path: backend/requirements.txt
+      - run: pip install -r backend/requirements.txt
+      - name: Check USDA
+        working-directory: backend
+        run: python scripts/check_usda_updates.py "$RUNNER_TEMP/report.md"
+      - name: Open or update the pull request
+        run: |
+          if git diff --quiet -- backend/app/data; then
+            echo "Nothing changed at USDA since the last check."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git switch -C "$BRANCH"
+          git add backend/app/data
+          git commit -m "USDA food list check $(date -u +%Y-%m)"
+          git push --force origin "$BRANCH"
+          if gh pr view "$BRANCH" --json state -q .state 2>/dev/null | grep -q OPEN; then
+            gh pr edit "$BRANCH" --body-file "$RUNNER_TEMP/report.md"
+          else
+            gh pr create --head "$BRANCH" --base main --title "USDA food list check $(date -u +%Y-%m)" \
+              --body-file "$RUNNER_TEMP/report.md"
+          fi

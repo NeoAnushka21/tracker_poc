@@ -1,6 +1,6 @@
 # Deploying OmniAI (Render + Neon)
 
-> Last updated: 2026-09-29 (always-on launcher page).
+> Last updated: 2026-09-30 (monthly USDA food list check; earlier: always-on launcher page).
 
 **Open the app from the launcher:** https://omniai-app.onrender.com (static site `omniai-app`, never sleeps; the exact address is shown on its Render page). **App:** https://omniai-hkv2.onrender.com (Render service `omniai`, Singapore) · Neon project `young-star-73873699` (AWS Singapore). Local data was copied into Neon on 2026-09-29 (159 rows, 13 tables); Neon is now the real database. The NVIDIA backup is off in production, and there's no uptime pinger yet. Update this file whenever the deployment setup changes (see [README.md](README.md)).
 
@@ -168,6 +168,21 @@ The app sends a Content-Security-Policy and other security headers itself (see t
 | Dependency vulnerability audit | `pip-audit` on `backend/requirements.txt`, `npm audit --omit=dev --audit-level=high` |
 
 Render deploys `main` only when all four pass. See a run under the repository's **Actions** tab; a red X on a commit means it wasn't deployed. If an audit fails because of a newly published vulnerability, upgrade that package (or, if it can't be fixed yet and doesn't affect us, note why and relax the check) to unblock deploys. **One-time check:** Render → each service → **Settings** → **Auto-Deploy** should say **After CI Checks Pass** (the Blueprint sets it; if Blueprint sync is off, set it there by hand).
+
+## Monthly USDA food list check (set up 2026-09-30)
+
+`.github/workflows/usda-refresh.yml` runs at 03:00 UTC on the 1st of every month (or by hand: **Actions → USDA food list refresh → Run workflow**). It runs `backend/scripts/check_usda_updates.py`, which:
+
+1. downloads the USDA SR Legacy data, rebuilds `backend/app/data/general_foods.json` and lists any food whose numbers changed (SR Legacy has been frozen since 2018, so normally none), and
+2. lists USDA **Foundation Foods** added or removed since the last check (snapshot: `backend/app/data/usda_foundation_seen.json`; baseline 2026-09-30, 394 foods).
+
+If nothing changed, it stops. Otherwise it opens (or updates) one pull request, **"USDA food list check YYYY-MM"**, on the branch `usda-refresh`, with the report as its text. Nothing reaches the app until you merge it. New foods aren't added automatically: to add one, give it a short name, aliases and raw/cooked in `backend/scripts/general_foods_spec.py` and rebuild (see the technical overview). Merging only records that they were seen.
+
+**One-time setup:**
+- GitHub → repository **Settings → Actions → General → Workflow permissions**: tick **Allow GitHub Actions to create and approve pull requests**. Without it, the run fails at the last step.
+- Optional: a free USDA key from https://api.data.gov/signup as the Actions secret **`USDA_API_KEY`**. Without it the shared `DEMO_KEY` is used (about 10 requests an hour; a run needs 2–3).
+
+Pull requests opened by this workflow don't start CI themselves (a GitHub rule for its built-in token). The checks run on `main` after you merge, and Render deploys only when they pass, as usual. Cost: free (GitHub Actions minutes and the USDA API).
 
 ## Updating and troubleshooting
 
