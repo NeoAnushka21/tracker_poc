@@ -544,6 +544,61 @@ button.danger { color: var(--error); }
 .food-micros-edit { border: none; padding: 0; margin: 10px 0 0; min-width: 0; }
 .food-micros-edit legend { padding: 0; font-weight: 650; margin-bottom: 2px; }
 .empty-foods { padding: 24px 0; text-align: center; }
+/* branded foods: label check (same warning colours as .badge.pending) */
+.source-tag.unchecked { background: color-mix(in srgb, var(--status-warning) 15%, var(--surface)); color: var(--status-warning); }
+.segmented .to-check {
+  display: inline-grid; place-items: center; min-width: 18px; height: 18px; margin-left: 6px; padding: 0 5px;
+  border-radius: 999px; font-size: 0.7rem; font-weight: 700; vertical-align: 1px;
+  background: color-mix(in srgb, var(--status-warning) 15%, var(--surface)); color: var(--status-warning);
+}
+.brand-group { margin-top: 14px; }
+.brand-group h3 { margin: 0 0 6px; font-size: 0.95rem; font-weight: 700; }
+.label-nudge { margin-top: 2px; }
+.label-nudge .link { padding: 2px 0; font-weight: 600; }
+.food-notice { margin: 6px 0 0; color: var(--accent); font-weight: 600; }
+.label-ticks { display: flex; flex-direction: column; gap: 2px; margin-top: 8px; }
+.label-ticks .check { margin: 2px 0; }
+.label-check { background: var(--surface-2); border-radius: var(--radius-sm); padding: 14px; margin-top: 8px; animation: fade-up 0.25s var(--ease-out) both; }
+.label-search { display: flex; gap: 8px; }
+.label-search input { flex: 1; min-width: 0; }
+.label-results { list-style: none; margin: 8px 0; padding: 0; }
+.label-results li {
+  display: flex; justify-content: space-between; align-items: center; gap: 10px;
+  padding: 10px 12px; margin-bottom: 6px; background: var(--surface); border: 1px solid var(--border); border-radius: 10px;
+}
+.label-product { min-width: 0; overflow-wrap: anywhere; }
+.label-results li button { flex-shrink: 0; font-weight: 600; color: var(--accent); }
+.label-check-foot { display: flex; justify-content: flex-end; align-items: center; gap: 8px; flex-wrap: wrap; margin-top: 6px; }
+.label-finder { margin: 6px 0; }
+.label-picked { margin: 4px 0 8px; padding: 8px 10px; border-radius: 10px; background: var(--accent-soft); }
+.energy-warning { margin: 10px 0 0; padding: 8px 10px; border-radius: 10px; color: var(--status-warning); background: color-mix(in srgb, var(--status-warning) 12%, var(--surface)); }
+
+/* Saved Food → + Add */
+.foods-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; }
+.add-food-btn { flex-shrink: 0; white-space: nowrap; }
+.add-food-panel { margin: 14px 0 6px; padding: 14px; border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--surface); animation: fade-up 0.25s var(--ease-out) both; }
+.add-food-head { display: flex; justify-content: space-between; align-items: center; gap: 8px; flex-wrap: wrap; }
+.add-food-head h3 { margin: 0; font-size: 1rem; }
+.add-choices { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; margin-top: 12px; }
+.add-choice {
+  display: flex; flex-direction: column; gap: 4px; text-align: left; padding: 14px; border-radius: var(--radius-sm);
+  border: 1px solid var(--border); background: var(--surface-2); color: var(--text);
+}
+.add-choice:hover, .add-choice:focus-visible { border-color: var(--accent); background: var(--accent-soft); }
+.add-choice b { font-size: 0.97rem; }
+.add-template { margin-top: 12px; }
+.add-template h4 { margin: 14px 0 6px; font-size: 0.88rem; font-weight: 650; }
+.add-template details.food-micros-edit summary { cursor: pointer; font-weight: 650; margin: 10px 0 2px; }
+.add-template .check { margin-top: 10px; }
+.recipe-rows { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.recipe-rows li { display: grid; grid-template-columns: minmax(0, 3fr) minmax(0, 1fr) minmax(0, 1fr) auto; gap: 6px; align-items: center; }
+.recipe-rows input { min-width: 0; }
+.recipe-preview { margin-top: 10px; padding: 10px 12px; border-radius: 10px; background: var(--accent-soft); }
+.recipe-preview .ingredient-list { margin-top: 8px; background: var(--surface); }
+@media (max-width: 640px) {
+  .add-choices { grid-template-columns: 1fr; }
+  .recipe-rows li { grid-template-columns: minmax(0, 1fr) 72px 72px auto; }
+}
 @media (max-width: 860px) {
   /* phone: name and calories on one line, the three buttons under them on the right */
   .food-line { grid-template-columns: minmax(0, 1fr) auto; row-gap: 2px; }

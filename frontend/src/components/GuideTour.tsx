@@ -88,7 +88,7 @@ function steps(name: string | null): Step[] {
     {
       tab: "foods",
       title: "6. Saved Food remembers for you",
-      body: <p>Every food you confirm is saved here with its macros and micronutrients, so the next time you log it (e.g. "40g pineapple") the numbers are exactly the same, straight from your library, without using an AI message (small typos like "panner" are fine). About 300 common foods (fruit, dals, rice, milk, chicken…) are built in too, and for foods like rice or chicken MacBro asks whether the weight was raw or cooked instead of guessing. Recipes you save show up here too. The list shows each name with its calories; tap <b>Additional info</b> for the other macros and micronutrients. You can search, correct or delete any of them.</p>,
+      body: <p>Every food you confirm is saved here with its macros and micronutrients, so the next time you log it (e.g. "40g pineapple") the numbers are exactly the same, straight from your library, without using an AI message (small typos like "panner" are fine). About 300 common foods (fruit, dals, rice, milk, chicken…) are built in too, and for foods like rice or chicken MacBro asks whether the weight was raw or cooked instead of guessing. Recipes you save show up here too. The list shows each name with its calories; tap <b>Additional info</b> for the other macros and micronutrients. You can search, correct or delete any of them. Packaged foods you log with their brand ("10 g Amul butter") are grouped under <b>Brands</b>: press <b>Check label</b> to pick the real pack label from Open Food Facts, or type it in with the pencil. <b>+ Add</b> lets you add a branded product, a generic food or a recipe yourself.</p>,
     },
     {
       tab: "explore",

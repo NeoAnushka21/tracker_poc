@@ -38,7 +38,13 @@ function title(action: Action): string {
 const SOURCE_TAG: Record<string, { label: string; hint: string }> = {
   library: { label: "saved", hint: "Numbers from your saved foods" },
   recipe: { label: "recipe", hint: "Numbers from your saved recipe" },
+  unchecked: { label: "check label", hint: "The AI's memory of this product's label. After saving, check it in Saved Food → Brands" },
 };
+
+function tagFor(it: Item): { key: string; label: string; hint: string } | undefined {
+  const key = it.source && SOURCE_TAG[it.source] ? it.source : it.brand_name && it.source !== "library" ? "unchecked" : null;
+  return key ? { key, ...SOURCE_TAG[key] } : undefined;
+}
 
 function ItemsTable({ items, struck }: { items: Item[]; struck?: boolean }) {
   return (
@@ -48,13 +54,13 @@ function ItemsTable({ items, struck }: { items: Item[]; struck?: boolean }) {
       </thead>
       <tbody>
         {items.map((it, i) => {
-          const tag = it.source ? SOURCE_TAG[it.source] : undefined;
+          const tag = tagFor(it);
           return (
             <tr key={i}>
               <td>
                 {it.ingredient_name}
                 {it.brand_name && <span className="muted"> · {it.brand_name}</span>}
-                {tag && <span className={`source-tag ${it.source}`} title={tag.hint}>{tag.label}</span>}
+                {tag && <span className={`source-tag ${tag.key}`} title={tag.hint}>{tag.label}</span>}
               </td>
               <td className="num">{it.quantity} {it.unit}</td>
               <td className="num">{Math.round(it.calories)}</td>
@@ -90,12 +96,12 @@ function ItemsBrief({ items }: { items: Item[] }) {
   return (
     <ul className="items-brief">
       {items.map((it, i) => {
-        const tag = it.source ? SOURCE_TAG[it.source] : undefined;
+        const tag = tagFor(it);
         return (
           <li key={i}>
             <span>{it.ingredient_name}{it.brand_name && ` · ${it.brand_name}`}</span>
             <span className="num">{it.quantity} {it.unit}</span>
-            {tag && <span className={`source-tag ${it.source}`} title={tag.hint}>{tag.label}</span>}
+            {tag && <span className={`source-tag ${tag.key}`} title={tag.hint}>{tag.label}</span>}
           </li>
         );
       })}

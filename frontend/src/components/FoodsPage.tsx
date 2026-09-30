@@ -1,17 +1,32 @@
 import { useEffect, useMemo, useState, type FormEvent } from "react";
 import { api } from "../api";
 import type { Food, MicroField } from "../types";
+import LabelSearch from "./LabelSearch";
+import AddFoodPanel, { type AddKind } from "./AddFoodPanel";
 import { grams } from "../format";
 import { PencilIcon, TrashIcon } from "./icons";
 
-type Filter = "all" | "food" | "recipe";
+type Filter = "all" | "food" | "recipe" | "brand";
 
 const SOURCE_LABEL: Record<Food["source"], string> = {
   estimate: "learned from your logs",
   user: "edited by you",
   recipe: "your recipe",
   general: "from the general food list (USDA)",
+  label: "from the pack label",
 };
+
+function sourceText(f: Food): string {
+  if (f.source === "label") {
+    return f.off_code ? `from the pack label (Open Food Facts, barcode ${f.off_code})` : "from the pack label, typed in by you";
+  }
+  return isBranded(f) ? `${SOURCE_LABEL[f.source]} · label not checked yet` : SOURCE_LABEL[f.source];
+}
+
+const isBranded = (f: Food) => f.kind === "food" && !!f.brand_name;
+
+/** "Amul" and "amul " are one brand. */
+const brandKey = (f: Food) => (f.brand_name ?? "").trim().toLowerCase();
 
 function yieldText(f: Food): string {
   const parts: string[] = [];
@@ -71,7 +86,7 @@ function FoodInfo({ food, fields, id }: { food: Food; fields: MicroField[]; id: 
           </ul>
         </>
       )}
-      <p className="muted small food-source">All values {food.measures} · {SOURCE_LABEL[food.source]}</p>
+      <p className="muted small food-source">All values {food.measures} · {sourceText(food)}</p>
     </div>
   );
 }
@@ -96,6 +111,8 @@ function EditForm({ food, fields, onSaved, onCancel }: {
   // Blank = unknown (not zero), so a missing value never pretends the food has none.
   const [micros, setMicros] = useState<Record<string, string>>(() =>
     Object.fromEntries(Object.entries(food.micronutrients ?? {}).map(([k, n]) => [k, String(n)])));
+  const [labelChecked, setLabelChecked] = useState(food.label_checked);
+  const [correctLogs, setCorrectLogs] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const set = (k: keyof typeof v) => (e: { target: { value: string } }) => setV({ ...v, [k]: e.target.value });
@@ -120,6 +137,8 @@ function EditForm({ food, fields, onSaved, onCancel }: {
         grams_per_serving: optNum(v.grams_per_serving),
         micronutrients: Object.fromEntries(
           Object.entries(micros).filter(([, s]) => s.trim() !== "").map(([k, s]) => [k, Number(s)])),
+        label_checked: labelChecked,
+        correct_logs: labelChecked && correctLogs,
       }));
     } catch (err) {
       setError((err as Error).message);
@@ -164,6 +183,20 @@ function EditForm({ food, fields, onSaved, onCancel }: {
           </div>
         </fieldset>
       )}
+      {!isRecipe && v.brand_name.trim() && (
+        <div className="label-ticks">
+          <label className="check">
+            <input type="checkbox" checked={labelChecked} onChange={(e) => setLabelChecked(e.target.checked)} />
+            These values are from the pack label
+          </label>
+          {labelChecked && (
+            <label className="check">
+              <input type="checkbox" checked={correctLogs} onChange={(e) => setCorrectLogs(e.target.checked)} />
+              Also correct the times I've already logged it
+            </label>
+          )}
+        </div>
+      )}
       {isRecipe && <p className="muted small">A recipe's numbers come from its ingredients. To change them, tell the chat, e.g. "update my {food.name} recipe: 10 ml oil instead of 5".</p>}
       {error && <p className="error">{error}</p>}
       <div className="food-edit-actions">
@@ -174,12 +207,58 @@ function EditForm({ food, fields, onSaved, onCancel }: {
   );
 }
 
+/** Find the food's pack label on Open Food Facts and use it. Nothing changes until "Use this". */
+function LabelCheck({ food, onApplied, onClose }: {
+  food: Food; onApplied: (f: Food) => void; onClose: () => void;
+}) {
+  const [correctLogs, setCorrectLogs] = useState(true);
+  const [busy, setBusy] = useState<string | null>(null);   // the barcode being saved
+  const [error, setError] = useState<string | null>(null);
+
+  async function applyLabel(code: string) {
+    setBusy(code);
+    setError(null);
+    try {
+      onApplied(await api.applyLabel(food.id, code, correctLogs));
+    } catch (err) {
+      setError((err as Error).message);
+      setBusy(null);
+    }
+  }
+
+  return (
+    <div className="label-check">
+      <p className="muted small">
+        Saved now: <b className="num">{Math.round(food.calories)}</b> kcal {food.measures}. Pick the product that
+        matches your pack.
+      </p>
+      <LabelSearch initialQuery={`${food.brand_name ?? ""} ${food.name}`.trim()} busyCode={busy} onPick={(l) => applyLabel(l.code)} />
+      {error && <p className="error small">{error}</p>}
+      <label className="check small">
+        <input type="checkbox" checked={correctLogs} onChange={(e) => setCorrectLogs(e.target.checked)} />
+        Also correct the times I've already logged it
+      </label>
+      <div className="label-check-foot">
+        <button type="button" className="ghost" onClick={onClose}>Close</button>
+      </div>
+    </div>
+  );
+}
+
 function FoodRow({ food, fields, onChanged, onDeleted }: {
   food: Food; fields: MicroField[]; onChanged: (f: Food) => void; onDeleted: (id: number) => void;
 }) {
   const [editing, setEditing] = useState(false);
   const [open, setOpen] = useState(false);
+  const [checking, setChecking] = useState(false);
+  const [notice, setNotice] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+
+  function saved(f: Food, how: string) {
+    onChanged(f);
+    const n = f.logs_corrected ?? 0;
+    setNotice(n ? `${how} ${n} past log${n === 1 ? "" : "s"} corrected.` : how);
+  }
 
   async function remove() {
     if (!window.confirm(`Delete "${food.name}" from your ${food.kind === "recipe" ? "recipes" : "foods"}? Past logs won't change.`)) return;
@@ -200,6 +279,9 @@ function FoodRow({ food, fields, onChanged, onDeleted }: {
           <span className="food-name">{food.name}</span>
           {food.brand_name && <span className="muted"> · {food.brand_name}</span>}
           {food.kind === "recipe" && <span className="source-tag recipe">recipe</span>}
+          {isBranded(food) && (food.label_checked
+            ? <span className="source-tag label" title="Numbers from the pack label">label ✓</span>
+            : <span className="source-tag unchecked" title="Numbers are the AI's estimate of the label">label not checked</span>)}
         </div>
         <div className="food-kcal">
           <b className="num">{Math.round(food.calories).toLocaleString()}</b> kcal
@@ -220,10 +302,24 @@ function FoodRow({ food, fields, onChanged, onDeleted }: {
           </button>
         </div>
       </div>
+      {isBranded(food) && !checking && !editing && (
+        <div className="label-nudge small">
+          {!food.label_checked && <span className="muted">These numbers are the AI's estimate. </span>}
+          <button className="link" onClick={() => { setChecking(true); setNotice(null); }}>
+            {food.label_checked ? "Check label again" : "Check label"}
+          </button>
+        </div>
+      )}
+      {checking && (
+        <LabelCheck food={food} onClose={() => setChecking(false)}
+                    onApplied={(f) => { saved(f, "Label saved."); setChecking(false); }} />
+      )}
+      {notice && <p className="small food-notice" role="status">{notice}</p>}
       {open && <FoodInfo food={food} fields={fields} id={infoId} />}
       {error && <p className="error small food-error">{error}</p>}
       {editing && (
-        <EditForm food={food} fields={fields} onCancel={() => setEditing(false)} onSaved={(f) => { onChanged(f); setEditing(false); }} />
+        <EditForm food={food} fields={fields} onCancel={() => setEditing(false)}
+                  onSaved={(f) => { saved(f, "Saved."); setEditing(false); }} />
       )}
     </li>
   );
@@ -235,6 +331,8 @@ export default function FoodsPage({ dataVersion }: { dataVersion: number }) {
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState<Filter>("all");
   const [microFields, setMicroFields] = useState<MicroField[]>([]);
+  const [adding, setAdding] = useState(false);
+  const [added, setAdded] = useState<string | null>(null);
 
   useEffect(() => {
     api.micronutrientFields().then(setMicroFields).catch(() => setMicroFields([]));
@@ -247,12 +345,45 @@ export default function FoodsPage({ dataVersion }: { dataVersion: number }) {
   const shown = useMemo(() => {
     const q = query.trim().toLowerCase();
     return (foods ?? []).filter((f) =>
-      (filter === "all" || f.kind === filter) &&
+      (filter === "all" || (filter === "brand" ? isBranded(f) : f.kind === filter)) &&
       (!q || f.name.toLowerCase().includes(q) || (f.brand_name ?? "").toLowerCase().includes(q)),
     );
   }, [foods, query, filter]);
 
+  /** Brands view: one group per brand, A to Z; in each, foods whose label isn't checked come first. */
+  const brandGroups = useMemo(() => {
+    if (filter !== "brand") return [];
+    const groups = new Map<string, Food[]>();
+    for (const f of shown) groups.set(brandKey(f), [...(groups.get(brandKey(f)) ?? []), f]);
+    return [...groups.values()]
+      .map((fs) => [...fs].sort((a, b) => Number(a.label_checked) - Number(b.label_checked) || a.name.localeCompare(b.name)))
+      .sort((a, b) => (a[0].brand_name ?? "").localeCompare(b[0].brand_name ?? ""));
+  }, [shown, filter]);
+
   const recipeCount = foods?.filter((f) => f.kind === "recipe").length ?? 0;
+  const brandCount = foods?.filter(isBranded).length ?? 0;
+  const toCheck = foods?.filter((f) => isBranded(f) && !f.label_checked).length ?? 0;
+
+  const SHOW_AFTER_ADD: Record<AddKind, Filter> = { brand: "brand", generic: "food", recipe: "recipe" };
+
+  async function onAdded(f: Food, kind: AddKind) {
+    setAdding(false);
+    setQuery("");
+    setFilter(SHOW_AFTER_ADD[kind]);
+    setAdded(`Added ${f.name}${f.brand_name ? ` · ${f.brand_name}` : ""}.`);
+    // Reload: a recipe can also add its general-list ingredients to Saved Food.
+    try { setFoods(await api.foods()); } catch { setFoods((fs) => [f, ...(fs ?? [])]); }
+  }
+
+  const row = (f: Food) => (
+    <FoodRow
+      key={f.id}
+      food={f}
+      fields={microFields}
+      onChanged={(nf) => setFoods((fs) => fs?.map((x) => (x.id === nf.id ? nf : x)) ?? null)}
+      onDeleted={(id) => setFoods((fs) => fs?.filter((x) => x.id !== id) ?? null)}
+    />
+  );
 
   return (
     <section className="foods card">
@@ -261,17 +392,31 @@ export default function FoodsPage({ dataVersion }: { dataVersion: number }) {
           <h2>Saved Food</h2>
           <p className="muted small">
             Foods are saved automatically when you confirm a meal, so next time the app reuses the same
-            numbers. Save a recipe by telling the chat, e.g. "save my chapati as a recipe".
+            numbers. Add your own with <b>+ Add</b>: a branded product, a generic food or a recipe (or tell the
+            chat, e.g. "save my chapati as a recipe").
           </p>
         </div>
+        {!adding && (
+          <button type="button" className="primary add-food-btn" onClick={() => { setAdding(true); setAdded(null); }}>+ Add</button>
+        )}
       </div>
+
+      {adding && (
+        <AddFoodPanel foods={foods ?? []} fields={microFields} onAdded={onAdded} onClose={() => setAdding(false)} />
+      )}
+      {added && <p className="small food-notice" role="status">{added}</p>}
 
       <div className="foods-tools">
         <input type="search" placeholder="Search foods" value={query} onChange={(e) => setQuery(e.target.value)} aria-label="Search foods" />
         <div className="segmented" role="radiogroup" aria-label="Show">
-          {(["all", "food", "recipe"] as const).map((f) => (
+          {(["all", "food", "recipe", "brand"] as const).map((f) => (
             <button key={f} type="button" className={filter === f ? "on" : ""} onClick={() => setFilter(f)} aria-pressed={filter === f}>
-              {f === "all" ? `All (${foods?.length ?? 0})` : f === "food" ? "Foods" : `Recipes (${recipeCount})`}
+              {f === "all" ? `All (${foods?.length ?? 0})` : f === "food" ? "Foods"
+                : f === "recipe" ? `Recipes (${recipeCount})` : `Brands (${brandCount})`}
+              {f === "brand" && toCheck > 0 && (
+                <span className="to-check" title={`${toCheck} label${toCheck === 1 ? "" : "s"} not checked`}
+                      aria-label={`${toCheck} not checked`}>{toCheck}</span>
+              )}
             </button>
           ))}
         </div>
@@ -280,21 +425,26 @@ export default function FoodsPage({ dataVersion }: { dataVersion: number }) {
       {error && <p className="error">{error}</p>}
       {foods === null && !error && <p className="muted">Loading…</p>}
       {foods?.length === 0 && (
-        <p className="muted empty-foods">Nothing saved yet. Log a meal in the chat and confirm it, and its foods will show up here.</p>
+        <p className="muted empty-foods">Nothing saved yet. Log a meal in the chat and confirm it, and its foods will show up here, or press <b>+ Add</b>.</p>
       )}
-      {foods && foods.length > 0 && shown.length === 0 && <p className="muted">No matches.</p>}
+      {foods && foods.length > 0 && shown.length === 0 && (
+        <p className="muted">
+          {filter === "brand" && !query.trim()
+            ? 'No branded foods yet. Name the brand when you log, e.g. "10 g Amul butter", and it will show up here.'
+            : "No matches."}
+        </p>
+      )}
 
-      <ul className="food-list">
-        {shown.map((f) => (
-          <FoodRow
-            key={f.id}
-            food={f}
-            fields={microFields}
-            onChanged={(nf) => setFoods((fs) => fs?.map((x) => (x.id === nf.id ? nf : x)) ?? null)}
-            onDeleted={(id) => setFoods((fs) => fs?.filter((x) => x.id !== id) ?? null)}
-          />
-        ))}
-      </ul>
+      {filter === "brand" ? (
+        brandGroups.map((fs) => (
+          <div key={brandKey(fs[0])} className="brand-group">
+            <h3>{fs[0].brand_name} <span className="muted small">· {fs.length}</span></h3>
+            <ul className="food-list">{fs.map(row)}</ul>
+          </div>
+        ))
+      ) : (
+        <ul className="food-list">{shown.map(row)}</ul>
+      )}
     </section>
   );
 }

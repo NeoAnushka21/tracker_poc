@@ -94,7 +94,7 @@ user message ─► FastAPI /api/chat ─► LLM (Groq gpt-oss-120b or Claude) w
 - **Chat:** talk to MacBro (typing or voice). Proposals appear as cards you confirm.
 - **Dashboard:** today's calorie ring; protein, fiber, carbs and fat meters; calorie split; water tracker; micronutrients; five meal sections with per-meal macros.
 - **Analysis:** 7, 14 or 30-day trends: calories and protein vs target, macro lines, calorie split, calories by meal, water, and a data table. All charts have hover and keyboard tooltips.
-- **Saved Food:** your saved foods and recipes.
+- **Saved Food:** your saved foods and recipes; the **Brands** filter groups packaged foods by brand, and **Check label** takes their real pack label from Open Food Facts.
 - **Admin console:** reached through **Admin login** on the login page, and only for `ADMIN_EMAILS`. Admin emails can't sign up or use the normal login. The admin account is created at startup from `ADMIN_INITIAL_PASSWORD` if it doesn't exist yet. Two-step sign-in (authenticator app codes) can be switched on in the console; admin sessions last 12 hours. The console shows users, logins and activity, with read-only access to each user's logs, foods and chat, and every view is written to an audit log.
 - **Body:** weight, height, BMI (WHO categories) and an estimated body-fat percentage (US Navy equations, shown only when the needed measurements are there), plus a male/female body diagram: tap a body part to see how to measure it and add a dated measurement.
 - **Privacy:** a public plain-language notice at `/privacy` (linked from sign-in and Settings); accounts are for adults (18+), checked at onboarding.
@@ -115,7 +115,8 @@ user message ─► FastAPI /api/chat ─► LLM (Groq gpt-oss-120b or Claude) w
 | `backend/app/services/actions.py` | Confirm / reject / expire proposals |
 | `backend/app/services/logs.py` | Totals, daily summary, log queries |
 | `backend/app/services/foods.py` | Food library + recipes: units, scaling, recipe maths |
-| `backend/app/routers/foods.py` | Saved Food API (list / edit / delete) |
+| `backend/app/routers/foods.py` | Saved Food API (list / add foods and recipes / edit / delete, label search and check) |
+| `backend/app/services/labels.py` | Pack labels for branded foods from Open Food Facts |
 | `backend/app/nutrition.py` | BMR / TDEE / target calculation |
 | `frontend/src/components/` | Auth, Onboarding, GuideTour, Chat (with voice input), ProposalCard, Dashboard, Analysis, Saved Food, Settings, Admin |
 

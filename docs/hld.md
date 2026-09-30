@@ -1,6 +1,6 @@
 # OmniAI high-level design (HLD)
 
-> Last updated: 2026-09-30 (optional "About you" answers: targets, meal times, MacBro context; country/region step in the sign-in flow; database hardening phase 1: public user UUIDs, items linked to foods, ON DELETE rules, timestamptz, composite indexes; built-in general food list (USDA) between Saved Food and the AI; raw/cooked asked, never assumed; typo-tolerant saved-food and meal-word matching, Dashboard "Did you mean …?"; earlier: tabs: Saved Food, Explore, Body Profile; admin two-step sign-in; tool allow-list; terms page; earlier: health notes, Alembic, forgot password…).Update the diagrams whenever a component, data flow, table or external service changes (see [docs/README.md](README.md)).
+> Last updated: 2026-09-30 (Saved Food + Add: §4.6; branded foods: Open Food Facts label check, §2, §3, §4.5, §5; optional "About you" answers: targets, meal times, MacBro context; country/region step in the sign-in flow; database hardening phase 1: public user UUIDs, items linked to foods, ON DELETE rules, timestamptz, composite indexes; built-in general food list (USDA) between Saved Food and the AI; raw/cooked asked, never assumed; typo-tolerant saved-food and meal-word matching, Dashboard "Did you mean …?"; earlier: tabs: Saved Food, Explore, Body Profile; admin two-step sign-in; tool allow-list; terms page; earlier: health notes, Alembic, forgot password…).Update the diagrams whenever a component, data flow, table or external service changes (see [docs/README.md](README.md)).
 > Diagrams are Mermaid. They render on GitHub and in VS Code with a Mermaid preview extension.
 
 ## 1. Purpose and principles
@@ -24,6 +24,7 @@ flowchart LR
     U -->|Continue with Google<br/>ID token| GIS[(Google Identity Services)]
     APP -->|public signing keys| GIS
     APP -->|OpenAI-compatible API<br/>tool calling| LLM[(Open-source models<br/>Groq: gpt-oss-20b / 120b<br/>backup: NVIDIA DeepSeek V4.1 Flash)]
+    APP -->|label search by product words or barcode<br/>only on Check label| OFF[(Open Food Facts<br/>open food-label database)]
     U -.->|Web Speech API<br/>voice to text, in browser| U
 ```
 
@@ -32,6 +33,7 @@ flowchart LR
 | **User** | Home (summary, meal-logging and protein streaks), Chat logging, Dashboard, Analysis, Saved Food, Settings |
 | **Admin** (emails in `ADMIN_EMAILS`) | Admin console only: user list, per-user read-only data, audit log |
 | **LLM provider** | Nutrition estimation, clarifying questions, choosing tools. It never writes data. |
+| **Open Food Facts** | Pack-label values for branded foods, searched only when the user presses **Check label**. It receives the search words or barcode, nothing about the user. |
 
 ## 3. Container view
 
@@ -56,10 +58,12 @@ flowchart TB
 
     DB[(Postgres on Neon<br/>SQLite in development)]
     LLM[(LLM API)]
+    OFF[(Open Food Facts API)]
 
     SPA -->|/api/* JSON<br/>httpOnly JWT cookie| R
     S --> DB
     L -->|HTTPS| LLM
+    S -->|HTTPS · services/labels| OFF
 ```
 
 In development, Vite serves the SPA on `:5173` and proxies `/api` to Uvicorn on `:8000`, with SQLite as the database.
@@ -210,6 +214,45 @@ flowchart TD
 
 The AI estimate follows principle 1: it is a pending action, written only by `confirm_action` after **Add it**. It is kept apart from the chat: it isn't shown there or sent to the model as an open proposal, chat proposals don't replace it, and confirming it posts no progress card. Saved foods follow principle 3: the user's own click on their own numbers, applied directly.
 
+### 4.5 Checking a branded food's label
+
+A branded food first comes from the AI's memory of its label, so it is saved with `label_checked = false`. The user replaces that with the real pack label:
+
+```mermaid
+flowchart TB
+    B[Saved Food → Brands<br/>Check label] -->|GET /api/foods/label-search?q=brand name or barcode| LS[services/labels]
+    LS -->|search or product by barcode| OFF[(Open Food Facts)]
+    OFF --> LS
+    LS -->|complete labels only, per 100 g/ml<br/>sold in India first| P[User compares with the pack<br/>and picks one]
+    P -->|POST /api/foods/id/label<br/>barcode only| AP[labels.get_label: fetched again by barcode]
+    AP --> F[foods.apply_label<br/>source = label, label_checked = true]
+    F -->|correct past logs ticked| C[foods.correct_past_logs<br/>items with user_food_id recomputed]
+    F --> DB[(DB)]
+    C --> DB
+    M[Pencil: values typed from the pack<br/>+ These values are from the pack label] -->|PUT /api/foods/id| F2[source = label] --> DB
+```
+
+Principle 3 applies: the user's own click on a label they chose. The server never trusts label numbers sent by the browser; it re-fetches the product by barcode. A food marked `label` is never overwritten by a later AI estimate, and the model sees `| label |` on its line in "my foods", so it reuses the food's numbers.
+
+### 4.6 Adding a food or recipe in Saved Food (no LLM)
+
+```mermaid
+flowchart TB
+    A[Saved Food: + Add] --> K{What to add?}
+    K -->|Branded product| B[Brand, product,<br/>nutrition table as on the pack]
+    B -.->|optional| LS[Search Open Food Facts<br/>fills the form]
+    K -->|Generic food| G[Name, per amount + unit,<br/>kcal and macros]
+    K -->|Recipe| R[Name, raw ingredients,<br/>servings / pieces / cooked weight]
+    B -->|POST /api/foods<br/>label_code if a label was picked and not changed| F[user_foods row<br/>source label or user]
+    G -->|POST /api/foods| F
+    R -->|POST /api/foods/recipes/preview<br/>Calculate, nothing saved| P[foods.typed_ingredient:<br/>Saved Food, else general list]
+    R -->|POST /api/foods/recipes| P --> C[compute_recipe] --> S[save_recipe<br/>general-list ingredients learned too]
+    F --> DB[(DB)]
+    S --> DB
+```
+
+Principle 3 applies: the user's own typed numbers (or a label they picked, fetched again by barcode). The same name and brand can't be added twice (409); the model never reaches these routes.
+
 ## 5. Data model (overview)
 
 ```mermaid
@@ -232,6 +275,8 @@ erDiagram
 ```
 
 **Identity and integrity (migration 0003, 2026-09-30):** `users.id` is the internal key every table joins on; `users.public_id` (UUID v7) is what the API and admin screens show. Every foreign key has an ON DELETE rule, so deleting a user row removes everything they own in the database itself (model-usage and admin-audit rows are kept, unlinked). Logged items point at the saved food they came from, so "most eaten" is a count. Timestamps are `timestamptz` (UTC); per-user tables are indexed on (user_id, date) or (user_id, status).
+
+**Branded foods (migration 0006, 2026-09-30):** `user_foods.label_checked` says whether a food's numbers come from its pack label, and `off_code` keeps the Open Food Facts barcode it was matched to (§4.5).
 
 Column-level detail is in [technical-overview.md](technical-overview.md#5-data-model).
 

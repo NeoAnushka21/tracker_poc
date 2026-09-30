@@ -1,6 +1,6 @@
 import type {
   Action, AdminUserDetail, AdminUserRow, AuditRow, ChatMessage, DailySummary, Food, Item, RangeSummary, User,
-  Streaks, ChatDay, LlmUsageReport, MicroField,
+  Streaks, ChatDay, Label, LlmUsageReport, MicroField, RecipeInput, RecipePreview,
 } from "./types";
 import { recoverServer, serverAwake, SLOW_REQUEST_MS } from "./wake";
 
@@ -153,6 +153,10 @@ export type FoodInput = {
   grams_per_serving: number | null;
   /** Per the same reference amount; missing keys are "unknown". */
   micronutrients: Record<string, number>;
+  /** "These values are from the pack label". */
+  label_checked: boolean;
+  /** Also recompute past logs of this food with the new numbers. */
+  correct_logs: boolean;
 };
 
 export const api = {
@@ -236,7 +240,13 @@ export const api = {
   foods: () => request<Food[]>("GET", "/api/foods"),
   micronutrientFields: () => request<MicroField[]>("GET", "/api/foods/micronutrients"),
   updateFood: (id: number, data: FoodInput) => request<Food>("PUT", `/api/foods/${id}`, data),
+  createFood: (data: FoodInput & { label_code: string | null }) => request<Food>("POST", "/api/foods", data),
+  previewRecipe: (data: RecipeInput) => request<RecipePreview>("POST", "/api/foods/recipes/preview", data),
+  createRecipe: (data: RecipeInput) => request<Food>("POST", "/api/foods/recipes", data),
   deleteFood: (id: number) => request<{ ok: boolean }>("DELETE", `/api/foods/${id}`),
+  labelSearch: (q: string) => request<Label[]>("GET", `/api/foods/label-search?q=${encodeURIComponent(q)}`),
+  applyLabel: (id: number, code: string, correct_logs: boolean) =>
+    request<Food>("POST", `/api/foods/${id}/label`, { code, correct_logs }),
 
   addWater: (amount_ml: number) => request<{ id: number; amount_ml: number }>("POST", "/api/water", { amount_ml }),
   deleteWater: (id: number) => request<{ ok: boolean }>("DELETE", `/api/water/${id}`),

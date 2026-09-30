@@ -7,10 +7,11 @@ from sqlalchemy.orm import Session
 from app import config
 from app.db import get_db
 from app.deps import onboarded_user
-from app.models import User, utcnow
-from app.services import micros
+from app.models import User, UserFood, utcnow
+from app.services import labels, micros
 from app.services.foods import (
-    NUTRIENTS, find_by_name, food_to_dict, get_user_food, list_foods, name_key, normalize_unit, recipes_using,
+    NUTRIENTS, FoodError, apply_label, compute_recipe, correct_past_logs, find_by_name, food_to_dict, get_user_food,
+    list_foods, name_key, normalize_unit, recipes_using, save_recipe, typed_ingredient,
 )
 
 router = APIRouter(prefix="/api/foods", tags=["foods"])
@@ -32,6 +33,10 @@ class FoodUpdateIn(BaseModel):
     # Per the same reference amount as the macros ({"iron_mg": 0.4, ...}). A missing key means
     # "unknown", not zero. Leaving the field out of the request keeps the stored values.
     micronutrients: dict[str, float | None] | None = None
+    # "These values are from the pack label" (branded foods). Left out = unchanged.
+    label_checked: bool | None = None
+    # Also recompute past logs of this food with the new numbers.
+    correct_logs: bool = False
 
     @field_validator("micronutrients")
     @classmethod
@@ -42,6 +47,38 @@ class FoodUpdateIn(BaseModel):
             if value is not None and value < 0:
                 raise ValueError(f"{key} can't be negative")
         return v
+
+
+class LabelIn(BaseModel):
+    code: str = Field(min_length=8, max_length=14, pattern=r"^\d+$")   # the Open Food Facts barcode
+    correct_logs: bool = True
+
+
+class FoodCreateIn(FoodUpdateIn):
+    # Branded product picked on Open Food Facts: its label is fetched again by barcode and
+    # replaces the typed numbers.
+    label_code: str | None = Field(default=None, min_length=8, max_length=14, pattern=r"^\d+$")
+
+
+class IngredientIn(BaseModel):
+    name: str = Field(min_length=1, max_length=200)
+    food_id: int | None = None          # picked from Saved Food
+    quantity: float = Field(gt=0)
+    unit: str = Field(min_length=1, max_length=32)
+
+
+class RecipeCreateIn(BaseModel):
+    name: str = Field(min_length=1, max_length=200)
+    ingredients: list[IngredientIn] = Field(min_length=1, max_length=40)
+    yield_pieces: float | None = Field(default=None, gt=0)
+    yield_servings: float | None = Field(default=None, gt=0)
+    cooked_weight_g: float | None = Field(default=None, gt=0)
+
+
+def _no_clash(db: Session, user: User, name: str, brand: str | None) -> None:
+    if find_by_name(db, user.id, name, brand) is not None:
+        what = f"{name} ({brand})" if brand else name
+        raise HTTPException(status.HTTP_409_CONFLICT, f"You already have '{what}' in Saved Food. Edit that one instead.")
 
 
 def _food_or_404(db: Session, user: User, food_id: int):
@@ -61,6 +98,93 @@ def micronutrient_fields(_user: User = Depends(onboarded_user)):
     """The micronutrients a food can carry (labels and units for the edit form)."""
     return [{"key": key, "label": label, "unit": unit, "kind": kind}
             for key, label, unit, kind, _ in config.MICRONUTRIENTS]
+
+
+@router.post("", status_code=status.HTTP_201_CREATED)
+def create(body: FoodCreateIn, user: User = Depends(onboarded_user), db: Session = Depends(get_db)):
+    """+ Add → Generic food or Branded product: a food typed in by the user (or a label they picked)."""
+    name, brand = body.name.strip(), (body.brand_name or "").strip() or None
+    _no_clash(db, user, name, brand)
+    food = UserFood(user_id=user.id, name=name, brand_name=brand, name_key=name_key(name, brand), kind="food",
+                    ref_qty=body.ref_qty, ref_unit=normalize_unit(body.ref_unit)[0],
+                    **{k: getattr(body, k) for k in NUTRIENTS},
+                    grams_per_piece=body.grams_per_piece, grams_per_serving=body.grams_per_serving,
+                    micronutrients=micros.clean(body.micronutrients),
+                    label_checked=bool(body.label_checked), source="label" if body.label_checked else "user")
+    if body.label_code:
+        try:
+            apply_label(food, labels.get_label(body.label_code))
+        except labels.LabelLookupError as e:
+            raise HTTPException(status.HTTP_502_BAD_GATEWAY, str(e))
+        if body.grams_per_serving:        # the user's own serving weight wins over the label's
+            food.grams_per_serving = body.grams_per_serving
+    db.add(food)
+    db.commit()
+    return food_to_dict(food, with_ingredients=True)
+
+
+def _recipe_payload(db: Session, user: User, body: RecipeCreateIn) -> dict:
+    try:
+        ingredients = [typed_ingredient(db, user, i.name.strip(), i.quantity, i.unit.strip(), i.food_id)
+                       for i in body.ingredients]
+        computed = compute_recipe(ingredients, body.yield_pieces, body.yield_servings, body.cooked_weight_g)
+    except FoodError as e:
+        raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT, str(e))
+    return {"name": body.name.strip(), "ingredients": ingredients, "yield_pieces": body.yield_pieces,
+            "yield_servings": body.yield_servings, "cooked_weight_g": body.cooked_weight_g, **computed}
+
+
+@router.post("/recipes/preview")
+def preview_recipe(body: RecipeCreateIn, user: User = Depends(onboarded_user), db: Session = Depends(get_db)):
+    """+ Add → Recipe, Calculate: what the recipe comes to, without saving anything."""
+    p = _recipe_payload(db, user, body)
+    return {k: p[k] for k in ("ref_qty", "ref_unit", "per_ref", "batch_totals")} | {
+        "ingredients": [{"name": i["ingredient_name"], "quantity": i["quantity"], "unit": i["unit"],
+                         "calories": i["calories"], "from": i["source"]} for i in p["ingredients"]]}
+
+
+@router.post("/recipes", status_code=status.HTTP_201_CREATED)
+def create_recipe(body: RecipeCreateIn, user: User = Depends(onboarded_user), db: Session = Depends(get_db)):
+    """+ Add → Recipe. General-list ingredients are saved to Saved Food too, like a chat recipe."""
+    _no_clash(db, user, body.name.strip(), None)
+    recipe = save_recipe(db, user, _recipe_payload(db, user, body))
+    db.commit()
+    db.refresh(recipe)
+    return food_to_dict(recipe, with_ingredients=True)
+
+
+@router.get("/label-search")
+def label_search(q: str, _user: User = Depends(onboarded_user)):
+    """Pack labels from Open Food Facts for a brand + product name, or a barcode."""
+    q = q.strip()[:120]
+    if len(q) < 2:
+        raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT, "Type a product name and brand, or a barcode")
+    try:
+        return labels.search(q)
+    except labels.LabelLookupError as e:
+        raise HTTPException(status.HTTP_502_BAD_GATEWAY, str(e))
+
+
+@router.post("/{food_id}/label")
+def use_label(food_id: int, body: LabelIn, user: User = Depends(onboarded_user), db: Session = Depends(get_db)):
+    """Replace a food's numbers with a pack label the user picked. The label is fetched again
+    here by barcode, so only Open Food Facts' own values are saved."""
+    food = _food_or_404(db, user, food_id)
+    if food.kind == "recipe":
+        raise HTTPException(status.HTTP_409_CONFLICT, "A recipe's numbers come from its ingredients")
+    try:
+        label = labels.get_label(body.code)
+    except labels.LabelLookupError as e:
+        raise HTTPException(status.HTTP_502_BAD_GATEWAY, str(e))
+    if not food.brand_name and label["brand"]:
+        clash = find_by_name(db, user.id, food.name, label["brand"])
+        if clash is None or clash.id == food.id:
+            food.brand_name = label["brand"]
+            food.name_key = name_key(food.name, food.brand_name)
+    apply_label(food, label)
+    corrected = correct_past_logs(db, user, food) if body.correct_logs else 0
+    db.commit()
+    return {**food_to_dict(food, with_ingredients=True), "logs_corrected": corrected}
 
 
 @router.get("/{food_id}")
@@ -87,10 +211,16 @@ def update(food_id: int, body: FoodUpdateIn, user: User = Depends(onboarded_user
         food.grams_per_serving = body.grams_per_serving
         if "micronutrients" in body.model_fields_set:
             food.micronutrients = micros.clean(body.micronutrients)
-        food.source = "user"   # hand-edited values are never overwritten by later estimates
+        if body.label_checked is not None:
+            food.label_checked = body.label_checked
+            if not body.label_checked:
+                food.off_code = None
+        # Hand-edited values (and labels) are never overwritten by later estimates.
+        food.source = "label" if food.label_checked else "user"
     food.updated_at = utcnow()
+    corrected = correct_past_logs(db, user, food) if body.correct_logs and food.kind != "recipe" else 0
     db.commit()
-    return food_to_dict(food, with_ingredients=True)
+    return {**food_to_dict(food, with_ingredients=True), "logs_corrected": corrected}
 
 
 @router.delete("/{food_id}")

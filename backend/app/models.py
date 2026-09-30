@@ -19,7 +19,7 @@ Differences from the spec's starting schema:
 import uuid
 from datetime import date, datetime, timezone
 
-from sqlalchemy import JSON, Boolean, Date, Float, ForeignKey, Index, Integer, String, Text, UniqueConstraint, Uuid
+from sqlalchemy import JSON, Boolean, Date, Float, ForeignKey, Index, Integer, String, Text, UniqueConstraint, Uuid, false
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db import Base, UTCDateTime
@@ -226,7 +226,11 @@ class UserFood(Base):
     brand_name: Mapped[str | None] = mapped_column(String(200))
     kind: Mapped[str] = mapped_column(String(10), default="food")  # food | recipe
     # estimate (from the LLM, confirmed by the user) | user (edited by hand) | recipe
+    # | general (general food list) | label (from the pack label: Open Food Facts or typed in)
     source: Mapped[str] = mapped_column(String(10), default="estimate")
+    # Branded foods: true once the numbers come from the pack label (2026-09-30).
+    label_checked: Mapped[bool] = mapped_column(Boolean, default=False, server_default=false())
+    off_code: Mapped[str | None] = mapped_column(String(32))       # Open Food Facts barcode
 
     ref_qty: Mapped[float] = mapped_column(Float)
     ref_unit: Mapped[str] = mapped_column(String(32))              # g | ml | piece | serving | cup...

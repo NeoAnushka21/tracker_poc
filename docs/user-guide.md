@@ -4,7 +4,7 @@ OmniAI is a chat-based calorie and macro tracker. In the Chat you talk to **MacB
 
 This guide walks a new user through the app from sign-up to daily use. The same walkthrough appears inside the app as a short tour the first time you log in. You can reopen it any time with the **? Guide** button at the top.
 
-> Last updated: 2026-09-30 (Settings reorganised: About you, Targets, Appearance, Account & privacy, Security; India only for now in the country list; optional "About you" questions: diet, allergies, pace, meal times, training, health; country and region in the profile, age in Settings; built-in general food list of ~300 common foods (USDA) used without the AI; "raw or cooked?" asked, never assumed; small typos in saved-food names and meal words are understood without the AI; Dashboard asks "Did you mean …?"; earlier: Saved Food renamed Saved Food, a list with Additional info; Body renamed Body Profile; new Explore tab, coming soon; terms page; earlier: health notes and low-target warning, forgot password…). Keep this file in step with the UI (see [docs/README.md](README.md)).
+> Last updated: 2026-09-30 (**+ Add** in Saved Food: a branded product, a generic food or a recipe from a form; branded foods: a **Brands** filter in Saved Food, and **Check label** fetches the real pack label from Open Food Facts; Settings reorganised: About you, Targets, Appearance, Account & privacy, Security; India only for now in the country list; optional "About you" questions: diet, allergies, pace, meal times, training, health; country and region in the profile, age in Settings; built-in general food list of ~300 common foods (USDA) used without the AI; "raw or cooked?" asked, never assumed; small typos in saved-food names and meal words are understood without the AI; Dashboard asks "Did you mean …?"; earlier: Saved Food renamed Saved Food, a list with Additional info; Body renamed Body Profile; new Explore tab, coming soon; terms page; earlier: health notes and low-target warning, forgot password…). Keep this file in step with the UI (see [docs/README.md](README.md)).
 
 ---
 
@@ -62,7 +62,7 @@ If the consent wording changes later (it did on 2026-09-28, to mention the AI se
 
 **Terms:** the **Terms** link (also at **/terms**) sets out the basics in plain words: adults only, estimates not medical advice, fair use of the free AI, your data stays yours, and the app is provided free and as is.
 
-**Privacy:** the **Privacy** link under the sign-in form (also at **/privacy**, no login needed) explains in plain words what OmniAI stores, why, which services handle it (Render and Neon in Singapore, Groq in the US for the AI, Google if you use it), how long it's kept, and how to download or delete it. OmniAI is for adults (18 and over).
+**Privacy:** the **Privacy** link under the sign-in form (also at **/privacy**, no login needed) explains in plain words what OmniAI stores, why, which services handle it (Render and Neon in Singapore, Groq in the US for the AI, Google if you use it, Open Food Facts for label searches), how long it's kept, and how to download or delete it. OmniAI is for adults (18 and over).
 
 ## 2. Set up your profile
 
@@ -272,13 +272,30 @@ Your water target is based on your weight and activity level. The bar shows litr
 - **Raw or cooked is never assumed.** Meat, chicken, fish, prawns, rice, other grains (oats, quinoa, millet, dalia, pasta, noodles) and dals/beans have very different calories raw and cooked (cooked rice is about 130 kcal per 100 g, raw rice 365). If you give a weight without saying which (`200 g rice`), MacBro asks **"Was the rice weighed raw or cooked?"** with **Raw** / **Cooked** buttons. You can also type the answer, or for two foods `chicken raw, rice cooked`. Saying it upfront (`200 g cooked rice`, `150 g raw chicken breast`, `boiled dal`) skips the question. The same applies to a food you saved as, say, "chicken breast, cooked": typing just `chicken breast` asks, so a raw weight isn't logged with cooked numbers.
 - Counted pieces without a weight (`2 chicken drumsticks`) and dishes (`chicken curry`, `dal tadka`, `paneer butter masala`) aren't on the list; the AI handles them as before. Not on the list yet: paneer, poha, jaggery, ragi, idli, dosa and other cooked dishes.
 
-- **Search** by name or brand, and filter by **All / Foods / Recipes**.
+- **Search** by name or brand, and filter by **All / Foods / Recipes / Brands**.
+- **+ Add** (top right) adds a food yourself, without the chat. First pick what you're adding, then fill in its form:
+  - **Branded product:** brand and product name. **Search Open Food Facts** finds the pack label (by brand and name, or the barcode number) and **Use this** fills in the form; or copy the **nutrition table** from the pack: per 100 g or ml, energy (kcal), protein, carbohydrate, fibre, total fat, sodium, and the serving size. **More nutrients from the label** takes the rest. Keep **These values are from the pack label** ticked when you copied them from the pack, and the food shows **label ✓**. If you change a number after picking a product, your typed numbers are saved instead.
+  - **Generic food:** a loose or home food (paneer, a sabzi…): name, the amount the numbers are for (per 100 g, 100 ml, 1 piece or 1 serving), kcal, protein, carbs, fat, and optionally fiber, g per piece, g per serving and micronutrients. Common foods (banana, rice, ghee, dals…) are already on the general food list, so you only need this for foods that aren't, or to use your own numbers.
+  - **Recipe:** a name, the **raw ingredients for the whole batch** (each with an amount and unit, e.g. `200 g`, `1 tbsp`), and what it makes (**servings** or **pieces**, and optionally the **cooked weight** of the whole batch, so you can log it in grams). Ingredients come from your Saved Food (suggested as you type) or the general food list; anything else, add first as a generic food or branded product. **Calculate** shows the numbers per serving (or piece, or 100 g) and each ingredient's calories before you save; **Save recipe** saves it. Ingredients from the general list are saved to Saved Food too.
+  - If a food's protein, carbs and fat don't add up to roughly its calories, the form says so. It's only a hint (labels round a little); you can still save. A food with the same name (and brand) as one you already have isn't added twice: edit that one instead.
 - Foods are shown as a **list**: each line has the food's **name** and its **calories** for the saved amount (e.g. "165 kcal per 100 g").
 - Tap **Additional info** on a line to open the rest: **protein, carbs, fat and fiber**, the saved **micronutrients** (iron, calcium, magnesium, potassium, zinc, vitamins C, B12 and D, and sodium), where the numbers came from, and a recipe's **ingredients**. Tap it again to close.
 - **Edit** (pencil icon) a food to fix its values (per 100 g/ml, or per piece/serving with the gram weight). **Additional nutrients** lets you add or correct its micronutrients for the same amount; leave a box blank if you don't know it (blank means unknown, not zero). Foods you edit by hand are never overwritten by later estimates.
 - **Delete** (trash icon) a food you no longer want. With a mouse, the icons appear when you hover over a line; on touch screens they're always visible. Past logs keep their numbers.
 
-**Recipes** are for dishes you make at home:
+**Branded foods (Brands):** a packaged product has a pack label, and its numbers should come from that label, not a guess.
+
+1. Name the brand when you log it: `10 g Amul butter`, `1 Britannia Nutrichoice biscuit`. MacBro saves it with its brand. Until you check the label, the numbers are the AI's memory of the label, and the chat card marks the item **check label**.
+2. Open **Saved Food → Brands**. Branded foods are grouped by brand (Amul → Butter, Paneer…), and each one shows **label ✓** or **label not checked**. The small number on the **Brands** filter counts the ones still to check.
+3. Press **Check label** under a food. OmniAI searches **Open Food Facts**, a free, open database of food labels, for the brand and name, and lists the products it finds with their calories, protein, carbs and fat **per 100 g** (or 100 ml for drinks), the pack size and serving size. Products sold in India come first. Not the right one? Change the words, or type the **barcode number** printed under the pack's barcode for an exact match.
+4. Compare with your pack, then press **Use this**. The food now uses the label's numbers (and micronutrients the label lists, like sodium and calcium), plus the serving weight when the label gives one. Nothing changes until you press it.
+5. **Also correct the times I've already logged it** (ticked by default) recomputes your past logs of this food with the label's numbers, so your earlier days add up correctly too. Untick it to leave past days as they were.
+
+Not on Open Food Facts, or its numbers don't match your pack? Press the pencil, type the values from the label, and tick **These values are from the pack label** (and, if you like, **Also correct the times I've already logged it**). Either way the food shows **label ✓**, and later AI estimates never overwrite it. Open Food Facts is filled in by volunteers, so always check the numbers against your pack before you use them.
+
+Once a branded food is saved, `10 g amul butter` (brand and name, in either order) is answered straight from Saved Food, without the AI, with the checked label's numbers once you've checked it.
+
+**Recipes** are for dishes you make at home. Make one with **+ Add → Recipe** (above), or in the chat:
 
 1. In the chat, say `save my chapati as a recipe` (MacBro may also offer this for dishes you log often).
 2. Give the raw ingredients for the whole batch and what it makes, e.g. `200g multigrain atta, 10ml oil, makes 8 chapatis`.

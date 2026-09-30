@@ -184,7 +184,7 @@ export type Food = Nutrients & {
   name: string;
   brand_name: string | null;
   kind: "food" | "recipe";
-  source: "estimate" | "user" | "recipe" | "general";
+  source: "estimate" | "user" | "recipe" | "general" | "label";
   ref_qty: number;
   ref_unit: string;
   grams_per_piece: number | null;
@@ -199,6 +199,46 @@ export type Food = Nutrients & {
   /** Per the reference amount (`measures`), e.g. {"iron_mg": 0.4}; missing keys are unknown. */
   micronutrients: Record<string, number> | null;
   ingredients?: RecipeIngredient[];
+  /** Branded foods: the numbers come from the pack label (Open Food Facts, or typed in). */
+  label_checked: boolean;
+  /** The Open Food Facts barcode the label was taken from. */
+  off_code: string | null;
+  /** After an edit or a label check: how many past logs were recomputed. */
+  logs_corrected?: number;
+};
+
+/** + Add → Recipe: an ingredient row (food_id when picked from Saved Food). */
+export type RecipeIngredientInput = { name: string; food_id: number | null; quantity: number; unit: string };
+
+export type RecipeInput = {
+  name: string;
+  ingredients: RecipeIngredientInput[];
+  yield_pieces: number | null;
+  yield_servings: number | null;
+  cooked_weight_g: number | null;
+};
+
+/** POST /api/foods/recipes/preview: what the recipe comes to, nothing saved. */
+export type RecipePreview = {
+  ref_qty: number;
+  ref_unit: string;
+  per_ref: Nutrients;
+  batch_totals: Nutrients;
+  ingredients: { name: string; quantity: number; unit: string; calories: number; from: "library" | "recipe" | "general" }[];
+};
+
+/** A pack label from Open Food Facts (GET /api/foods/label-search), per 100 g or ml. */
+export type Label = Nutrients & {
+  code: string;
+  name: string;
+  brand: string | null;
+  pack: string | null;
+  serving_size: string | null;
+  grams_per_serving: number | null;
+  in_india: boolean;
+  ref_qty: number;
+  ref_unit: string;
+  micronutrients: Record<string, number> | null;
 };
 
 /** A micronutrient a food can carry (GET /api/foods/micronutrients). */

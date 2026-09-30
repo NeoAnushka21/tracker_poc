@@ -9,7 +9,7 @@ import re
 from sqlalchemy import select
 from sqlalchemy.orm import Session, selectinload
 
-from app.models import RecipeIngredient, User, UserFood, utcnow
+from app.models import LogEntry, LogEntryItem, RecipeIngredient, User, UserFood, utcnow
 from app.services import micros
 
 NUTRIENTS = ("calories", "protein_g", "carbs_g", "fat_g", "fiber_g")
@@ -151,6 +151,8 @@ def library_index(db: Session, user_id: int) -> dict[str, UserFood]:
         keys = _variants(f.name)
         if "," in f.name:   # "eggs, large" can be called "eggs" if nothing else is
             keys |= _variants(f.name.split(",")[0])
+        if f.brand_name:    # "amul butter" (and "butter amul") finds Butter · Amul
+            keys |= _variants(f"{f.brand_name} {f.name}") | _variants(f"{f.name} {f.brand_name}")
         for k in keys:
             if k in index and index[k] is not f:
                 ambiguous.add(k)
@@ -247,6 +249,8 @@ def food_to_dict(food: UserFood, with_ingredients: bool = False) -> dict:
         "measures": _measures(food),
         "units": measurable_units(food),
         "micronutrients": food.micronutrients,
+        "label_checked": bool(food.label_checked),
+        "off_code": food.off_code,
         "last_used_at": food.last_used_at.isoformat() + "Z",
     }
     if with_ingredients and food.kind == "recipe":
@@ -283,7 +287,7 @@ def _shares_word(food_words: set[str], wanted: set[str]) -> bool:
 
 
 def library_context(db: Session, user: User, match_text: str | None = None) -> list[str]:
-    """Compact lines listing the user's foods for the LLM: 'id | name | kind | measures'.
+    """Compact lines listing the user's foods for the LLM: 'id | name | kind | label? | measures'.
     With match_text, only foods sharing a word with it (allowing a typo, see typo_limit) are
     listed (a big token saving)."""
     foods = list_foods(db, user.id, CONTEXT_FOOD_LIMIT)
@@ -292,7 +296,7 @@ def library_context(db: Session, user: User, match_text: str | None = None) -> l
         foods = [f for f in foods if _shares_word(_stems(f"{f.name} {f.brand_name or ''}"), wanted)]
     return [
         f"{f.id} | {f.name}{f' ({f.brand_name})' if f.brand_name else ''}"
-        f"{' | RECIPE' if f.kind == 'recipe' else ''} | {_measures(f)}"
+        f"{' | RECIPE' if f.kind == 'recipe' else ''}{' | label' if f.label_checked else ''} | {_measures(f)}"
         for f in foods
     ]
 
@@ -345,11 +349,11 @@ def compute_recipe(ingredients: list[dict], yield_pieces: float | None,
 
 def upsert_estimate(db: Session, user: User, item: dict) -> UserFood | None:
     """Save a confirmed LLM estimate to the library. The latest confirmed values win,
-    except that an estimate never overwrites a recipe or a hand-edited food."""
+    except that an estimate never overwrites a recipe, a hand-edited food or a pack label."""
     if item.get("quantity", 0) <= 0:
         return None
     existing = find_by_name(db, user.id, item["ingredient_name"], item.get("brand_name"))
-    if existing is not None and existing.source in ("recipe", "user"):
+    if existing is not None and existing.source in ("recipe", "user", "label"):
         existing.last_used_at = utcnow()
         return existing
 
@@ -450,3 +454,71 @@ def save_recipe(db: Session, user: User, payload: dict) -> UserFood:
     ]
     db.flush()
     return recipe
+
+
+# --- branded foods: pack labels -----------------------------------------------------
+
+def apply_label(food: UserFood, label: dict) -> None:
+    """Replace a food's numbers with its pack label's (per 100 g/ml; services/labels.py).
+    Its piece weight is kept; the serving weight comes from the label when it has one."""
+    food.ref_qty, food.ref_unit = label["ref_qty"], label["ref_unit"]
+    for k in NUTRIENTS:
+        setattr(food, k, label[k])
+    food.micronutrients = micros.clean(label.get("micronutrients"))
+    if label.get("grams_per_serving"):
+        food.grams_per_serving = label["grams_per_serving"]
+    food.source, food.label_checked, food.off_code = "label", True, label.get("code")
+    food.updated_at = utcnow()
+
+
+def correct_past_logs(db: Session, user: User, food: UserFood) -> int:
+    """Recompute every logged item that came from this food with its current numbers (after
+    the label was checked). Items in a unit the food can't convert are left as they were.
+    Returns how many were changed."""
+    stmt = (select(LogEntryItem).join(LogEntry)
+            .where(LogEntryItem.user_food_id == food.id, LogEntry.user_id == user.id, LogEntry.deleted_at.is_(None)))
+    changed = 0
+    for item in db.scalars(stmt):
+        try:
+            n = nutrients_for(food, item.quantity, item.unit)
+        except FoodError:
+            continue
+        for k in NUTRIENTS:
+            setattr(item, k, n[k])
+        item.micronutrients = n["micronutrients"]
+        item.brand_name = food.brand_name
+        item.source = "library"
+        changed += 1
+    db.flush()
+    return changed
+
+
+# --- added by hand in Saved Food (+ Add) ------------------------------------------------
+
+def typed_ingredient(db: Session, user: User, name: str, qty: float, unit: str, food_id: int | None = None) -> dict:
+    """A recipe ingredient typed in the Add recipe form -> an item with its nutrients, from Saved
+    Food (picked, or the name matches) or else the general food list. Raises FoodError with a
+    message for the user when it can't be used."""
+    from app.services import general_foods
+    food = get_user_food(db, user.id, food_id) if food_id else match_saved(db, user.id, name)
+    if food is not None:
+        try:
+            n = nutrients_for(food, qty, unit)
+        except FoodError:
+            raise FoodError(f"{food.name} is saved {_measures(food)}, so it can't be measured in '{unit}'. "
+                            f"Use: {', '.join(measurable_units(food))}.") from None
+        return {"ingredient_name": food.name, "brand_name": food.brand_name, "quantity": qty, "unit": unit,
+                **n, "food_id": food.id, "general_id": None, "unit_weight_g": None,
+                "source": "recipe" if food.kind == "recipe" else "library"}
+    m = general_foods.find(name)
+    if m is not None and m.entry is None:
+        raise FoodError(f"Was the {m.base} weighed raw or cooked? Write '{m.base}, raw' or '{m.base}, cooked'.")
+    if m is not None:
+        try:
+            return general_foods.resolve_item({"general_id": m.entry["id"], "ingredient_name": name,
+                                               "quantity": qty, "unit": unit, "unit_weight_g": None})
+        except FoodError:
+            raise FoodError(f"{general_foods.display_name(m.entry)} can't be measured in '{unit}'. "
+                            f"Use: {', '.join(general_foods.units_for(m.entry))}.") from None
+    raise FoodError(f"'{name}' isn't in Saved Food or the general food list. Add it first "
+                    "(+ Add → Generic food or Branded product), then use it here.")
