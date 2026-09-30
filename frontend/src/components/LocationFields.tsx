@@ -17,6 +17,10 @@ export function LocationFields({ country, region, onChange }: {
   const [countries, setCountries] = useState<Country[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   useEffect(() => { loadCountries().then(setCountries).catch((e) => setError(e.message)); }, []);
+  // Only one country offered (India for now): pick it, so only the optional region is left.
+  useEffect(() => {
+    if (countries?.length === 1 && !country) onChange(countries[0].code, "");
+  }, [countries, country, onChange]);
   const regions = countries?.find((c) => c.code === country)?.regions ?? [];
 
   return (
@@ -28,6 +32,7 @@ export function LocationFields({ country, region, onChange }: {
           <option value="" disabled>{countries ? "Select your country" : "Loading…"}</option>
           {countries?.map((c) => <option key={c.code} value={c.code}>{c.name}</option>)}
         </select>
+        {countries?.length === 1 && <span className="muted small">Available in {countries[0].name} for now.</span>}
         {error && <span className="error small">{error}</span>}
       </label>
       <label>

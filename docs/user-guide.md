@@ -4,7 +4,7 @@ OmniAI is a chat-based calorie and macro tracker. In the Chat you talk to **MacB
 
 This guide walks a new user through the app from sign-up to daily use. The same walkthrough appears inside the app as a short tour the first time you log in. You can reopen it any time with the **? Guide** button at the top.
 
-> Last updated: 2026-09-30 (optional "About you" questions: diet, allergies, pace, meal times, training, health; country and region in the profile, age in Settings; built-in general food list of ~300 common foods (USDA) used without the AI; "raw or cooked?" asked, never assumed; small typos in saved-food names and meal words are understood without the AI; Dashboard asks "Did you mean …?"; earlier: Saved Food renamed Saved Food, a list with Additional info; Body renamed Body Profile; new Explore tab, coming soon; terms page; earlier: health notes and low-target warning, forgot password…). Keep this file in step with the UI (see [docs/README.md](README.md)).
+> Last updated: 2026-09-30 (India only for now in the country list; optional "About you" questions: diet, allergies, pace, meal times, training, health; country and region in the profile, age in Settings; built-in general food list of ~300 common foods (USDA) used without the AI; "raw or cooked?" asked, never assumed; small typos in saved-food names and meal words are understood without the AI; Dashboard asks "Did you mean …?"; earlier: Saved Food renamed Saved Food, a list with Additional info; Body renamed Body Profile; new Explore tab, coming soon; terms page; earlier: health notes and low-target warning, forgot password…). Keep this file in step with the UI (see [docs/README.md](README.md)).
 
 ---
 
@@ -72,8 +72,8 @@ OmniAI needs a few details to work out your daily targets:
 |---|---|
 | What should I call you? | Optional. Used in the Home greeting and by MacBro in the chat. |
 | Date of birth, sex | Used in the calorie formula and for micronutrient reference values; your **age** is worked out from the date of birth (shown in **Settings → Account**). You need to be **18 or over** to use OmniAI; a date of birth under 18 (or in the future) isn't accepted. |
-| Country | **Required.** Pick it from the list (you can't type your own). |
-| State / region | Optional. Pick it from the list for your country, or leave it as *Not specified*. |
+| Country | **Required.** Pick it from the list (you can't type your own). OmniAI is available in **India** for now, so India is the only choice and is already selected; more countries will follow. |
+| State / region | Optional. Pick your state or union territory from the list, or leave it as *Not specified*. |
 | Units | Metric (kg, cm) or Imperial (lb, ft/in). |
 | Height, weight | Required. |
 | Goal | Lose weight, Build muscle, Gain weight, Recomposition, or Maintain weight. |

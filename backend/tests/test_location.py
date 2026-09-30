@@ -14,19 +14,25 @@ def register(client, email="new@example.com"):
                                                    "consent": True}).status_code == 201
 
 
-def test_country_list_is_public_and_cached(client):
+def test_country_list_is_public_cached_and_india_only(client):
     r = client.get("/api/profile/countries")
     assert r.status_code == 200 and "max-age" in r.headers["cache-control"]
-    india = next(c for c in r.json() if c["code"] == "IN")
+    [india] = r.json()                                   # India only for now (config.SUPPORTED_COUNTRIES)
     assert india["name"] == "India" and len(india["regions"]) == 36 and "Maharashtra" in india["regions"]
-    assert len(r.json()) > 240
+
+
+def test_other_countries_can_be_added_in_config(client, monkeypatch):
+    from app.services import places
+    monkeypatch.setattr(places, "SUPPORTED_COUNTRIES", ["IN", "US"])
+    assert [c["code"] for c in client.get("/api/profile/countries").json()] == ["IN", "US"]
 
 
 def test_onboarding_needs_a_country_from_the_list(client):
     register(client)
     no_country = {k: v for k, v in ONBOARDING.items() if k not in ("country", "region")}
     assert client.post("/api/profile/onboarding", json=no_country).status_code == 422
-    for bad in ({"country": "XX"}, {"country": "IN", "region": "Texas"}, {"country": "IN", "region": "maharashtra"}):
+    for bad in ({"country": "XX"}, {"country": "US"}, {"country": "IN", "region": "Texas"},
+                {"country": "IN", "region": "maharashtra"}):
         r = client.post("/api/profile/onboarding", json={**ONBOARDING, **bad})
         assert r.status_code == 422 and "from the list" in r.json()["detail"], bad
     me = client.post("/api/profile/onboarding", json={**ONBOARDING, "country": "in", "region": None}).json()
@@ -45,9 +51,11 @@ def test_existing_accounts_are_asked_once(client, user):
         u.country = u.region = None
         db.commit()
     assert client.get("/api/auth/me").json()["needs_location"] is True
-    r = client.put("/api/profile/location", json={"country": "US", "region": "Texas"})
+    r = client.put("/api/profile/location", json={"country": "IN", "region": "Goa"})
     assert r.status_code == 200 and r.json()["needs_location"] is False
-    assert client.put("/api/profile/location", json={"country": "US", "region": "Goa"}).status_code == 422
+    assert client.put("/api/profile/location", json={"country": "IN", "region": "Texas"}).status_code == 422
+    r = client.put("/api/profile/location", json={"country": "US", "region": "Texas"})
+    assert r.status_code == 422 and "India" in r.json()["detail"]                 # not offered yet
     # Settings: change it later, e.g. clear the region.
     assert client.put("/api/profile/location", json={"country": "IN", "region": ""}).json()["region"] is None
     with SessionLocal() as db:

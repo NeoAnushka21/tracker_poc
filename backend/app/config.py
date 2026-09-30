@@ -234,6 +234,11 @@ FAT_CALORIE_SHARE = 0.25
 KCAL_PER_G = {"protein": 4, "carbs": 4, "fat": 9}
 FIBER_G_PER_1000_KCAL = 14       # dietary guideline: 14 g fiber per 1,000 kcal
 
+# --- Where users can sign up from (2026-09-30) ------------------------------
+# ISO codes offered in the country dropdown and accepted by the API. India only for now; the full
+# list (app/data/countries.json) is kept, so adding a country is adding its code here.
+SUPPORTED_COUNTRIES = ["IN"]
+
 # --- Optional "about you" questions (2026-09-30) -----------------------------
 # All optional and skippable; each is used somewhere (see services/preferences.py).
 DIET_TYPES = {"vegetarian": "Vegetarian", "eggetarian": "Eggetarian (vegetarian + eggs)",

@@ -7,16 +7,22 @@ import json
 from functools import lru_cache
 from pathlib import Path
 
+from app.config import SUPPORTED_COUNTRIES
+
 DATA = Path(__file__).resolve().parents[1] / "data" / "countries.json"
 
 
 @lru_cache(maxsize=1)
+def _all() -> dict[str, dict]:
+    return {c["code"]: c for c in json.loads(DATA.read_text(encoding="utf-8"))["countries"]}
+
+
 def countries() -> list[dict]:
-    """[{code, name, regions: [name, ...]}, ...], sorted by name. Served to the dropdowns as is."""
-    return json.loads(DATA.read_text(encoding="utf-8"))["countries"]
+    """The countries offered now (config.SUPPORTED_COUNTRIES; India only for now), with their
+    regions: [{code, name, regions: [name, ...]}], sorted by name. Served to the dropdowns as is."""
+    return sorted((_all()[c] for c in SUPPORTED_COUNTRIES), key=lambda c: c["name"])
 
 
-@lru_cache(maxsize=1)
 def _by_code() -> dict[str, dict]:
     return {c["code"]: c for c in countries()}
 
@@ -25,7 +31,7 @@ def check(country: str, region: str | None) -> tuple[str, str | None]:
     """(country code, region or None) if both are on the list; ValueError with a readable message if not."""
     c = _by_code().get((country or "").strip().upper())
     if c is None:
-        raise ValueError("Please pick your country from the list")
+        raise ValueError("Please pick your country from the list (OmniAI is available in India for now)")
     region = (region or "").strip() or None
     if region is not None and region not in c["regions"]:
         raise ValueError(f"Please pick a region of {c['name']} from the list")
@@ -33,5 +39,5 @@ def check(country: str, region: str | None) -> tuple[str, str | None]:
 
 
 def country_name(code: str | None) -> str | None:
-    c = _by_code().get(code or "")
+    c = _all().get(code or "")          # also for a country saved before the list was narrowed
     return c["name"] if c else None
