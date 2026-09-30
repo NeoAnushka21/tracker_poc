@@ -1,4 +1,8 @@
+<p align="center"><img src="docs/brand/tandurust-emblem-256.png" alt="Tandurust logo: a leaf-and-runner emblem in green and amber" width="128" height="128"></p>
+
 # Tandurust
+
+*AI meal & wellness tracker*
 
 **Track your food by just saying what you ate.** Tandurust is a calorie and macro tracker you talk to. Tell its assistant, **MacBro**, "2 rotis, dal and a bowl of rice for lunch", check the card it shows you, press **Looks good**, and it's logged. It's free, including the AI.
 

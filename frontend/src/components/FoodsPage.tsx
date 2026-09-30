@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useState, type FormEvent } from "react";
-import { api } from "../api";
+import { api, ApiError } from "../api";
 import type { Food, MicroField } from "../types";
 import LabelSearch from "./LabelSearch";
+import DuplicateFoodDialog from "./DuplicateFoodDialog";
 import AddFoodPanel, { type AddKind } from "./AddFoodPanel";
 import { grams } from "../format";
 import { ChevronDownIcon, PencilIcon, TrashIcon } from "./icons";
@@ -217,20 +218,25 @@ function EditForm({ food, fields, onSaved, onCancel }: {
 }
 
 /** Find the food's pack label on Open Food Facts and use it. Nothing changes until "Use this". */
-function LabelCheck({ food, onApplied, onClose }: {
-  food: Food; onApplied: (f: Food) => void; onClose: () => void;
+function LabelCheck({ food, onApplied, onMerged, onClose }: {
+  food: Food; onApplied: (f: Food) => void; onMerged: (kept: Food) => void; onClose: () => void;
 }) {
   const [correctLogs, setCorrectLogs] = useState(true);
   const [busy, setBusy] = useState<string | null>(null);   // the barcode being saved
   const [error, setError] = useState<string | null>(null);
+  // Another saved food already uses the picked label: offer to merge this one into it.
+  const [duplicate, setDuplicate] = useState<{ code: string; existing: Food } | null>(null);
 
-  async function applyLabel(code: string) {
+  async function applyLabel(code: string, merge = false) {
     setBusy(code);
     setError(null);
     try {
-      onApplied(await api.applyLabel(food.id, code, correctLogs));
+      const f = await api.applyLabel(food.id, code, correctLogs, merge);
+      if (merge) onMerged(f); else onApplied(f);
     } catch (err) {
-      setError((err as Error).message);
+      const data = err instanceof ApiError ? err.data : null;
+      if (data?.code === "duplicate_label" && data.existing) setDuplicate({ code, existing: data.existing as Food });
+      else setError((err as Error).message);
       setBusy(null);
     }
   }
@@ -250,12 +256,28 @@ function LabelCheck({ food, onApplied, onClose }: {
       <div className="label-check-foot">
         <button type="button" className="ghost" onClick={onClose}>Close</button>
       </div>
+      {duplicate && (
+        <DuplicateFoodDialog existing={duplicate.existing} onClose={() => setDuplicate(null)} actions={<>
+          <button type="button" className="primary" disabled={busy !== null}
+                  onClick={() => { const code = duplicate.code; setDuplicate(null); applyLabel(code, true); }}>
+            Merge into it
+          </button>
+          <button type="button" className="ghost" onClick={() => setDuplicate(null)}>Cancel</button>
+        </>}>
+          <p className="muted small">
+            <b>Merge into it</b> keeps that one and removes "{food.name}"; the times you logged "{food.name}" (and any
+            recipes using it) move over{correctLogs ? " and get the label's numbers" : ""}.
+          </p>
+        </DuplicateFoodDialog>
+      )}
     </div>
   );
 }
 
-function FoodRow({ food, fields, onChanged, onDeleted }: {
+function FoodRow({ food, fields, onChanged, onDeleted, onMerged }: {
   food: Food; fields: MicroField[]; onChanged: (f: Food) => void; onDeleted: (id: number) => void;
+  /** This food was merged into `kept` (same pack label) and no longer exists. */
+  onMerged: (kept: Food, removedId: number) => void;
 }) {
   const [editing, setEditing] = useState(false);
   const [open, setOpen] = useState(false);
@@ -321,7 +343,8 @@ function FoodRow({ food, fields, onChanged, onDeleted }: {
       )}
       {checking && (
         <LabelCheck food={food} onClose={() => setChecking(false)}
-                    onApplied={(f) => { saved(f, "Label saved."); setChecking(false); }} />
+                    onApplied={(f) => { saved(f, "Label saved."); setChecking(false); }}
+                    onMerged={(kept) => onMerged(kept, food.id)} />
       )}
       {notice && <p className="small food-notice" role="status">{notice}</p>}
       {open && <FoodInfo food={food} fields={fields} id={infoId} />}
@@ -402,6 +425,11 @@ export default function FoodsPage({ dataVersion }: { dataVersion: number }) {
       fields={microFields}
       onChanged={(nf) => setFoods((fs) => fs?.map((x) => (x.id === nf.id ? nf : x)) ?? null)}
       onDeleted={(id) => setFoods((fs) => fs?.filter((x) => x.id !== id) ?? null)}
+      onMerged={(kept, removedId) => {
+        setFoods((fs) => fs?.filter((x) => x.id !== removedId).map((x) => (x.id === kept.id ? kept : x)) ?? null);
+        const n = kept.logs_moved ?? 0;
+        setAdded(`Merged into ${kept.name}${kept.brand_name ? ` · ${kept.brand_name}` : ""}${n ? `; ${n} past log${n === 1 ? "" : "s"} moved over` : ""}.`);
+      }}
     />
   );
 
@@ -422,7 +450,8 @@ export default function FoodsPage({ dataVersion }: { dataVersion: number }) {
       </div>
 
       {adding && (
-        <AddFoodPanel foods={foods ?? []} fields={microFields} onAdded={onAdded} onClose={() => setAdding(false)} />
+        <AddFoodPanel foods={foods ?? []} fields={microFields} onAdded={onAdded} onClose={() => setAdding(false)}
+                      onShowExisting={(f) => { setAdding(false); setFilter(tabOf(f)); setQuery(f.name); setAdded(null); }} />
       )}
       {added && <p className="small food-notice" role="status">{added}</p>}
 

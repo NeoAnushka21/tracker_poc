@@ -13,7 +13,7 @@ Follow the checklist in `docs/README.md` and bump each touched file's "Last upda
 
 ## Other rules
 
-- Naming: the app is **Tandurust** (logo "T"; renamed from OmniAI on 2026-09-30 for display only: the URL, Render services, Google project, hostnames and internal ids keep "omniai", don't rename them); **MacBro** is the chat assistant and appears, with its avatar, only in the chat (the chat window, its minimized bubble and the Home invite that opens it) and on the loading/wake screen (`WakeScreen`); both requested by the owner. Use `frontend/src/brand.ts` / `APP_NAME` in `config.py`; never hard-code the names.
+- Naming: the app is **Tandurust** (logo: the leaf-and-runner emblem in `frontend/public/brand/`, sources in `docs/brand/`; tagline "AI meal & wellness tracker"; renamed from OmniAI on 2026-09-30 for display only: the URL, Render services, Google project, hostnames and internal ids keep "omniai", don't rename them); **MacBro** is the chat assistant and appears, with its avatar, only in the chat (the chat window, its minimized bubble and the Home invite that opens it) and on the loading/wake screen (`WakeScreen`); both requested by the owner. Use `frontend/src/brand.ts` / `APP_NAME` in `config.py`; never hard-code the names.
 - The LLM only proposes. Writes from chat go through `services/actions.py → confirm_action` after the user presses a button.
 - Test with the fake LLM (`pytest`). Don't call real LLM APIs for routine testing, because the free-tier quota is shared.
 - Stay open-source and free-tier. Don't add paid services or credits without asking.

@@ -522,3 +522,29 @@ def typed_ingredient(db: Session, user: User, name: str, qty: float, unit: str, 
                             f"Use: {', '.join(general_foods.units_for(m.entry))}.") from None
     raise FoodError(f"'{name}' isn't in My Foods or the general food list. Add it first "
                     "(+ Add → Generic food or Branded product), then use it here.")
+
+
+# --- duplicates: one pack label (barcode) = one saved food ------------------------------
+
+def find_by_off_code(db: Session, user_id: int, code: str, exclude_id: int | None = None) -> UserFood | None:
+    """The user's saved food already using this Open Food Facts barcode, if any."""
+    stmt = select(UserFood).where(UserFood.user_id == user_id, UserFood.off_code == code)
+    if exclude_id is not None:
+        stmt = stmt.where(UserFood.id != exclude_id)
+    return db.scalars(stmt).first()
+
+
+def merge_into(db: Session, duplicate: UserFood, keep: UserFood) -> int:
+    """Fold `duplicate` into `keep`: its logged items and its uses as a recipe ingredient point at
+    `keep` from now on, then `duplicate` is deleted. Returns how many logged items moved."""
+    moved = 0
+    for item in db.scalars(select(LogEntryItem).where(LogEntryItem.user_food_id == duplicate.id)):
+        item.user_food_id = keep.id
+        moved += 1
+    for ri in db.scalars(select(RecipeIngredient).where(RecipeIngredient.food_id == duplicate.id)):
+        ri.food_id = keep.id
+    keep.last_used_at = max(keep.last_used_at, duplicate.last_used_at)
+    db.flush()
+    db.delete(duplicate)
+    db.flush()
+    return moved

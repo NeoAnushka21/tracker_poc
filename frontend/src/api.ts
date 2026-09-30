@@ -5,7 +5,8 @@ import type {
 import { recoverServer, serverAwake, SLOW_REQUEST_MS } from "./wake";
 
 export class ApiError extends Error {
-  constructor(public status: number, message: string) {
+  /** `detail` when the server sent an object (e.g. {message, code, existing}); null otherwise. */
+  constructor(public status: number, message: string, public data: Record<string, unknown> | null = null) {
     super(message);
   }
 }
@@ -38,14 +39,19 @@ async function request<T>(method: string, path: string, body?: unknown, signal?:
   }
   if (!res.ok) {
     let message = `Request failed (${res.status})`;
+    let detail: Record<string, unknown> | null = null;
     try {
       const data = await res.json();
       if (typeof data.detail === "string") message = data.detail;
       else if (Array.isArray(data.detail) && data.detail[0]?.msg) message = data.detail[0].msg.replace(/^Value error, /, "");
+      else if (data.detail && typeof data.detail === "object") {
+        detail = data.detail;
+        if (typeof data.detail.message === "string") message = data.detail.message;
+      }
     } catch {
       /* non-JSON error body */
     }
-    throw new ApiError(res.status, message);
+    throw new ApiError(res.status, message, detail);
   }
   return res.json() as Promise<T>;
 }
@@ -245,8 +251,8 @@ export const api = {
   createRecipe: (data: RecipeInput) => request<Food>("POST", "/api/foods/recipes", data),
   deleteFood: (id: number) => request<{ ok: boolean }>("DELETE", `/api/foods/${id}`),
   labelSearch: (q: string) => request<Label[]>("GET", `/api/foods/label-search?q=${encodeURIComponent(q)}`),
-  applyLabel: (id: number, code: string, correct_logs: boolean) =>
-    request<Food>("POST", `/api/foods/${id}/label`, { code, correct_logs }),
+  applyLabel: (id: number, code: string, correct_logs: boolean, merge = false) =>
+    request<Food>("POST", `/api/foods/${id}/label`, { code, correct_logs, merge }),
 
   addWater: (amount_ml: number) => request<{ id: number; amount_ml: number }>("POST", "/api/water", { amount_ml }),
   deleteWater: (id: number) => request<{ ok: boolean }>("DELETE", `/api/water/${id}`),

@@ -205,6 +205,9 @@ export type Food = Nutrients & {
   off_code: string | null;
   /** After an edit or a label check: how many past logs were recomputed. */
   logs_corrected?: number;
+  /** After a merge (same pack label): the removed food's id and how many of its logs moved over. */
+  merged_from?: number;
+  logs_moved?: number;
 };
 
 /** + Add → Recipe: an ingredient row (food_id when picked from My Foods). */

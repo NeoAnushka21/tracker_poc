@@ -1,4 +1,4 @@
-import { APP_MARK, APP_NAME } from "../brand";
+import { APP_LOGO, APP_NAME } from "../brand";
 import { useId } from "react";
 
 /** MacBro: a cartoon boy in an "MB" t-shirt. Drawn inline so it scales cleanly. */
@@ -50,12 +50,13 @@ export function UserAvatar({ name, email, size = 32 }: { name: string | null; em
   );
 }
 
-/** App logo: the app mark ("T") on a gradient tile. The letters shrink to fit (one letter large). */
+/** App logo: the Tandurust emblem (transparent PNG, sharp at 2x). Decorative unless `label`. */
 export function AppLogo({ size = 32, label = false }: { size?: number; label?: boolean }) {
+  const big = size > 48;   // the 96 px file is enough up to 48 px on a 2x screen
   return (
-    <span className="app-logo" style={{ width: size, height: size, fontSize: size * Math.min(0.56, 1.02 / APP_MARK.length), borderRadius: size * 0.28 }}
-          role={label ? "img" : undefined} aria-label={label ? APP_NAME : undefined} aria-hidden={label ? undefined : true}>
-      {APP_MARK}
-    </span>
+    <img className="app-logo" src={big ? APP_LOGO.src2x : APP_LOGO.src}
+         srcSet={big ? undefined : `${APP_LOGO.src} 1x, ${APP_LOGO.src2x} 2x`}
+         width={size} height={size} alt={label ? APP_NAME : ""} aria-hidden={label ? undefined : true}
+         decoding="async" draggable={false} />
   );
 }

@@ -10,8 +10,8 @@ from app.deps import onboarded_user
 from app.models import User, UserFood, utcnow
 from app.services import labels, micros
 from app.services.foods import (
-    NUTRIENTS, FoodError, apply_label, compute_recipe, correct_past_logs, find_by_name, food_to_dict, get_user_food,
-    list_foods, name_key, normalize_unit, recipes_using, save_recipe, typed_ingredient,
+    NUTRIENTS, FoodError, apply_label, compute_recipe, correct_past_logs, find_by_name, find_by_off_code, food_to_dict,
+    get_user_food, list_foods, merge_into, name_key, normalize_unit, recipes_using, save_recipe, typed_ingredient,
 )
 
 router = APIRouter(prefix="/api/foods", tags=["foods"])
@@ -52,6 +52,8 @@ class FoodUpdateIn(BaseModel):
 class LabelIn(BaseModel):
     code: str = Field(min_length=8, max_length=14, pattern=r"^\d+$")   # the Open Food Facts barcode
     correct_logs: bool = True
+    # Another saved food already has this label: fold this one into it (logs and recipes move).
+    merge: bool = False
 
 
 class FoodCreateIn(FoodUpdateIn):
@@ -73,6 +75,17 @@ class RecipeCreateIn(BaseModel):
     yield_pieces: float | None = Field(default=None, gt=0)
     yield_servings: float | None = Field(default=None, gt=0)
     cooked_weight_g: float | None = Field(default=None, gt=0)
+
+
+def _duplicate_label(existing: UserFood, can_merge: bool) -> HTTPException:
+    """409 with the saved food that already uses this pack label, so the app can offer it (or a merge)."""
+    what = f"{existing.name} · {existing.brand_name}" if existing.brand_name else existing.name
+    return HTTPException(status.HTTP_409_CONFLICT, {
+        "code": "duplicate_label",
+        "message": f"This product is already in My Foods as '{what}'.",
+        "existing": food_to_dict(existing),
+        "can_merge": can_merge,
+    })
 
 
 def _no_clash(db: Session, user: User, name: str, brand: str | None) -> None:
@@ -104,6 +117,8 @@ def micronutrient_fields(_user: User = Depends(onboarded_user)):
 def create(body: FoodCreateIn, user: User = Depends(onboarded_user), db: Session = Depends(get_db)):
     """+ Add → Generic food or Branded product: a food typed in by the user (or a label they picked)."""
     name, brand = body.name.strip(), (body.brand_name or "").strip() or None
+    if body.label_code and (same := find_by_off_code(db, user.id, body.label_code)) is not None:
+        raise _duplicate_label(same, can_merge=False)
     _no_clash(db, user, name, brand)
     food = UserFood(user_id=user.id, name=name, brand_name=brand, name_key=name_key(name, brand), kind="food",
                     ref_qty=body.ref_qty, ref_unit=normalize_unit(body.ref_unit)[0],
@@ -172,6 +187,15 @@ def use_label(food_id: int, body: LabelIn, user: User = Depends(onboarded_user),
     food = _food_or_404(db, user, food_id)
     if food.kind == "recipe":
         raise HTTPException(status.HTTP_409_CONFLICT, "A recipe's numbers come from its ingredients")
+    same = find_by_off_code(db, user.id, body.code, exclude_id=food.id)
+    if same is not None:
+        if not body.merge:
+            raise _duplicate_label(same, can_merge=True)
+        moved = merge_into(db, food, same)
+        corrected = correct_past_logs(db, user, same) if body.correct_logs else 0
+        db.commit()
+        return {**food_to_dict(same, with_ingredients=True), "logs_corrected": corrected,
+                "merged_from": food_id, "logs_moved": moved}
     try:
         label = labels.get_label(body.code)
     except labels.LabelLookupError as e:

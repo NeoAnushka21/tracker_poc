@@ -1,25 +1,26 @@
 :root {
   --content-max: 1200px;
   --edge: max(24px, calc((100% - var(--content-max)) / 2));
-  --bg: #fafafa;
+  --bg: #f9f9f5;
   --surface: #ffffff;
-  --surface-2: #f4f4f5;
+  --surface-2: #f3f4ee;
   --glass: rgb(255 255 255 / 0.72);
   --header-glass: rgb(255 255 255 / 0.75);
-  --header-mesh: radial-gradient(at 6% 30%, rgb(110 231 183 / 0.55) 0, transparent 45%), radial-gradient(at 36% 0%, rgb(103 232 249 / 0.45) 0, transparent 42%), radial-gradient(at 58% 55%, rgb(196 181 253 / 0.3) 0, transparent 48%), radial-gradient(at 78% 100%, rgb(249 168 212 / 0.35) 0, transparent 45%), radial-gradient(at 97% 15%, rgb(252 211 77 / 0.35) 0, transparent 40%);
+  --header-mesh: radial-gradient(at 6% 30%, rgb(147 181 64 / 0.42) 0, transparent 45%), radial-gradient(at 36% 0%, rgb(99 156 70 / 0.32) 0, transparent 42%), radial-gradient(at 58% 55%, rgb(249 180 41 / 0.22) 0, transparent 48%), radial-gradient(at 78% 100%, rgb(242 139 37 / 0.22) 0, transparent 45%), radial-gradient(at 97% 15%, rgb(249 180 41 / 0.32) 0, transparent 40%);
   --text: #18181b;
   --muted: #5c5c66;
   --border: #e7e7ea;
   --grid: #efeff1;
-  --accent: #047857;
+  --accent: #2e7d32;
   --accent-text: #ffffff;
-  --accent-soft: #e7f6ef;
-  --accent-grad: linear-gradient(135deg, #047857, #0e7490);
-  --accent-glow: rgb(16 185 129 / 0.35);
-  --mint: #effaf5;
+  --accent-soft: #edf6e6;
+  --accent-grad: linear-gradient(135deg, #2e7d32, #3c7a1c);
+  --brand-grad: linear-gradient(120deg, #358449, #93b540 55%, #f9b429);   /* decoration only: no text on it */
+  --accent-glow: rgb(99 156 70 / 0.35);
+  --mint: #f1f7e8;
   --warn: #b45309;
   --error: #b42318;
-  --bar: #059669;
+  --bar: #2e7d32;
   --radius: 22px;
   --radius-sm: 14px;
   /* macro colours: luminous green / amber / cyan, validated 2026-09-29 with the dataviz palette
@@ -38,7 +39,7 @@
   --meal-dinner: #6d28d9; --meal-dinner-ink: #5b21b6;
   --meal-glyph: #ffffff;
   --status-warning: #b45309;
-  --avatar-bg: #047857;
+  --avatar-bg: #2e7d32;
   --avatar-fg: #ffffff;
   --user-avatar-bg: #e9e3f7;
   --user-avatar-fg: #4a3aa7;
@@ -64,20 +65,21 @@
     --surface-2: #26262a;
     --glass: rgb(28 28 31 / 0.72);
     --header-glass: rgb(28 28 31 / 0.75);
-    --header-mesh: radial-gradient(at 6% 30%, rgb(6 95 70 / 0.75) 0, transparent 45%), radial-gradient(at 36% 0%, rgb(21 94 117 / 0.7) 0, transparent 42%), radial-gradient(at 58% 55%, rgb(76 29 149 / 0.45) 0, transparent 48%), radial-gradient(at 78% 100%, rgb(131 24 67 / 0.5) 0, transparent 45%), radial-gradient(at 97% 15%, rgb(120 53 15 / 0.55) 0, transparent 40%);
+    --header-mesh: radial-gradient(at 6% 30%, rgb(53 132 73 / 0.7) 0, transparent 45%), radial-gradient(at 36% 0%, rgb(99 156 70 / 0.45) 0, transparent 42%), radial-gradient(at 58% 55%, rgb(120 90 20 / 0.4) 0, transparent 48%), radial-gradient(at 78% 100%, rgb(140 70 15 / 0.45) 0, transparent 45%), radial-gradient(at 97% 15%, rgb(150 110 20 / 0.5) 0, transparent 40%);
     --text: #ececef;
     --muted: #a1a1aa;
     --border: #2e2e33;
     --grid: #29292d;
-    --accent: #34d399;
-    --accent-text: #062a1e;
-    --accent-soft: #133027;
-    --accent-grad: linear-gradient(135deg, #34d399, #22d3ee);
-    --accent-glow: rgb(52 211 153 / 0.45);
-    --mint: #14261e;
+    --accent: #8fce5c;
+    --accent-text: #11210a;
+    --accent-soft: #1f2e18;
+    --accent-grad: linear-gradient(135deg, #8fce5c, #c9d65a);
+    --brand-grad: linear-gradient(120deg, #4fa35f, #a6c653 55%, #f9b429);   /* decoration only: no text on it */
+    --accent-glow: rgb(143 206 92 / 0.4);
+    --mint: #18241a;
     --warn: #f0a24a;
     --error: #f47067;
-    --bar: #34d399;
+    --bar: #8fce5c;
     /* same hues stepped for the dark surface (validated: dataviz palette script) */
     --protein: #15ad52;
     --fiber: #c94696;
@@ -92,8 +94,8 @@
     --meal-dinner: #a78bfa; --meal-dinner-ink: #c4b5fd;
     --meal-glyph: #1c1c1f;
     --status-warning: #f0a24a;
-    --avatar-bg: #34d399;
-    --avatar-fg: #062a1e;
+    --avatar-bg: #8fce5c;
+    --avatar-fg: #11210a;
     --user-avatar-bg: #2d2850;
     --user-avatar-fg: #c9c2ff;
     --tooltip-bg: #0a0a0a;
@@ -110,20 +112,21 @@
   --surface-2: #26262a;
   --glass: rgb(28 28 31 / 0.72);
   --header-glass: rgb(28 28 31 / 0.75);
-  --header-mesh: radial-gradient(at 6% 30%, rgb(6 95 70 / 0.75) 0, transparent 45%), radial-gradient(at 36% 0%, rgb(21 94 117 / 0.7) 0, transparent 42%), radial-gradient(at 58% 55%, rgb(76 29 149 / 0.45) 0, transparent 48%), radial-gradient(at 78% 100%, rgb(131 24 67 / 0.5) 0, transparent 45%), radial-gradient(at 97% 15%, rgb(120 53 15 / 0.55) 0, transparent 40%);
+  --header-mesh: radial-gradient(at 6% 30%, rgb(53 132 73 / 0.7) 0, transparent 45%), radial-gradient(at 36% 0%, rgb(99 156 70 / 0.45) 0, transparent 42%), radial-gradient(at 58% 55%, rgb(120 90 20 / 0.4) 0, transparent 48%), radial-gradient(at 78% 100%, rgb(140 70 15 / 0.45) 0, transparent 45%), radial-gradient(at 97% 15%, rgb(150 110 20 / 0.5) 0, transparent 40%);
   --text: #ececef;
   --muted: #a1a1aa;
   --border: #2e2e33;
   --grid: #29292d;
-  --accent: #34d399;
-  --accent-text: #062a1e;
-  --accent-soft: #133027;
-  --accent-grad: linear-gradient(135deg, #34d399, #22d3ee);
-  --accent-glow: rgb(52 211 153 / 0.45);
-  --mint: #14261e;
+  --accent: #8fce5c;
+  --accent-text: #11210a;
+  --accent-soft: #1f2e18;
+  --accent-grad: linear-gradient(135deg, #8fce5c, #c9d65a);
+  --brand-grad: linear-gradient(120deg, #4fa35f, #a6c653 55%, #f9b429);   /* decoration only: no text on it */
+  --accent-glow: rgb(143 206 92 / 0.4);
+  --mint: #18241a;
   --warn: #f0a24a;
   --error: #f47067;
-  --bar: #34d399;
+  --bar: #8fce5c;
   /* same hues stepped for the dark surface (validated: dataviz palette script) */
   --protein: #15ad52;
   --fiber: #c94696;
@@ -138,8 +141,8 @@
   --meal-dinner: #a78bfa; --meal-dinner-ink: #c4b5fd;
   --meal-glyph: #1c1c1f;
   --status-warning: #f0a24a;
-  --avatar-bg: #34d399;
-  --avatar-fg: #062a1e;
+  --avatar-bg: #8fce5c;
+  --avatar-fg: #11210a;
   --user-avatar-bg: #2d2850;
   --user-avatar-fg: #c9c2ff;
   --tooltip-bg: #0a0a0a;
@@ -271,7 +274,7 @@ button.link { background: none; border: none; color: var(--accent); padding: 6px
 .tabs button:hover:not(.on)::after { left: 18px; right: 18px; opacity: 1; }
 .tabs button.on { color: var(--accent); background: var(--accent-soft); }
 .tab-indicator {
-  position: absolute; z-index: 1; left: 0; bottom: -1px; height: 3px; border-radius: 3px 3px 0 0; background: var(--accent-grad);
+  position: absolute; z-index: 1; left: 0; bottom: -1px; height: 3px; border-radius: 3px 3px 0 0; background: var(--brand-grad);
   transition: transform 0.28s cubic-bezier(0.2, 0.8, 0.2, 1), width 0.28s cubic-bezier(0.2, 0.8, 0.2, 1);
 }
 
@@ -1060,7 +1063,7 @@ button.danger { color: var(--error); }
 .home { display: grid; gap: 18px; }
 .home-hero {
   display: flex; align-items: center; gap: 18px; flex-wrap: wrap;
-  background: linear-gradient(135deg, var(--mint), var(--surface) 70%);
+  background: linear-gradient(135deg, var(--mint), var(--surface) 62%, color-mix(in srgb, #f9b429 9%, var(--surface)));
 }
 .home-hero-text { flex: 1; min-width: 220px; }
 .home-hero h1 { font-size: 1.9rem; margin: 2px 0 4px; }
@@ -1114,12 +1117,9 @@ button.danger { color: var(--error); }
 }
 
 /* ---------- app logo (placeholder until the name is final) ---------- */
-.app-logo {
-  display: inline-grid; place-items: center; flex-shrink: 0;
-  background: var(--accent-grad); color: var(--accent-text);
-  font-weight: 800; letter-spacing: 0.02em; line-height: 1;
-  box-shadow: 0 4px 12px var(--accent-glow);
-}
+.app-logo { display: inline-block; flex-shrink: 0; object-fit: contain; user-select: none; }
+/* Tagline under the name (sign-in screen) */
+.app-tagline { margin: 2px 0 6px; font-size: 0.78rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--accent); }
 
 /* ---------- chat per day, date picker ---------- */
 .show-earlier { align-self: center; font-size: 0.85rem; border-radius: 999px; padding: 6px 14px; color: var(--accent); }
@@ -1495,3 +1495,9 @@ button.danger { color: var(--error); }
   .explore-section, .explore-go { transition: none; }
   .explore-section:hover, .explore-section:hover .explore-go { transform: none; }
 }
+
+/* "Already in My Foods" (same pack label) */
+.dup-dialog { max-width: 440px; }
+.dup-dialog h3 { margin: 0 0 8px; }
+.dup-dialog p { margin: 0 0 10px; line-height: 1.5; }
+.dup-actions { display: flex; gap: 8px; justify-content: flex-end; flex-wrap: wrap; margin-top: 6px; }

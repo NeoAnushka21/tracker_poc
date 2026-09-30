@@ -1,8 +1,9 @@
 import { useMemo, useState, type FormEvent } from "react";
-import { api } from "../api";
+import { api, ApiError } from "../api";
 import type { Food, Label, MicroField, RecipePreview } from "../types";
 import { grams } from "../format";
 import LabelSearch from "./LabelSearch";
+import DuplicateFoodDialog from "./DuplicateFoodDialog";
 
 export type AddKind = "brand" | "generic" | "recipe";
 
@@ -35,7 +36,10 @@ const EMPTY: Values = {
 };
 
 /** Branded product and Generic food: the same fields, laid out for a pack label or for your own numbers. */
-function FoodTemplate({ branded, fields, onAdded }: { branded: boolean; fields: MicroField[]; onAdded: (f: Food) => void }) {
+function FoodTemplate({ branded, fields, onAdded, onShowExisting }: {
+  branded: boolean; fields: MicroField[]; onAdded: (f: Food) => void; onShowExisting: (f: Food) => void;
+}) {
+  const [duplicate, setDuplicate] = useState<Food | null>(null);   // the saved food that already has this label
   const [v, setV] = useState<Values>(EMPTY);
   const [micros, setMicros] = useState<Record<string, string>>({});
   const [label, setLabel] = useState<Label | null>(null);        // picked on Open Food Facts, until a number is changed
@@ -87,7 +91,9 @@ function FoodTemplate({ branded, fields, onAdded }: { branded: boolean; fields: 
         label_code: label?.code ?? null,
       }));
     } catch (err) {
-      setError((err as Error).message);
+      const data = err instanceof ApiError ? err.data : null;
+      if (data?.code === "duplicate_label" && data.existing) setDuplicate(data.existing as Food);
+      else setError((err as Error).message);
       setBusy(false);
     }
   }
@@ -193,6 +199,12 @@ function FoodTemplate({ branded, fields, onAdded }: { branded: boolean; fields: 
       <div className="food-edit-actions">
         <button className="primary" disabled={busy}>{busy ? "Saving…" : "Add to My Foods"}</button>
       </div>
+      {duplicate && (
+        <DuplicateFoodDialog existing={duplicate} onClose={() => setDuplicate(null)} actions={<>
+          <button type="button" className="primary" onClick={() => { setDuplicate(null); onShowExisting(duplicate); }}>Show it</button>
+          <button type="button" className="ghost" onClick={() => setDuplicate(null)}>Close</button>
+        </>} />
+      )}
     </form>
   );
 }
@@ -313,8 +325,10 @@ function RecipeTemplate({ foods, onAdded }: { foods: Food[]; onAdded: (f: Food) 
 }
 
 /** My Foods → + Add: pick what to add, then fill in its template. */
-export default function AddFoodPanel({ foods, fields, onAdded, onClose }: {
-  foods: Food[]; fields: MicroField[]; onAdded: (f: Food, kind: AddKind) => void; onClose: () => void;
+export default function AddFoodPanel({ foods, fields, onAdded, onShowExisting, onClose }: {
+  foods: Food[]; fields: MicroField[]; onAdded: (f: Food, kind: AddKind) => void;
+  /** "Already in My Foods" → Show it: close the panel and find that food in the list. */
+  onShowExisting: (f: Food) => void; onClose: () => void;
 }) {
   const [kind, setKind] = useState<AddKind | null>(null);
   const choice = CHOICES.find((c) => c.kind === kind);
@@ -337,8 +351,8 @@ export default function AddFoodPanel({ foods, fields, onAdded, onClose }: {
           ))}
         </div>
       )}
-      {kind === "brand" && <FoodTemplate key="brand" branded fields={fields} onAdded={(f) => onAdded(f, "brand")} />}
-      {kind === "generic" && <FoodTemplate key="generic" branded={false} fields={fields} onAdded={(f) => onAdded(f, "generic")} />}
+      {kind === "brand" && <FoodTemplate key="brand" branded fields={fields} onAdded={(f) => onAdded(f, "brand")} onShowExisting={onShowExisting} />}
+      {kind === "generic" && <FoodTemplate key="generic" branded={false} fields={fields} onAdded={(f) => onAdded(f, "generic")} onShowExisting={onShowExisting} />}
       {kind === "recipe" && <RecipeTemplate foods={foods} onAdded={(f) => onAdded(f, "recipe")} />}
     </div>
   );

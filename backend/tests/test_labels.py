@@ -170,3 +170,40 @@ def test_brand_and_name_in_chat_use_the_label_without_the_ai(client, user, fake_
     assert r.status_code == 200, r.text
     item = r.json()[-1]["actions"][0]["payload"]["items"][0]
     assert (item["food_id"], item["calories"]) == (butter["id"], 72.2)
+
+
+# --- one pack label = one saved food ---------------------------------------------------
+
+def test_adding_a_product_whose_label_is_already_saved_is_refused(client, user, fake_llm, off):
+    log_and_confirm(client, fake_llm, [BUTTER_ESTIMATE])
+    butter = foods_by_name(client)["butter"]
+    client.post(f"/api/foods/{butter['id']}/label", json={"code": "8901262010016"})
+    body = {"name": "white butter", "brand_name": "Amul", "ref_qty": 100, "ref_unit": "g", "calories": 1,
+            "protein_g": 0, "carbs_g": 0, "fat_g": 0, "label_checked": True, "label_code": "8901262010016"}
+    r = client.post("/api/foods", json=body)
+    assert r.status_code == 409
+    detail = r.json()["detail"]
+    assert detail["code"] == "duplicate_label" and detail["existing"]["id"] == butter["id"] and not detail["can_merge"]
+    assert "already in My Foods as 'butter · Amul'" in detail["message"]
+    assert "white butter" not in foods_by_name(client)
+
+
+def test_checking_a_second_food_against_the_same_label_offers_a_merge(client, user, fake_llm, off):
+    log_and_confirm(client, fake_llm, [BUTTER_ESTIMATE])
+    log_and_confirm(client, fake_llm, [{**BUTTER_ESTIMATE, "ingredient_name": "amul butter salted", "brand_name": "amul"}])
+    foods = foods_by_name(client)
+    keep, dup = foods["butter"], foods["amul butter salted"]
+    client.post(f"/api/foods/{keep['id']}/label", json={"code": "8901262010016"})
+
+    r = client.post(f"/api/foods/{dup['id']}/label", json={"code": "8901262010016"})
+    assert r.status_code == 409 and r.json()["detail"]["can_merge"] is True
+    assert "amul butter salted" in foods_by_name(client)                    # nothing changed yet
+
+    r = client.post(f"/api/foods/{dup['id']}/label", json={"code": "8901262010016", "merge": True})
+    assert r.status_code == 200, r.text
+    merged = r.json()
+    assert (merged["id"], merged["merged_from"], merged["logs_moved"], merged["logs_corrected"]) == (keep["id"], dup["id"], 1, 2)
+    assert "amul butter salted" not in foods_by_name(client)
+    with SessionLocal() as db:   # both logged items now point at the kept food, with the label's numbers
+        items = db.scalars(select(LogEntryItem)).all()
+        assert {i.user_food_id for i in items} == {keep["id"]} and {i.calories for i in items} == {72.2}

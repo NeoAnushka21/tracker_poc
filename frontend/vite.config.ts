@@ -1,11 +1,11 @@
 import { fileURLToPath } from "node:url";
 import { defineConfig, type Plugin } from "vite";
 import react from "@vitejs/plugin-react";
-import { APP_DEV_HOST, APP_NAME } from "./src/brand";
+import { APP_DEV_HOST, APP_NAME, APP_TAGLINE } from "./src/brand";
 
 /** Fills %APP_NAME% in index.html from src/brand.ts, so a rename is one edit. */
 function brandHtml(): Plugin {
-  return { name: "brand-html", transformIndexHtml: (html) => html.replaceAll("%APP_NAME%", APP_NAME) };
+  return { name: "brand-html", transformIndexHtml: (html) => html.replaceAll("%APP_NAME%", APP_NAME).replaceAll("%APP_TAGLINE%", APP_TAGLINE) };
 }
 
 // In dev, /api is proxied to FastAPI so the session cookie is same-origin.

@@ -2,7 +2,7 @@ import { useEffect, useState, type FormEvent } from "react";
 import { api } from "../api";
 import type { User } from "../types";
 import { AppLogo } from "./Avatar";
-import { APP_NAME } from "../brand";
+import { APP_NAME, APP_TAGLINE } from "../brand";
 import ThemeToggle from "./ThemeToggle";
 import GoogleButton from "./GoogleButton";
 
@@ -134,6 +134,7 @@ export default function AuthScreen({ onAuthed }: { onAuthed: (u: User) => void }
           <AppLogo size={72} />
           <div>
             <h1>{APP_NAME}{mode === "admin" && <span className="admin-badge">Admin</span>}</h1>
+            <p className="app-tagline">{APP_TAGLINE}</p>
             <p className="muted">
               {mode === "admin" ? "Admin console login. For the app's administrators only."
                 : mode === "forgot" ? "Forgot your password? We'll email you a link to set a new one."

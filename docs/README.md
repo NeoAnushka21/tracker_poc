@@ -25,7 +25,7 @@ The docs are part of the product. **Update them in the same change as the code**
 | A Python package | `backend/requirements.in`, then regenerate `requirements.txt` (technical-overview §10) |
 | Config / env variables | `technical-overview.md` §9, `backend/.env.example` |
 | Target formulas, meal windows, water or micronutrient rules | `user-guide.md` (§2, §5, §11) and `technical-overview.md` |
-| App or assistant name, logo, hostname | `frontend/src/brand.ts` (name, logo text, `APP_DEV_HOST`, `APP_DOMAIN`), `public/favicon.svg`, `backend/app/config.py` `APP_NAME`, the persona line in `prompt.py`, all docs titles, and `technical-overview.md` §8 |
+| App or assistant name, logo, hostname | `frontend/src/brand.ts` (name, `APP_LOGO`, `APP_TAGLINE`, `APP_DEV_HOST`, `APP_DOMAIN`), the logo files in `public/brand/` (see `docs/brand/README.md`), `backend/app/config.py` `APP_NAME`, the persona line in `prompt.py`, all docs titles, and `technical-overview.md` §8 |
 | Deployment or infrastructure | `deployment.md`, `render.yaml`, `hld.md` §3.1 and §7, `technical-overview.md` §1 and §9, the root `README.md` |
 
 Before committing, besides the backend tests and `npm run build`, run `npm run lint` in `frontend/` (CI runs all three).
