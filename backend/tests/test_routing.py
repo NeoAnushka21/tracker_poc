@@ -52,6 +52,11 @@ def usage_rows():
     ("delete the cookie", "edit", "small"),
     ("the rice was actually 200g", "edit", "small"),
     ("save my chapati as a recipe", "full", "large"),
+    # Disputing an answer is a re-check (read tools only), not an edit.
+    ("No you are wrong check again I did not complete 143g", "query", "large"),
+    ("that's not right, recalculate", "query", "large"),
+    ("you're wrong, the rice was 200g", "edit", "small"),               # a concrete food fix
+    ("that's wrong, delete the cookie", "edit", "small"),
 ])
 def test_router(text, intent, tier):
     r = route(text)
@@ -98,6 +103,37 @@ def test_summary_fastpath(client, user, no_llm):
     assert reply["content"].startswith("Protein: 0 /") and "Calories:" in reply["content"]
     assert "Here's today so far" in chat(client, "what's left today")["content"]
     assert no_llm.calls == []
+
+
+@pytest.mark.parametrize("text,first_line", [
+    ("How much protein did I eat today?", "Protein: 31 /"),
+    ("how much protein have I had so far", "Protein: 31 /"),
+    ("what's my protein intake today?", "Protein: 31 /"),
+    ("protein today?", "Protein: 31 /"),
+    ("how many calories did I eat today", "Here's today so far:\n- Calories: 165 /"),
+    ("how much did I eat today?", "Here's today so far:"),
+])
+def test_eaten_today_questions_use_the_exact_totals(client, user, fake_llm, text, first_line):
+    log_and_confirm(client, fake_llm, [CHICKEN])                    # 165 kcal, 31 g protein
+    no = fake_llm()
+    assert chat(client, text)["content"].startswith(first_line)
+    assert no.calls == []
+
+
+def test_other_days_still_go_to_the_model(client, user, fake_llm):
+    llm = fake_llm(text_reply("You had 80 g."))
+    chat(client, "how much protein did I eat yesterday?")
+    assert len(llm.calls) == 1
+
+
+def test_dispute_rechecks_without_edit_tools(client, user, fake_llm):
+    log_and_confirm(client, fake_llm, [CHICKEN])
+    llm = fake_llm(text_reply("Let me re-check: 31 g of 143 g."))
+    chat(client, "No you are wrong check again I did not complete 143g")
+    call = llm.calls[0]
+    assert {t["name"] for t in call["tools"]} == {"get_logs", "get_daily_summary", "get_food"}
+    assert "never from your own arithmetic" in call["system_stable"]
+    assert '"protein_g": 31' in call["system_dynamic"]              # per-entry protein in the context
 
 
 def test_library_only_log_fastpath(client, user, fake_llm):

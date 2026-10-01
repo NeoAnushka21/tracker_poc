@@ -40,6 +40,15 @@ _QUESTION_START = re.compile(
 _EDIT = re.compile(
     r"\b(?:move|shift|copy|duplicate|delete|remove|undo|change|update|edit|correct|replace|swap|"
     r"instead|actually|wrong|mistake|wasn'?t|was not|make (?:it|that|the)|should be|not \d|(?:was|were) \d[\w.]*)\b", re.I)
+# "You're wrong, check again": the user disputes an answer (usually a total). Without a concrete
+# food change it's a re-check, not an edit, so it gets read tools only.
+_DISPUTE = re.compile(
+    r"\b(?:(?:you(?:'re| are)?|that'?s|that is|it'?s|it is|this is)\s+(?:(?:so|totally|completely)\s+)?"
+    r"(?:wrong|not right|incorrect|not correct)|check again|double[- ]check|re-?check|recount|count again|"
+    r"re-?calculate|calculate again|add (?:it |them )?up again|not true)\b", re.I)
+_FOOD_FIX = re.compile(
+    r"\b(?:move|shift|copy|duplicate|delete|remove|undo|change|update|edit|replace|swap|make (?:it|that|the)|"
+    r"should be|(?:was|were) (?:only |just |actually )?\d[\w.]*|not \d[\w.]*\s*(?:g|gm|grams?|ml|pieces?|pcs?)\b)", re.I)
 _RECIPE = re.compile(r"\brecipes?\b", re.I)
 _QTY = re.compile(r"\d|\b(?:a|an|one|two|three|four|five|six|half|couple)\b", re.I)
 # Portions or dishes whose contents vary a lot: worth the large model's judgement.
@@ -63,6 +72,8 @@ def route(text: str, *, feedback: bool = False) -> Route:
         return Route("full", "large", ALL_TOOLS, SECTIONS["full"], "recipe")
     if words > 40:
         return Route("full", "large", ALL_TOOLS, SECTIONS["full"], "long message")
+    if _DISPUTE.search(text) and not _FOOD_FIX.search(text):
+        return Route("query", "large", QUERY_TOOLS, SECTIONS["query"], "disputes an answer")
     if _EDIT.search(text):
         tier = "large" if count_items(text) >= 3 or _VAGUE.search(text) else "small"
         return Route("edit", tier, EDIT_TOOLS, SECTIONS["edit"], "edit words")

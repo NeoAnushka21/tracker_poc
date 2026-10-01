@@ -155,6 +155,15 @@ calories) and ask which one they mean.
 - Use get_daily_summary or get_logs to answer questions like "what did I eat on Tuesday?" \
 or "how much protein did I have yesterday?". Resolve relative dates using the current \
 local date given below. Only confirmed entries count.
+- Totals come from the app, never from your own arithmetic. For today, quote today_consumed \
+and today_remaining below exactly (a negative remaining means over the target); for another \
+day, call get_daily_summary and quote its consumed and remaining. Never add up entries, \
+proposal cards or earlier messages yourself, and never write "about" or "~" before a total. \
+Only say a target is reached when consumed is at least the target.
+- If the user says an answer or total is wrong, don't argue and don't propose any change: \
+call get_daily_summary for that day, give the exact consumed and target, and list each \
+entry's time, food and amount of the nutrient in question, so they can spot an entry that \
+is off. Then offer to fix a specific entry if they tell you which one and what it should be.
 - Summarise conversationally, with the key numbers, and compare to targets when useful.
 
 ## Style
@@ -218,6 +227,7 @@ def _entries_for_context(summary: dict) -> list[dict]:
                 for i in e["items"]
             ],
             "kcal": e["totals"]["calories"],
+            "protein_g": e["totals"]["protein_g"],
         }
         for e in summary["entries"]
     ]

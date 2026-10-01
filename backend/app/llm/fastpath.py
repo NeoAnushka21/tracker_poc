@@ -127,10 +127,18 @@ def _yes(ctx: ToolContext, text: str) -> str | None:
 _MACROS = {"protein": "protein_g", "calories": "calories", "calorie": "calories", "kcal": "calories",
            "carbs": "carbs_g", "carb": "carbs_g", "carbohydrates": "carbs_g", "fat": "fat_g", "fats": "fat_g",
            "fiber": "fiber_g", "fibre": "fiber_g"}
+_MACRO_WORDS = r"protein|calories|calorie|kcal|carbs|carb|carbohydrates|fat|fats|fiber|fibre"
+_TODAY = r"(?: (?:today|so far|so far today|today so far))?"
 _SUMMARY = re.compile(
     r"(?:(?:what'?s|what is|whats) (?:left|remaining)(?: for today| today)?"
-    r"|how much (?P<macro>protein|calories|calorie|kcal|carbs|carb|carbohydrates|fat|fats|fiber|fibre)? ?"
+    r"|how much (?P<macro>" + _MACRO_WORDS + r")? ?"
     r"(?:do i have |is |have i got )?(?:left|remaining)(?: for today| today)?"
+    # "how much protein did I eat today?", "how many calories have I had so far?" (today only:
+    # any other day word fails the full match and goes to the model)
+    r"|how (?:much|many) (?P<eaten>" + _MACRO_WORDS + r")? ?(?:did i|have i|i have|i've) "
+    r"(?:eat|eaten|ate|have|had|get|got|consume|consumed|take|taken)" + _TODAY +
+    r"|(?:what'?s|what is|whats) my (?P<mine>" + _MACRO_WORDS + r")(?: intake| count| total)?" + _TODAY +
+    r"|(?:my )?(?P<total>" + _MACRO_WORDS + r") (?:intake |count |total )?(?:today|so far)"
     r"|(?:today'?s |my )?(?:summary|progress|status)(?: for today| today| so far)?"
     r"|how am i doing(?: today)?|day so far)\??")
 
@@ -143,7 +151,7 @@ def _summary(ctx: ToolContext, text: str) -> str | None:
     t, c = s.get("targets"), s["consumed"]
     if not t:
         return None
-    macro = _MACROS.get(m.group("macro") or "")
+    macro = _MACROS.get(m.group("macro") or m.group("eaten") or m.group("mine") or m.group("total") or "")
 
     def line(label: str, key: str, unit: str) -> str:
         left = t[key] - c[key]
