@@ -6,6 +6,7 @@
 | `tandurust-emblem-1024.png` | The emblem alone with a **transparent** background, 1024 × 1024. Master for every size used in the app. |
 | `tandurust-emblem-256.png` | The same, 256 px, used at the top of the root README. |
 | `cutout.py` | How the transparent emblem was made (see below). |
+| `google-oauth-logo-120.png` | 120 × 120 PNG (13 KB) for Google Auth Platform → Branding → App logo: the emblem centred on opaque white with a small margin (Google may show it in a circle). Made from the 1024 master with Pillow (2026-10-01). |
 
 The app's copies live in `frontend/public/brand/`: `emblem-96.png` and `emblem-192.png` (the `AppLogo` component, sharp on high-density screens), `favicon-32.png` / `favicon-64.png` (browser tab), `apple-touch-icon.png` (180 px on the warm off-white, for phone home screens, which show transparent icons on black).
 
