@@ -55,6 +55,15 @@ def test_welcome_page_is_served_at_welcome(site):
     assert site.get("/").text == "<html>app</html>"
 
 
+def test_prerendered_privacy_and_terms(site, tmp_path):
+    """/privacy and /terms serve their pre-rendered pages when the build made them, else the app."""
+    assert site.get("/privacy").text == "<html>app</html>"
+    (tmp_path / "dist" / "privacy.html").write_text("<html>privacy text</html>")
+    for path in ("/privacy", "/privacy/"):
+        assert site.get(path).text == "<html>privacy text</html>", path
+    assert site.get("/terms").text == "<html>app</html>"
+
+
 def test_no_frontend_build_means_api_only(tmp_path):
     assert mount_frontend(FastAPI(), tmp_path / "missing") is False
 

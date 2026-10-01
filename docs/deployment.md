@@ -1,6 +1,6 @@
 # Deploying Tandurust (Render + Neon)
 
-> Last updated: 2026-10-01 (moving to the Tandurust addresses: new services `tandurust` / `tandurust-app`, old `omniai-app` forwards, owner checklist; invite-only sign-up with a waitlist: `JOIN_MODE`, `LAUNCHER_ORIGIN`, how to open sign-up again; the static site's start page is now the welcome page, not the launcher; the app serves it at /welcome; 2026-09-30: UptimeRobot monitor live, server kept awake; keep-awake monitor steps, `/api/health` answers HEAD; monthly USDA food list check; earlier: always-on launcher page).
+> Last updated: 2026-10-01 (Google brand verification: home page = the welcome site, Privacy/Terms pre-rendered, Search Console steps; moving to the Tandurust addresses: new services `tandurust` / `tandurust-app`, old `omniai-app` forwards, owner checklist; invite-only sign-up with a waitlist: `JOIN_MODE`, `LAUNCHER_ORIGIN`, how to open sign-up again; the static site's start page is now the welcome page, not the launcher; the app serves it at /welcome; 2026-09-30: UptimeRobot monitor live, server kept awake; keep-awake monitor steps, `/api/health` answers HEAD; monthly USDA food list check; earlier: always-on launcher page).
 
 **Open the app from the welcome page:** https://tandurust-app.onrender.com (static site `tandurust-app`, never sleeps; the exact address is shown on its Render page). **App:** https://tandurust.onrender.com (Render service `tandurust`, Singapore). The old addresses: `omniai-app.onrender.com` forwards to the welcome page; `omniai-hkv2.onrender.com` (service `omniai`) is deleted once the move below is done · Neon project `young-star-73873699` (AWS Singapore). Local data was copied into Neon on 2026-09-29 (159 rows, 13 tables); Neon is now the real database. The NVIDIA backup is off in production. An UptimeRobot monitor (free, since 2026-09-30) pings `/api/health` every 5 minutes, so the app stays awake and down alerts go by email. Update this file whenever the deployment setup changes (see [README.md](README.md)).
 
@@ -138,6 +138,12 @@ Free: no billing and no Google review (only the basic `openid email profile` sco
 4. The client ID goes in `GOOGLE_CLIENT_ID` (`render.yaml` and `backend/.env`).
 
 A new app address (e.g. a custom domain) must be added to the origins, or the button fails there.
+
+**Brand verification (so Google's sign-in screen shows "Tandurust"; started 2026-10-01).** Sign-in works without it. Google's checker reads pages without running JavaScript, so it must be pointed at pages whose text is in the HTML:
+
+- **Branding → App domain:** home page `https://tandurust-app.onrender.com` (the welcome site: explains the app, names it, never sleeps, links the privacy policy in its HTML); privacy policy `https://tandurust.onrender.com/privacy`; terms `https://tandurust.onrender.com/terms`. Both are pre-rendered at build time (`dist/privacy.html`, `dist/terms.html`). Not the app's `/`: it's an empty page until the script runs, and a login screen after.
+- **Authorized domains:** `tandurust-app.onrender.com` and `tandurust.onrender.com` (no `localhost`: that list takes public domains only; local addresses belong in the client's origins).
+- **Ownership:** Google Search Console (free) → **Add property** → **URL prefix** `https://tandurust-app.onrender.com/` → method **HTML tag**. The `google-site-verification` tag goes in `frontend/welcome.html` (Claude adds it), push, wait for the deploy, **Verify**. Then wait 24 hours and press **Verify** again under Branding. Google may not accept a subdomain of a shared host (`onrender.com`); if it refuses, the fix is a custom domain (paid, owner's call); sign-in keeps working meanwhile.
 
 ## Monitoring: error reports and uptime (code ready 2026-09-29; accounts to create)
 

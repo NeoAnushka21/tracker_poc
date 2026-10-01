@@ -109,9 +109,11 @@ document.querySelectorAll<HTMLElement>("[data-go]").forEach((el) => {
   });
 });
 
-// Privacy and Terms live in the app.
+// Privacy and Terms live in the app. The build already writes the app's address into these links
+// (%APP_URL% in welcome.html, so readers without JavaScript get them right); this covers the rest.
 document.querySelectorAll<HTMLAnchorElement>("a[data-app-link]").forEach((a) => {
-  a.href = `${APP_URL}${a.getAttribute("href")}`;
+  const href = a.getAttribute("href") ?? "";
+  if (href.startsWith("/")) a.href = `${APP_URL}${href}`;
 });
 
 // ---- example chats: a slideshow of three tabs (click, arrow keys, Home/End) --------------

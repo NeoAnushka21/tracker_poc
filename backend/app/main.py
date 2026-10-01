@@ -132,6 +132,11 @@ def mount_frontend(app: FastAPI, dist: Path) -> bool:
             raise HTTPException(status_code=404, detail="Not found")
         if path.rstrip("/") == "welcome" and (dist / "welcome.html").is_file():
             return FileResponse(dist / "welcome.html", headers={"Cache-Control": "no-cache"})
+        # Privacy and Terms are pre-rendered at build time (vite.config.ts), so their text is in the HTML
+        # for readers that don't run JavaScript (Google's brand check); the app then takes over as usual.
+        page = path.rstrip("/")
+        if page in ("privacy", "terms") and (dist / f"{page}.html").is_file():
+            return FileResponse(dist / f"{page}.html", headers={"Cache-Control": "no-cache"})
         file = (dist / path).resolve()
         if path and file.is_file() and dist in file.parents:   # favicon.svg etc.; no ../ escapes
             return FileResponse(file)
