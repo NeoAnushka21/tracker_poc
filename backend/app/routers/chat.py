@@ -43,7 +43,7 @@ def send(body: ChatIn, user: User = Depends(onboarded_user), db: Session = Depen
     usage.begin()
     try:
         return handle_user_message(db, user, body.message.strip(), body.feedback_on_action_id,
-                                   body.client_request_id, body.log_date)
+                                   body.client_request_id, body.log_date, body.barcode)
     except cancel.ChatCancelled:
         db.rollback()
         raise HTTPException(status.HTTP_409_CONFLICT, "cancelled")

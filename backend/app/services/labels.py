@@ -5,7 +5,9 @@ Open Database Licence), with no key or account. Only the search text or barcode 
 never anything about the user.
 
 The app never trusts label numbers sent by the browser: applying a label re-fetches the
-product here by its barcode. The user picks the product; nothing is applied automatically.
+product here by its barcode (or, on a chat card, takes it from the options the server stored).
+The user picks the product; nothing is applied automatically. Chat cards search on their own
+for branded items (services/label_match.py), so only product words or barcodes are sent.
 """
 import re
 
@@ -43,9 +45,9 @@ def is_barcode(text: str) -> bool:
     return bool(_BARCODE.match(text.strip()))
 
 
-def _get(url: str, params: dict | None = None) -> dict:
+def _get(url: str, params: dict | None = None, timeout: float = TIMEOUT_S) -> dict:
     try:
-        r = httpx.get(url, params=params, timeout=TIMEOUT_S, headers={"User-Agent": USER_AGENT})
+        r = httpx.get(url, params=params, timeout=timeout, headers={"User-Agent": USER_AGENT})
         r.raise_for_status()
         return r.json()
     except (httpx.HTTPError, ValueError) as e:
@@ -79,6 +81,7 @@ def product_to_label(p: dict) -> dict | None:
         "code": str(p.get("code") or ""),
         "name": (p.get("product_name") or p.get("product_name_en") or "").strip() or "Unnamed product",
         "brand": (p.get("brands") or "").split(",")[0].strip() or None,
+        "brands": (p.get("brands") or "").strip(),      # every brand listed, for matching
         "pack": (p.get("quantity") or "").strip() or None,
         "serving_size": (p.get("serving_size") or "").strip() or None,
         "grams_per_serving": serving if serving else None,
@@ -93,26 +96,26 @@ def product_to_label(p: dict) -> dict | None:
     }
 
 
-def search(text: str) -> list[dict]:
+def search(text: str, timeout: float = TIMEOUT_S) -> list[dict]:
     """Products matching a name and brand (or a barcode), usable ones only, sold-in-India first."""
     text = text.strip()
     if not text:
         return []
     if is_barcode(text):
-        label = get_label(text, missing_ok=True)
+        label = get_label(text, missing_ok=True, timeout=timeout)
         return [label] if label else []
     data = _get(SEARCH_URL, {"search_terms": text, "search_simple": 1, "action": "process", "json": 1,
-                             "page_size": 20, "fields": FIELDS})
+                             "page_size": 20, "fields": FIELDS}, timeout)
     labels = [lab for p in data.get("products") or [] if (lab := product_to_label(p)) and lab["code"]]
     labels.sort(key=lambda lab: not lab["in_india"])       # stable: keeps Open Food Facts' own order
     return labels[:MAX_RESULTS]
 
 
-def get_label(code: str, missing_ok: bool = False) -> dict | None:
+def get_label(code: str, missing_ok: bool = False, timeout: float = TIMEOUT_S) -> dict | None:
     """One product's label values by barcode."""
     if not is_barcode(code):
         raise LabelLookupError("That isn't a barcode (8 to 14 digits).")
-    data = _get(PRODUCT_URL.format(code=code.strip()), {"fields": FIELDS})
+    data = _get(PRODUCT_URL.format(code=code.strip()), {"fields": FIELDS}, timeout)
     product = data.get("product") if data.get("status") in (1, "1", "success") else None
     label = product_to_label(product) if product else None
     if label is None and not missing_ok:

@@ -45,6 +45,17 @@ def tool_reply(name: str, args: dict, call_id: str = "t1", text: str = "") -> LL
     return LLMResponse(text=text, tool_calls=[ToolCall(call_id, name, args)], stop_reason="tool_use")
 
 
+@pytest.fixture(autouse=True)
+def no_open_food_facts(monkeypatch):
+    """Tests never reach the real Open Food Facts: it finds nothing unless a test stubs it
+    (test_labels.py `off`). Chat cards search it on their own for branded items."""
+    from app.services import labels
+
+    def nothing(url, params=None, timeout=None):
+        return {"products": []} if url == labels.SEARCH_URL else {"status": 0}
+    monkeypatch.setattr(labels, "_get", nothing)
+
+
 @pytest.fixture
 def fake_llm():
     def install(*script: LLMResponse) -> FakeProvider:

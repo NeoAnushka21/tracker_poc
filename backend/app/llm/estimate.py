@@ -39,7 +39,7 @@ def estimate_food(db: Session, user: User, name: str, quantity: float, unit: str
     """(pending create action, note) or (None, the model's reason it couldn't estimate)."""
     text = f"{quantity:g} {unit} {name}"
     tier = route(text).tier
-    ctx = ToolContext(db=db, user=user, raw_user_message=text)
+    ctx = ToolContext(db=db, user=user, raw_user_message=text, match_labels=False)   # no label choices on the dashboard yet
     system = build_system_prompt(["logging", "library"]) + "\n" + DASHBOARD_RULES
     dynamic = "## Current context\n" + json.dumps({
         "now_local": local_now(user.timezone).strftime("%A %Y-%m-%d %H:%M"),

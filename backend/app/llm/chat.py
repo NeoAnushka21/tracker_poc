@@ -17,7 +17,7 @@ from app.llm.provider import LLMError
 from app.llm.router import ALL_TOOLS, SECTIONS, Route, escalate, route
 from app.llm.tools import TOOLS, ToolContext, ToolInputError, run_tool
 from app.models import ChatMessage, PendingAction, User, utcnow
-from app.services import allowance, cancel
+from app.services import allowance, cancel, label_match, labels
 from app.services.actions import action_to_dict, expire_stale, open_actions, supersede_older
 from app.timeutil import local_day_bounds_utc, local_today, utc_to_local
 
@@ -126,8 +126,10 @@ def _history_for_llm(messages: list[ChatMessage]) -> list[dict]:
         elif m.role == "event":
             out.append({"role": "user", "content": f"[App event] {m.content}"})
         else:
-            picked = (m.data or {}).get("log_date")
-            prefix = f"[Date picked in the app: {picked}] " if picked else ""
+            data = m.data or {}
+            prefix = f"[Date picked in the app: {data['log_date']}] " if data.get("log_date") else ""
+            if data.get("barcode"):
+                prefix += f"[Pack barcode scanned in the app: {data.get('product') or 'not on Open Food Facts'}] "
             out.append({"role": "user", "content": prefix + m.content})
     # The API requires the first message to be from the user.
     while out and out[0]["role"] != "user":
@@ -137,7 +139,7 @@ def _history_for_llm(messages: list[ChatMessage]) -> list[dict]:
 
 def handle_user_message(
     db: Session, user: User, text: str, feedback_on_action_id: int | None = None,
-    request_id: str | None = None, log_date: date | None = None,
+    request_id: str | None = None, log_date: date | None = None, barcode: str | None = None,
 ) -> list[dict]:
     """Runs one turn. Returns the new messages (events + assistant reply) for the UI.
 
@@ -160,15 +162,17 @@ def handle_user_message(
     today = local_today(user.timezone)
     if log_date is not None and log_date >= today:
         log_date = None   # today (or a future date) is the default, not a selection
-    user_msg = ChatMessage(user_id=user.id, role="user", content=text,
-                           data={"log_date": log_date.isoformat()} if log_date else None)
+    data = {"log_date": log_date.isoformat()} if log_date else {}
+    if barcode:
+        data |= {"barcode": barcode, "product": _scanned_product(db, barcode)}
+    user_msg = ChatMessage(user_id=user.id, role="user", content=text, data=data or None)
     db.add(user_msg)
     db.flush()
     new_messages.append(user_msg)
 
-    ctx = ToolContext(db=db, user=user, raw_user_message=text)
+    ctx = ToolContext(db=db, user=user, raw_user_message=text, scanned_code=barcode)
     fast = None
-    if LLM_FASTPATH and feedback_on_action_id is None and log_date is None:
+    if LLM_FASTPATH and feedback_on_action_id is None and log_date is None and barcode is None:
         fast = try_fastpath(db, user, text, ctx)
     if fast is not None:
         handler, reply_text = fast
@@ -199,6 +203,17 @@ def handle_user_message(
 
     db.refresh(reply)
     return [message_to_dict(m) for m in new_messages] + [message_to_dict(reply)]
+
+
+def _scanned_product(db: Session, code: str) -> str | None:
+    """'Pasteurised Butter, brand Amul (100 g pack)' for the model, or None if it isn't found."""
+    try:
+        lab = label_match.by_barcode(db, code)
+    except labels.LabelLookupError:
+        return None
+    if lab is None:
+        return None
+    return f"{lab['name']}" + (f", brand {lab['brand']}" if lab.get("brand") else "") + (f" ({lab['pack']} pack)" if lab.get("pack") else "")
 
 
 def _open_proposal_food_names(db: Session, user: User) -> list[str]:

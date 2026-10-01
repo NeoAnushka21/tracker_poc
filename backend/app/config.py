@@ -114,6 +114,12 @@ AUTH_REQUESTS_PER_IP = 60           # login / register / Google requests per add
 AUTH_REQUEST_WINDOW_S = 10 * 60     # ... within 10 minutes
 LLM_MAX_TOOL_ROUNDS = 8          # safety cap on the tool loop per user message
 
+# Branded items in a chat proposal: the pack label is looked up on Open Food Facts before the
+# card is shown (services/label_match.py). Off = the AI's estimate only, as before 2026-10-01.
+LABEL_AUTO_MATCH = os.getenv("LABEL_AUTO_MATCH", "true").lower() == "true"
+LABEL_AUTO_TIMEOUT_S = 5           # a slow Open Food Facts never holds the card up for long
+LABEL_CACHE_DAYS = 7               # searches and labels kept this long (public data only)
+
 # --- Multi-model routing (docs/llm-routing-strategy.md) ----------------------
 # Two tiers on the same provider by default: a small, fast model for simple messages and a
 # large one for complex ones. Each model has its own free quota. Comma-separated lists.

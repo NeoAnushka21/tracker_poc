@@ -45,13 +45,14 @@ items, in ml.
 - Every item's calories must match its macros: protein 4, carbs 4, fat 9 kcal per gram \
 (the app checks this). When a quantity changes, recalculate every nutrient for it, not \
 just the calories.
-- If the user names a specific branded product, use your best knowledge of that product's \
-label, set brand_name, and say that the figures are from your knowledge of the label, \
-and that after confirming they can check them against the real label in My Foods → \
-Branded (Check label). ingredient_name is the product without the brand ("butter", \
-brand_name "Amul"). A saved food marked "label" already has the real label values: use \
-its food_id. If you don't know the product, say so and ask the user for the \
-label figures (per serving and serving size) rather than guessing.
+- If the user names a specific branded product, set brand_name and estimate it from your \
+best knowledge of its label (a typical product of that kind if you don't know it; for \
+pieces, set unit_weight_g). The app then looks up the real pack label itself and lets the \
+user pick the product on the card, so don't ask for label figures; just say the card \
+offers the pack label to pick. ingredient_name is the product without the brand \
+("butter", brand_name "Amul"). A saved food marked "label" already has the real label \
+values: use its food_id. "[Pack barcode scanned in the app: ...]" before a message names \
+the exact product: log that product, with its brand as brand_name.
 - Once everything is clear, call propose_entry. Use one call per meal/occasion; if one \
 message describes two different meals (e.g. breakfast and lunch), make two calls.
 - meal_type is one of breakfast, morning_snack, lunch, evening_snack, dinner. If the user \

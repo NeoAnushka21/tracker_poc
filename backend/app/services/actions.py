@@ -205,6 +205,23 @@ def confirm_action(db: Session, user: User, action_id: int) -> tuple[PendingActi
     return action, event
 
 
+def choose_label(db: Session, user: User, action_id: int, index: int, code: str | None,
+                 search_again: bool = False) -> PendingAction:
+    """The user's tap on a card's pack-label choices (services/label_match.py). Only the card
+    changes; nothing is logged until they press Looks good."""
+    from app.services import label_match
+    action = _get_open_action(db, user, action_id)
+    try:
+        if search_again:
+            label_match.search_again(db, action, index)
+        else:
+            label_match.pick(action, index, code)
+    except label_match.LabelPickError as e:
+        raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT, str(e)) from e
+    db.commit()
+    return action
+
+
 def reject_action(db: Session, user: User, action_id: int) -> tuple[PendingAction, ChatMessage]:
     action = _get_open_action(db, user, action_id)
     action.status = "rejected"

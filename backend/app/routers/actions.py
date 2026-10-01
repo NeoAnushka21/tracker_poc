@@ -3,13 +3,14 @@ user's Confirm/Cancel click. (Dashboard edits in routers/entries.py are direct u
 from datetime import date, datetime
 
 from fastapi import APIRouter, Depends
+from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
 from app.db import get_db
 from app.deps import onboarded_user
 from app.llm.chat import message_to_dict
 from app.models import ChatMessage, User
-from app.services.actions import action_to_dict, confirm_action, from_dashboard, reject_action
+from app.services.actions import action_to_dict, choose_label, confirm_action, from_dashboard, reject_action
 from app.services.progress import build_progress, build_water_progress
 from app.timeutil import utc_to_local
 
@@ -50,3 +51,21 @@ def confirm(action_id: int, user: User = Depends(onboarded_user), db: Session = 
 def reject(action_id: int, user: User = Depends(onboarded_user), db: Session = Depends(get_db)):
     action, event = reject_action(db, user, action_id)
     return {"action": action_to_dict(action), "event": message_to_dict(event)}
+
+
+class LabelChoiceIn(BaseModel):
+    # A product's barcode from the card's choices; null = "none of these" (keep the AI's estimate).
+    code: str | None = Field(default=None, pattern=r"^\d{8,14}$")
+
+
+@router.post("/{action_id}/items/{index}/label")
+def pick_label(action_id: int, index: int, body: LabelChoiceIn, user: User = Depends(onboarded_user),
+               db: Session = Depends(get_db)):
+    """A branded item's pack label, picked on the card (before Looks good)."""
+    return action_to_dict(choose_label(db, user, action_id, index, body.code))
+
+
+@router.post("/{action_id}/items/{index}/label-search")
+def search_label_again(action_id: int, index: int, user: User = Depends(onboarded_user), db: Session = Depends(get_db)):
+    """"Find the label" when Open Food Facts didn't answer in time."""
+    return action_to_dict(choose_label(db, user, action_id, index, None, search_again=True))

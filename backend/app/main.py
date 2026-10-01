@@ -33,10 +33,12 @@ app = FastAPI(title=config.APP_NAME, lifespan=lifespan, **_docs)
 # Browser security headers on every response (OWASP secure headers). The CSP allows only our own
 # files plus Google's sign-in button (the origins Google documents for Sign in with Google); inline
 # scripts are not allowed. React's style attributes need 'unsafe-inline' for styles only.
+# 'wasm-unsafe-eval' lets the pack scanner run its WebAssembly (our own files, src/scan.ts); it
+# allows compiling WebAssembly only, not eval() of JavaScript.
 _GSI = "https://accounts.google.com/gsi/"
 CONTENT_SECURITY_POLICY = "; ".join([
     "default-src 'self'",
-    f"script-src 'self' {_GSI}client",
+    f"script-src 'self' 'wasm-unsafe-eval' {_GSI}client",
     f"style-src 'self' 'unsafe-inline' {_GSI}style",
     f"frame-src {_GSI}",
     f"connect-src 'self' {_GSI}",
@@ -52,8 +54,8 @@ SECURITY_HEADERS = {
     "X-Content-Type-Options": "nosniff",
     "X-Frame-Options": "DENY",
     "Referrer-Policy": "strict-origin-when-cross-origin",
-    # The mic is used for voice input on our own pages only.
-    "Permissions-Policy": "microphone=(self), camera=(), geolocation=(), payment=(), usb=()",
+    # The mic (voice input) and the camera (scanning a pack) are used on our own pages only.
+    "Permissions-Policy": "microphone=(self), camera=(self), geolocation=(), payment=(), usb=()",
     # Google's sign-in popup needs to talk back to this page.
     "Cross-Origin-Opener-Policy": "same-origin-allow-popups",
 }

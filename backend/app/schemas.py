@@ -170,6 +170,8 @@ class ChatIn(BaseModel):
     client_request_id: str | None = Field(default=None, max_length=64)
     # Day the user picked in the chat's date selector (past days only; None = today).
     log_date: date | None = None
+    # A pack barcode the user scanned for this message: that product's label is offered on the card.
+    barcode: str | None = Field(default=None, pattern=r"^\d{8,14}$")
 
 
 class CancelIn(BaseModel):

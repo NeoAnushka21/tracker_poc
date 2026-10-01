@@ -59,7 +59,27 @@ export type Item = Nutrients & {
   quantity: number;
   unit: string;
   food_id?: number | null;
-  source?: "estimate" | "library" | "recipe";
+  /** "label": the pack label the user picked on the card (Open Food Facts). */
+  source?: "estimate" | "library" | "recipe" | "general" | "label";
+  /** Branded items on a chat card: the pack labels found for it (see LabelMatch). */
+  label_match?: LabelMatch;
+  /** The picked label's barcode, and whether one piece's weight is MacBro's estimate. */
+  off_code?: string;
+  weight_estimated?: boolean;
+};
+
+/** Pack labels found for a branded item on a chat card (backend services/label_match.py).
+ *  sure: one clear product ("Is this your pack?"); choose: a few to pick from; none: nothing
+ *  found; unavailable: Open Food Facts didn't answer (try again). `picked` is the chosen barcode. */
+export type LabelMatch = {
+  status: "sure" | "choose" | "none" | "unavailable";
+  options: Label[];
+  query: string;
+  /** search: found by name; barcode: scanned with the message; picked: kept from the card it replaced. */
+  how: "search" | "barcode" | "picked";
+  picked: string | null;
+  /** "None of these": MacBro's estimate is kept. */
+  declined?: boolean;
 };
 
 export type Entry = {
@@ -119,7 +139,7 @@ export type ChatMessage = {
   kind?: "progress" | null;
   /** Progress card numbers (kind "progress"), the day picked for a user message, or MacBro's
    *  "raw or cooked?" question (answered with the quick-reply buttons). */
-  data?: (ProgressData & { log_date?: undefined }) | { log_date?: string }
+  data?: (ProgressData & { log_date?: undefined }) | { log_date?: string; barcode?: string; product?: string | null }
     | { ask_state: { text: string; items: string[] }; log_date?: undefined } | null;
 };
 

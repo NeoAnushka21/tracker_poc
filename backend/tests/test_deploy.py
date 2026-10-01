@@ -130,10 +130,12 @@ def test_security_headers_on_every_response(client):
         h = client.get(path).headers
         csp = h["content-security-policy"]
         assert "frame-ancestors 'none'" in csp and "object-src 'none'" in csp
-        assert "script-src 'self' https://accounts.google.com/gsi/client" in csp   # Google's button allowed
-        assert "'unsafe-inline'" not in csp.split("script-src")[1].split(";")[0]   # no inline scripts
+        # Google's button allowed; WebAssembly for the pack scanner, but no inline scripts or eval()
+        assert "script-src 'self' 'wasm-unsafe-eval' https://accounts.google.com/gsi/client" in csp
+        script_src = csp.split("script-src")[1].split(";")[0]
+        assert "'unsafe-inline'" not in script_src and "'unsafe-eval'" not in script_src
         assert h["x-content-type-options"] == "nosniff" and h["x-frame-options"] == "DENY"
-        assert "microphone=(self)" in h["permissions-policy"]
+        assert "microphone=(self)" in h["permissions-policy"] and "camera=(self)" in h["permissions-policy"]
         assert "strict-transport-security" not in h           # plain HTTP in tests: no HSTS
 
 

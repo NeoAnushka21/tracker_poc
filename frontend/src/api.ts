@@ -225,9 +225,12 @@ export const api = {
     request<BodyProfileData>("PUT", `/api/profile/measurements/${id}`, values),
 
   chatDay: (day?: string) => request<ChatDay>("GET", `/api/chat/day${day ? `?day=${day}` : ""}`),
+  /** `barcode`: a pack scanned or picked in the chat's pack finder, offered ready on the card. */
   send: (message: string, feedback_on_action_id: number | null, client_request_id: string, signal?: AbortSignal,
-         log_date?: string | null) =>
-    request<ChatMessage[]>("POST", "/api/chat", { message, feedback_on_action_id, client_request_id, log_date: log_date ?? null }, signal),
+         log_date?: string | null, barcode?: string | null) =>
+    request<ChatMessage[]>("POST", "/api/chat", {
+      message, feedback_on_action_id, client_request_id, log_date: log_date ?? null, barcode: barcode ?? null,
+    }, signal),
   /** Today's AI allowance; limit/remaining are null when unlimited. */
   aiAllowance: () => request<AiAllowance>("GET", "/api/chat/allowance"),
   cancelChat: (client_request_id: string) =>
@@ -242,6 +245,11 @@ export const api = {
     request<AddFoodResult>("POST", "/api/entries/add", body),
   confirm: (id: number) => request<ActionResult>("POST", `/api/actions/${id}/confirm`),
   reject: (id: number) => request<ActionResult>("POST", `/api/actions/${id}/reject`),
+  /** A branded item's pack label picked on the card; null = "none of these" (keep the estimate). */
+  pickLabel: (id: number, index: number, code: string | null) =>
+    request<Action>("POST", `/api/actions/${id}/items/${index}/label`, { code }),
+  /** "Find the label" when Open Food Facts didn't answer in time. */
+  findLabelAgain: (id: number, index: number) => request<Action>("POST", `/api/actions/${id}/items/${index}/label-search`),
 
   foods: () => request<Food[]>("GET", "/api/foods"),
   micronutrientFields: () => request<MicroField[]>("GET", "/api/foods/micronutrients"),

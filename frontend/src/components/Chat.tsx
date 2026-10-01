@@ -1,12 +1,14 @@
 import { Fragment, useEffect, useRef, useState, type FormEvent, type KeyboardEvent, type ReactNode } from "react";
+import { createPortal } from "react-dom";
 import { api, type AiAllowance } from "../api";
-import type { Action, ChatMessage, MacroProgressData, ProgressData, User, WaterProgressData } from "../types";
+import type { Action, ChatMessage, Label, MacroProgressData, ProgressData, User, WaterProgressData } from "../types";
 import { dayLabel, litres, localTodayIso } from "../format";
 import { haptic } from "../haptics";
 import { useRevealFill } from "../motion";
 import { useSpeechToText } from "../useSpeechToText";
 import { MacBroAvatar, UserAvatar } from "./Avatar";
 import { macroState } from "./Dashboard";
+import LabelSearch from "./LabelSearch";
 import ProposalCard from "./ProposalCard";
 import { WaterDrop } from "./icons";
 
@@ -150,6 +152,38 @@ function clock(iso: string): string {
   return new Date(iso).toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit" });
 }
 
+function ScanIcon() {
+  return (
+    <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round">
+      <path d="M4 8V5.5A1.5 1.5 0 0 1 5.5 4H8M16 4h2.5A1.5 1.5 0 0 1 20 5.5V8M20 16v2.5a1.5 1.5 0 0 1-1.5 1.5H16M8 20H5.5A1.5 1.5 0 0 1 4 18.5V16" />
+      <path d="M8 8v8M11 8v8M14 8v8M17 8v8" strokeWidth="1.4" />
+    </svg>
+  );
+}
+
+/** The chat's pack finder: scan the barcode or photograph the pack (or type), then pick the product.
+ *  The picked product goes with the next message, and its label comes ready on MacBro's card. */
+function PackFinder({ onPick, onClose }: { onPick: (l: Label) => void; onClose: () => void }) {
+  useEffect(() => {
+    const onKey = (e: globalThis.KeyboardEvent) => { if (e.key === "Escape") onClose(); };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [onClose]);
+  return createPortal(
+    <div className="backdrop">
+      <div className="dialog card pack-finder" role="dialog" aria-modal="true" aria-labelledby="pack-finder-title">
+        <div className="dialog-head">
+          <h3 id="pack-finder-title">Log a packaged product</h3>
+          <button type="button" className="ghost icon-btn" onClick={onClose} aria-label="Close">✕</button>
+        </div>
+        <p className="muted small">Scan the barcode, take or upload a photo of the pack, or type the brand and name. Then pick your product.</p>
+        <LabelSearch initialQuery="" scanFirst pickText="This one" onPick={onPick} />
+      </div>
+    </div>,
+    document.body,
+  );
+}
+
 function MicIcon() {
   return (
     <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true">
@@ -174,6 +208,9 @@ export default function Chat({ user, onDataChanged, draft, active, onMinimize, o
   const [ai, setAi] = useState<AiAllowance | null>(null);   // today's AI allowance
   const [feedbackFor, setFeedbackFor] = useState<Action | null>(null);
   const [busyAction, setBusyAction] = useState<number | null>(null);
+  // A pack picked in the pack finder: sent with the next message (its label comes ready on the card).
+  const [pack, setPack] = useState<Label | null>(null);
+  const [findingPack, setFindingPack] = useState(false);
   // Messages that arrived in this session (not loaded from history): only these spring in.
   const [freshIds, setFreshIds] = useState<Set<number>>(() => new Set());
   const markFresh = (ids: number[]) => setFreshIds((f) => new Set([...f, ...ids]));
@@ -274,7 +311,7 @@ export default function Chat({ user, onDataChanged, draft, active, onMinimize, o
     setSending(true);
     const optimistic: ChatMessage = {
       id: -Date.now(), role: "user", content: text, created_at: new Date().toISOString(), actions: [],
-      data: logDate ? { log_date: logDate } : null,
+      data: logDate || pack ? { ...(logDate ? { log_date: logDate } : {}), ...(pack ? { barcode: pack.code, product: pack.name } : {}) } : null,
     };
     setMessages((ms) => [...ms, optimistic]);
     if (preset === undefined) setInput("");
@@ -283,7 +320,8 @@ export default function Chat({ user, onDataChanged, draft, active, onMinimize, o
     const controller = new AbortController();
     inflightRef.current = { id: requestId, controller, text, optimisticId: optimistic.id };
     try {
-      const newMsgs = await api.send(text, feedbackId, requestId, controller.signal, logDate);
+      const newMsgs = await api.send(text, feedbackId, requestId, controller.signal, logDate, preset === undefined ? pack?.code : null);
+      if (preset === undefined) setPack(null);
       const newActionIds = new Set(newMsgs.flatMap((m) => m.actions.map((a) => a.id)));
       markFresh(newMsgs.filter((m) => m.role === "assistant").map((m) => m.id));
       // The reply includes the saved copy of the user's message, which replaces the optimistic one.
@@ -360,6 +398,28 @@ export default function Chat({ user, onDataChanged, draft, active, onMinimize, o
     }
   }
 
+  /** A tap on a card's pack-label choices: only the card changes until Looks good. */
+  async function chooseLabel(action: Action, index: number, code: string | null, again = false) {
+    setBusyAction(action.id);
+    setError(null);
+    try {
+      updateAction(again ? await api.findLabelAgain(action.id, index) : await api.pickLabel(action.id, index, code));
+      if (code) haptic("tap");
+    } catch (err) {
+      setError((err as Error).message);
+    } finally {
+      setBusyAction(null);
+    }
+  }
+
+  function packPicked(l: Label) {
+    setPack(l);
+    setFindingPack(false);
+    // The product's name goes in the message; the user adds how much they had.
+    if (!input.trim()) setInput(`${l.brand && !l.name.toLowerCase().includes(l.brand.toLowerCase()) ? `${l.brand} ` : ""}${l.name}`);
+    setTimeout(() => { const el = inputRef.current; if (el) { el.focus(); el.setSelectionRange(0, 0); } }, 0);
+  }
+
   function needsChanges(action: Action) {
     setFeedbackFor(action);
     inputRef.current?.focus();
@@ -380,6 +440,7 @@ export default function Chat({ user, onDataChanged, draft, active, onMinimize, o
 
   function renderMessage(m: ChatMessage) {
     const picked = m.role === "user" && m.data && "log_date" in m.data ? m.data.log_date : undefined;
+    const scanned = m.role === "user" && m.data && "barcode" in m.data ? m.data.barcode : undefined;
     const fresh = freshIds.has(m.id);
     return (
       <div key={m.id} className={`msg-row ${m.role}`}>
@@ -388,6 +449,7 @@ export default function Chat({ user, onDataChanged, draft, active, onMinimize, o
           : <UserAvatar name={user.preferred_name} email={user.email} />}
         <div className="msg">
           {picked && <span className="msg-date-tag">📅 for {dayLabel(picked, today)}</span>}
+          {scanned && <span className="msg-date-tag">▥ pack picked</span>}
           {m.kind === "progress" && m.data
             ? <ProgressCard m={m} fresh={fresh} />
             : <div className={`bubble ${fresh ? "fade-in" : ""}`}>{renderText(m.content)}</div>}
@@ -410,6 +472,8 @@ export default function Chat({ user, onDataChanged, draft, active, onMinimize, o
               onConfirm={() => resolve(a, "confirm")}
               onNeedsChanges={() => needsChanges(a)}
               onCancel={() => resolve(a, "reject")}
+              onPickLabel={(i, code) => void chooseLabel(a, i, code)}
+              onFindLabel={(i) => void chooseLabel(a, i, null, true)}
             />
           ))}
           <span className="msg-time">{clock(m.created_at)}</span>
@@ -424,7 +488,7 @@ export default function Chat({ user, onDataChanged, draft, active, onMinimize, o
         <MacBroAvatar size={36} />
         <div className="chat-head-text">
           <div className="chat-title" id="chat-title">MacBro</div>
-          <div className="muted small">Your macro bro. Tell me what you ate; I'll do the maths.</div>
+          <div className="muted small">Nutrition assistant</div>
         </div>
         {(onMinimize || onClose) && (
           <div className="chat-window-actions">
@@ -502,6 +566,12 @@ export default function Chat({ user, onDataChanged, draft, active, onMinimize, o
             </span>
           )}
         </div>
+        {pack && (
+          <div className="feedback-chip pack-chip">
+            ▥ <b>{pack.name}</b>{pack.brand ? ` · ${pack.brand}` : ""}{pack.pack ? ` (${pack.pack})` : ""}: add how much you had, e.g. "2 slices" or "30 g"
+            <button type="button" className="ghost" onClick={() => setPack(null)} aria-label="Remove the picked product">✕</button>
+          </div>
+        )}
         {speech.listening && <div className="listening-hint">Listening… tap the mic again when you're done.</div>}
         <div className="composer-row">
           <textarea
@@ -519,6 +589,10 @@ export default function Chat({ user, onDataChanged, draft, active, onMinimize, o
                 : "What did you eat? Type or tap the mic"
             }
           />
+          <button type="button" className="mic scan" onClick={() => setFindingPack(true)} disabled={sending}
+                  aria-label="Log a packaged product: scan or photo" title="Packaged product? Scan the barcode or take a photo">
+            <ScanIcon />
+          </button>
           {speech.supported && (
             <button
               type="button"
@@ -539,6 +613,7 @@ export default function Chat({ user, onDataChanged, draft, active, onMinimize, o
           )}
         </div>
       </form>
+      {findingPack && <PackFinder onPick={packPicked} onClose={() => setFindingPack(false)} />}
     </section>
   );
 }

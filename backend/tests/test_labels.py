@@ -32,7 +32,7 @@ def off(monkeypatch):
     calls = []
     products = {p["code"]: p for p in (AMUL_BUTTER, FOREIGN_BUTTER, NO_MACROS)}
 
-    def fake_get(url, params=None):
+    def fake_get(url, params=None, timeout=None):
         calls.append((url, params))
         if url == labels.SEARCH_URL:
             return {"products": [FOREIGN_BUTTER, NO_MACROS, AMUL_BUTTER]}
@@ -75,7 +75,7 @@ def test_search_by_barcode(client, user, off):
 
 
 def test_open_food_facts_down_is_a_clear_error(client, user, monkeypatch):
-    def down(url, params=None):
+    def down(url, params=None, timeout=None):
         raise labels.LabelLookupError("Open Food Facts didn't answer.")
     monkeypatch.setattr(labels, "_get", down)
     r = client.get("/api/foods/label-search", params={"q": "amul butter"})

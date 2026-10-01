@@ -401,8 +401,30 @@ def upsert_general(db: Session, user: User, item: dict) -> UserFood | None:
     return food
 
 
+def upsert_label_item(db: Session, user: User, item: dict) -> UserFood | None:
+    """A confirmed item whose pack label the user picked on the card -> My Foods with that label
+    (label checked). A saved food with the same barcode, or name and brand, takes the label."""
+    label = item["label"]
+    food = (find_by_off_code(db, user.id, label["code"])
+            or find_by_name(db, user.id, item["ingredient_name"], item.get("brand_name")))
+    if food is not None and food.kind == "recipe":
+        return None
+    if food is None:
+        food = UserFood(user_id=user.id, name=item["ingredient_name"], kind="food",
+                        name_key=name_key(item["ingredient_name"], item.get("brand_name")), brand_name=item.get("brand_name"))
+        db.add(food)
+    apply_label(food, label)
+    if normalize_unit(item["unit"])[0] == "piece" and item.get("unit_weight_g") and not food.grams_per_piece:
+        food.grams_per_piece = item["unit_weight_g"]
+    food.last_used_at = utcnow()
+    db.flush()
+    return food
+
+
 def learn_item(db: Session, user: User, item: dict) -> UserFood | None:
-    """A confirmed item that isn't a saved food -> My Foods (general-list or AI estimate)."""
+    """A confirmed item that isn't a saved food -> My Foods (pack label, general-list or AI estimate)."""
+    if item.get("label") and item.get("source") == "label":
+        return upsert_label_item(db, user, item)
     return upsert_general(db, user, item) if item.get("general_id") else upsert_estimate(db, user, item)
 
 

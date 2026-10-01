@@ -11,10 +11,10 @@ from datetime import date, datetime, timedelta, timezone
 from pydantic import ValidationError
 from sqlalchemy.orm import Session
 
-from app.config import LEGACY_SNACK, MEAL_TYPES, MICRONUTRIENTS, WATER_MAX_LOG_ML
+from app.config import LABEL_AUTO_MATCH, LEGACY_SNACK, MEAL_TYPES, MICRONUTRIENTS, WATER_MAX_LOG_ML
 from app.models import PendingAction, User, utcnow
 from app.schemas import ItemIn
-from app.services import general_foods
+from app.services import general_foods, label_match
 from app.services.preferences import meal_times
 from app.services.foods import (
     FoodError, compute_recipe, find_by_name, food_to_dict, get_user_food, resolve_library_item,
@@ -260,6 +260,9 @@ class ToolContext:
     created_actions: list[PendingAction] = field(default_factory=list)
     notes: list[str] = field(default_factory=list)   # user-facing text from propose_* calls
     reply_data: dict | None = None   # stored on the reply message, e.g. a pending raw/cooked question
+    # Branded estimates get pack-label choices from Open Food Facts (chat cards only).
+    match_labels: bool = True
+    scanned_code: str | None = None  # a barcode the user scanned with this message
 
 
 def run_tool(ctx: ToolContext, name: str, args: dict) -> str:
@@ -389,6 +392,13 @@ def _add_action(ctx: ToolContext, action_type: str, payload: dict, target_entry_
     }
 
 
+def _with_labels(ctx: ToolContext, items: list[dict]) -> list[dict]:
+    """Pack-label choices for branded items, found by the app (not the model)."""
+    if not (ctx.match_labels and LABEL_AUTO_MATCH):
+        return items
+    return label_match.attach(ctx.db, ctx.user, items, ctx.scanned_code)
+
+
 def _entry_or_error(ctx: ToolContext, entry_id: int):
     entry = get_active_entry(ctx.db, ctx.user.id, entry_id)
     if entry is None:
@@ -400,7 +410,7 @@ def _entry_or_error(ctx: ToolContext, entry_id: int):
 
 def _propose_entry(ctx: ToolContext, args: dict) -> dict:
     tz = ctx.user.timezone
-    items = _parse_items(ctx, args.get("items") or [])
+    items = _with_labels(ctx, _parse_items(ctx, args.get("items") or []))
     eaten_utc = _parse_local_dt(args["eaten_at"], tz) if args.get("eaten_at") else utcnow()
     eaten_local = utc_to_local(eaten_utc, tz)
     stated = args.get("meal_type")
@@ -420,7 +430,7 @@ def _propose_entry(ctx: ToolContext, args: dict) -> dict:
 def _propose_edit(ctx: ToolContext, args: dict) -> dict:
     tz = ctx.user.timezone
     entry = _entry_or_error(ctx, args["entry_id"])
-    items = _parse_items(ctx, args.get("items") or [])
+    items = _with_labels(ctx, _parse_items(ctx, args.get("items") or []))
     if args.get("eaten_at"):
         eaten_utc = _parse_local_dt(args["eaten_at"], tz)
     else:

@@ -1,6 +1,6 @@
 # Tandurust high-level design (HLD)
 
-> Last updated: 2026-10-01 (Privacy/Terms pre-rendered for Google's brand check, §7; Render services and addresses renamed to `tandurust` / `tandurust-app`, old `omniai-app` forwards, §2, §7; welcome page: Demo tour and **Join the community** waitlist with invite-only sign-up (`JOIN_MODE`), §2, §3.1, §4.3a, §5; welcome page as the start for signed-out visitors, on the static site and at /welcome; new logo and theme, display only; 2026-09-30: tab order Home, Meals, My Foods, Body Stats, Explore; tabs renamed: Saved Food → **My Foods**, Body Profile → **Body Stats**; app renamed Tandurust, display only; Dashboard tab renamed Meals, Analysis moved into it; Chat moved from a tab to a floating chat window opened from Home; Saved Food tabs: Generic / Branded / My Recipes; Saved Food + Add: §4.6; branded foods: Open Food Facts label check, §2, §3, §4.5, §5; optional "About you" answers: targets, meal times, MacBro context; country/region step in the sign-in flow; database hardening phase 1: public user UUIDs, items linked to foods, ON DELETE rules, timestamptz, composite indexes; built-in general food list (USDA) between Saved Food and the AI; raw/cooked asked, never assumed; typo-tolerant saved-food and meal-word matching, Dashboard "Did you mean …?"; earlier: tabs: Saved Food, Explore, Body Profile; admin two-step sign-in; tool allow-list; terms page; earlier: health notes, Alembic, forgot password…).Update the diagrams whenever a component, data flow, table or external service changes (see [docs/README.md](README.md)).
+> Last updated: 2026-10-01 (branded items on chat cards get pack-label choices from Open Food Facts, picked by the user, §4.5a; scanning a pack by camera or photo, read in the browser, §4.5b; `label_cache` table, §5; CSP allows WebAssembly and the camera for our own pages, §7; Privacy/Terms pre-rendered for Google's brand check, §7; Render services and addresses renamed to `tandurust` / `tandurust-app`, old `omniai-app` forwards, §2, §7; welcome page: Demo tour and **Join the community** waitlist with invite-only sign-up (`JOIN_MODE`), §2, §3.1, §4.3a, §5; welcome page as the start for signed-out visitors, on the static site and at /welcome; new logo and theme, display only; 2026-09-30: tab order Home, Meals, My Foods, Body Stats, Explore; tabs renamed: Saved Food → **My Foods**, Body Profile → **Body Stats**; app renamed Tandurust, display only; Dashboard tab renamed Meals, Analysis moved into it; Chat moved from a tab to a floating chat window opened from Home; Saved Food tabs: Generic / Branded / My Recipes; Saved Food + Add: §4.6; branded foods: Open Food Facts label check, §2, §3, §4.5, §5; optional "About you" answers: targets, meal times, MacBro context; country/region step in the sign-in flow; database hardening phase 1: public user UUIDs, items linked to foods, ON DELETE rules, timestamptz, composite indexes; built-in general food list (USDA) between Saved Food and the AI; raw/cooked asked, never assumed; typo-tolerant saved-food and meal-word matching, Dashboard "Did you mean …?"; earlier: tabs: Saved Food, Explore, Body Profile; admin two-step sign-in; tool allow-list; terms page; earlier: health notes, Alembic, forgot password…).Update the diagrams whenever a component, data flow, table or external service changes (see [docs/README.md](README.md)).
 > Diagrams are Mermaid. They render on GitHub and in VS Code with a Mermaid preview extension.
 
 ## 1. Purpose and principles
@@ -24,8 +24,9 @@ flowchart LR
     U -->|Continue with Google<br/>ID token| GIS[(Google Identity Services)]
     APP -->|public signing keys| GIS
     APP -->|OpenAI-compatible API<br/>tool calling| LLM[(Open-source models<br/>Groq: gpt-oss-20b / 120b<br/>backup: NVIDIA DeepSeek V4.1 Flash)]
-    APP -->|label search by product words or barcode<br/>only on Check label| OFF[(Open Food Facts<br/>open food-label database)]
+    APP -->|label search by product words or barcode<br/>branded items on chat cards, Check label, + Add| OFF[(Open Food Facts<br/>open food-label database)]
     U -.->|Web Speech API<br/>voice to text, in browser| U
+    U -.->|camera or photo of a pack<br/>barcode and words read in browser| U
     V([Visitor<br/>welcome page]) -->|Join the waitlist form| APP
     APP -->|new sign-up alert · invitation| BR[(Brevo<br/>transactional email)]
 ```
@@ -37,7 +38,7 @@ flowchart LR
 | **Admin** (emails in `ADMIN_EMAILS`) | Admin console only: user list, per-user read-only data, audit log, **Waitlist** (approve / remove) |
 | **Brevo** | Transactional email: password-reset links, waitlist alerts to the admin, invitations |
 | **LLM provider** | Nutrition estimation, clarifying questions, choosing tools. It never writes data. |
-| **Open Food Facts** | Pack-label values for branded foods, searched only when the user presses **Check label**. It receives the search words or barcode, nothing about the user. |
+| **Open Food Facts** | Pack-label values for branded foods: searched when a chat card has a branded item, and on **Check label** / **+ Add → Branded product**. It receives the brand and product words or a barcode, nothing about the user (photos never leave the browser). |
 
 ## 3. Container view
 
@@ -264,6 +265,52 @@ flowchart TB
 
 Principle 3 applies: the user's own click on a label they chose. The server never trusts label numbers sent by the browser; it re-fetches the product by barcode. A food marked `label` is never overwritten by a later AI estimate, and the model sees `| label |` on its line in "my foods", so it reuses the food's numbers.
 
+### 4.5a Pack labels on a chat card (branded items)
+
+The owner's rule (2026-10-01): try the real label first, so users don't have to check labels by hand; never assume, the user picks the product; the AI's estimate is the fallback.
+
+```mermaid
+flowchart TB
+    M[Model: propose_entry / propose_edit<br/>item with brand_name, AI estimate] --> T[tools._with_labels]
+    T --> LM[services/label_match.attach<br/>only branded estimates]
+    LM --> C{label_cache<br/>fresh < 7 days?}
+    C -->|no| OFF[(Open Food Facts search<br/>side by side, 5 s timeout)]
+    OFF --> C2[(label_cache)]
+    C -->|yes| R
+    C2 --> R[rank: brand must match, name words,<br/>sold in India, complete label,<br/>same label in other pack sizes once]
+    R -->|one clear match| S[sure: Is this your pack?]
+    R -->|several| CH[choose: 3 at a time]
+    R -->|nothing| N[none: AI estimate stays]
+    OFF -.->|no answer| U[unavailable: Find the label retries]
+    S --> CARD[Card: Not saved yet<br/>item.label_match with options]
+    CH --> CARD
+    N --> CARD
+    U --> CARD
+    CARD -->|user taps a product<br/>POST /api/actions/id/items/i/label code| P[label_match.pick: only stored options<br/>numbers from the label for the amount<br/>AI estimate kept for None of these]
+    P --> CARD
+    CARD -->|Looks good| CF[confirm_action → foods.upsert_label_item<br/>apply_label: source label, label_checked]
+```
+
+The browser only sends a barcode, and only one the server itself offered on that card, so label numbers never come from the browser. Picks only change the pending card; the write still happens in `confirm_action` (principle 3). A pick is kept when the card is replaced after **Needs changes**. A barcode scanned (or a product picked in the chat's pack finder) is sent with the message (`barcode`): the model is told the product, and the card arrives with that label already applied. Dashboard estimates don't get label choices yet.
+
+### 4.5b Scanning a pack (camera or photo, in the browser)
+
+```mermaid
+flowchart LR
+    CAM[Use camera<br/>getUserMedia] -->|frames every 0.4 s| ZX[zxing-wasm<br/>EAN/UPC barcode]
+    CAM -->|Take photo| PH[Photo]
+    UP[Upload a photo] --> PH
+    PH --> ZX
+    ZX -->|barcode found| Q[Search box: barcode]
+    ZX -->|none| OCR[Tesseract.js<br/>largest clear words on the pack]
+    OCR --> Q2[Search box: brand and name,<br/>editable]
+    Q --> LS[GET /api/foods/label-search]
+    Q2 --> LS
+    LS --> PICK[User picks the product]
+```
+
+Everything up to the search runs in the browser: the photo is never uploaded. Both readers are open source (zxing-wasm MIT, Tesseract.js Apache-2.0), served from the app itself (`/assets`, `/ocr/`) and loaded only on first use. Only for packaged products: a photo of a cooked dish has no label, and its oil and amounts can't be seen, so it stays a chat message. No vision AI model is used (none fits the open-source-licence and free-tier rules today; see open-points).
+
 ### 4.6 Adding a food or recipe in My Foods (no LLM)
 
 ```mermaid
@@ -303,6 +350,7 @@ erDiagram
     users ||--o{ password_resets : "forgot-password links"
     users ||--o| user_preferences : "optional about-you answers"
     waitlist }o..o| users : "same email, once they sign up (not linked)"
+    label_cache }o..o{ user_foods : "public labels, shared (off_code, not linked)"
 ```
 
 **Identity and integrity (migration 0003, 2026-09-30):** `users.id` is the internal key every table joins on; `users.public_id` (UUID v7) is what the API and admin screens show. Every foreign key has an ON DELETE rule, so deleting a user row removes everything they own in the database itself (model-usage and admin-audit rows are kept, unlinked). Logged items point at the saved food they came from, so "most eaten" is a count. Timestamps are `timestamptz` (UTC); per-user tables are indexed on (user_id, date) or (user_id, status).
@@ -310,6 +358,8 @@ erDiagram
 **Branded foods (migration 0006, 2026-09-30):** `user_foods.label_checked` says whether a food's numbers come from its pack label, and `off_code` keeps the Open Food Facts barcode it was matched to (§4.5).
 
 **Waitlist (migration 0007, 2026-10-01):** `waitlist` holds the "Join the community" sign-ups (name, email, optional interest, consent and approval times). It isn't linked to `users` by key: most people on it have no account; the admin list matches by email, and deleting an account deletes its waitlist row (§4.3a).
+
+**Label cache (migration 0008, 2026-10-01):** `label_cache` keeps Open Food Facts answers (a search or a barcode → usable labels) for 7 days, shared by everyone. Public data only, nothing about a user (§4.5a).
 
 Column-level detail is in [technical-overview.md](technical-overview.md#5-data-model).
 
@@ -325,6 +375,7 @@ Column-level detail is in [technical-overview.md](technical-overview.md#5-data-m
 | Per-call size | Only the tools and prompt sections the intent needs, and only saved foods and general-list foods named in the message, typos allowed (25–87% fewer instruction tokens per call) |
 | General food list | ~300 common foods per 100 g from USDA FoodData Central (SR Legacy, public domain), a JSON file shipped with the backend (`app/data/general_foods.json`, built by `scripts/build_general_foods.py` from our curated `general_foods_spec.py`). Read-only, loaded once, no table. Order: My Foods → general list → AI. Raw/cooked pairs are asked, never assumed. Confirmed foods are copied into My Foods (`source = general`). A monthly GitHub Action rebuilds it from USDA and opens a pull request only when numbers change or USDA adds foods ([deployment.md](deployment.md)). |
 | Observability | `llm_usage` table and the admin **AI usage** panel (calls, tokens, fast-path share, cooldowns) |
+| Pack labels | Branded estimates on `propose_entry` / `propose_edit` get Open Food Facts choices attached in code (`services/label_match.py`), not by the model; the user picks (§4.5a). A scanned barcode is passed to the model as "[Pack barcode scanned in the app: …]". |
 | Guards | Energy balance, quantity cleanup, false "Logged" claim nudge, missed-water nudge, move-vs-delete guard, tool allow-list per routed intent (other tool names are refused) |
 | Failure | Any provider error → HTTP 503 with a friendly message (`SHOW_LLM_ERRORS=true` shows details in dev) |
 
@@ -332,7 +383,7 @@ Column-level detail is in [technical-overview.md](technical-overview.md#5-data-m
 
 | Area | Current state | Planned |
 |---|---|---|
-| **Security** | Argon2id password hashes (OWASP settings; old scrypt hashes upgraded at login; no timing hint for unknown emails), or Google sign-in (verified ID token, verified email); JWT in an httpOnly SameSite cookie (Secure over HTTPS in production) with a per-user session version, so a password change or Log out of all devices ends existing sessions, admin two-step sign-in (authenticator codes, encrypted secret, no replay) and 12-hour admin sessions, forgot password by one-time emailed link (Brevo; hashed token, 30 min, no account enumeration, links built from a fixed address), per-user scoping on every query, admin audit, sign-in attempt limits (per email and per address), browser security headers (CSP without inline scripts, no framing, HSTS over HTTPS), API docs off in production | OTP email verification |
+| **Security** | Argon2id password hashes (OWASP settings; old scrypt hashes upgraded at login; no timing hint for unknown emails), or Google sign-in (verified ID token, verified email); JWT in an httpOnly SameSite cookie (Secure over HTTPS in production) with a per-user session version, so a password change or Log out of all devices ends existing sessions, admin two-step sign-in (authenticator codes, encrypted secret, no replay) and 12-hour admin sessions, forgot password by one-time emailed link (Brevo; hashed token, 30 min, no account enumeration, links built from a fixed address), per-user scoping on every query, admin audit, sign-in attempt limits (per email and per address), browser security headers (CSP without inline scripts (WebAssembly allowed for the pack scanner, `'wasm-unsafe-eval'`; camera and mic for our own pages only), no framing, HSTS over HTTPS), API docs off in production | OTP email verification |
 | **Privacy** | Consent at sign-up (versioned); public plain-language notice at `/privacy` (pre-rendered, readable without JavaScript); **Download my data** (all rows, secrets excluded); full account deletion; adults only (18+ checked at onboarding) | Data retention periods and a scheduled purge; legal review before a public launch |
 | **Scale** | Single process; Postgres on Neon (SQLite locally) | Stateless app instances (move in-memory state to the database or Redis) |
 | **LLM capacity** | Groq free tier, per model (~200K tokens/day each for gpt-oss-20b and 120b); fast paths and slimmer calls stretch it; **daily AI allowance** per user (`AI_DAILY_MESSAGE_LIMIT`, 20, resets at local midnight; failed calls and instant replies don't count) | Second free provider for failover, see [llm-routing-strategy.md](llm-routing-strategy.md) |

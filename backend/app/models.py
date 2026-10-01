@@ -374,3 +374,14 @@ class UserPreferences(Base):
     health_consent_at: Mapped[datetime | None] = mapped_column(UTCDateTime)
     skipped_at: Mapped[datetime | None] = mapped_column(UTCDateTime)
     updated_at: Mapped[datetime] = mapped_column(UTCDateTime, default=utcnow, onupdate=utcnow)
+
+
+class LabelCache(Base):
+    """Open Food Facts answers kept for a while (2026-10-01): a search ("q:amul butter") or one
+    product ("code:8901262010016") -> the usable labels. Public data only, never anything about
+    a user, so it is shared by everyone. Saves time and is polite to the free service."""
+    __tablename__ = "label_cache"
+
+    key: Mapped[str] = mapped_column(String(300), primary_key=True)
+    labels: Mapped[list] = mapped_column(JSON)
+    fetched_at: Mapped[datetime] = mapped_column(UTCDateTime, default=utcnow)
