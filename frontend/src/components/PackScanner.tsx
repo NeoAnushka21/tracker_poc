@@ -1,17 +1,17 @@
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { readBarcode, readPackWords, shrink } from "../scan";
-
-export type PackReading = { kind: "barcode" | "words"; text: string };
+import { readBarcode } from "../scan";
 
 const FRAME_MS = 400;     // how often a camera frame is checked for a barcode
 
-/** Read a packaged product with the live camera or from a photo: its barcode when one is in view,
- *  else the brand and name printed on the front. Only for packs: a cooked dish can't be read. The
- *  result only fills the search; the user still picks the product (src/scan.ts does the reading). */
-export default function PackScanner({ onRead, onClose }: { onRead: (r: PackReading) => void; onClose: () => void }) {
+/** Read a packaged product's barcode with the live camera or from a photo (barcode only: owner,
+ *  2026-10-01). The number only fills the search; the user still picks the product (src/scan.ts
+ *  does the reading). */
+export default function PackScanner({ onRead, onClose }: { onRead: (barcode: string) => void; onClose: () => void }) {
   const [mode, setMode] = useState<"pick" | "camera" | "reading">("pick");
   const [error, setError] = useState<string | null>(null);
+  // An uploaded photo with no readable barcode: offer a close-up instead of a dead end.
+  const [missed, setMissed] = useState(false);
   const video = useRef<HTMLVideoElement>(null);
   const stream = useRef<MediaStream | null>(null);
   const file = useRef<HTMLInputElement>(null);
@@ -35,6 +35,7 @@ export default function PackScanner({ onRead, onClose }: { onRead: (r: PackReadi
 
   async function startCamera() {
     setError(null);
+    setMissed(false);
     try {
       stream.current = await navigator.mediaDevices.getUserMedia({
         video: { facingMode: { ideal: "environment" }, width: { ideal: 1280 }, height: { ideal: 720 } }, audio: false,
@@ -66,7 +67,7 @@ export default function PackScanner({ onRead, onClose }: { onRead: (r: PackReadi
         if (code && !done) {
           done = true;
           stopCamera();
-          onRead({ kind: "barcode", text: code });
+          onRead(code);
         }
       } catch {
         /* a frame that can't be read: try the next one */
@@ -77,30 +78,17 @@ export default function PackScanner({ onRead, onClose }: { onRead: (r: PackReadi
     return () => { done = true; clearInterval(timer); };
   }, [mode]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  /** Take the current camera frame as a photo (for the front of a pack, which has no barcode). */
-  function takePhoto() {
-    const v = video.current;
-    if (!v || v.readyState < 2) return;
-    const canvas = document.createElement("canvas");
-    canvas.width = v.videoWidth;
-    canvas.height = v.videoHeight;
-    canvas.getContext("2d")!.drawImage(v, 0, 0);
-    stopCamera();
-    canvas.toBlob((b) => { if (b) void readPhoto(b); }, "image/jpeg", 0.92);
-  }
-
+  /** An uploaded photo, read at full size (a small barcode in a wide shot needs every pixel). */
   async function readPhoto(photo: Blob) {
     setMode("reading");
     setError(null);
+    setMissed(false);
     try {
-      const small = await shrink(photo);
-      const code = await readBarcode(small);
-      if (code) return onRead({ kind: "barcode", text: code });
-      const words = await readPackWords(small);
-      if (words) return onRead({ kind: "words", text: words });
-      setError("Couldn't read a barcode or a product name. Try again closer to the pack, in good light, or type the name.");
+      const code = await readBarcode(photo);
+      if (code) return onRead(code);
+      setMissed(true);
     } catch {
-      setError("Couldn't read that photo. Try another one, or type the product name.");
+      setError("Couldn't open that photo. Try another one, or use the camera.");
     }
     setMode("pick");
   }
@@ -112,7 +100,7 @@ export default function PackScanner({ onRead, onClose }: { onRead: (r: PackReadi
     <div className="backdrop pack-scanner-layer">
       <div className="dialog card pack-scanner" role="dialog" aria-modal="true" aria-labelledby="pack-scan-title" ref={box}>
         <div className="dialog-head">
-          <h3 id="pack-scan-title">Scan a packaged product</h3>
+          <h3 id="pack-scan-title">Scan the barcode</h3>
           <button type="button" className="ghost icon-btn" onClick={onClose} aria-label="Close">✕</button>
         </div>
 
@@ -122,30 +110,35 @@ export default function PackScanner({ onRead, onClose }: { onRead: (r: PackReadi
               <video ref={video} playsInline muted aria-label="Camera view" />
               <span className="pack-camera-frame" aria-hidden="true" />
             </div>
-            <p className="muted small">
-              Point at the <b>barcode</b>: it's read on its own. No barcode in view? Show the front of the pack with the
-              brand and name, then <b>Take photo</b>.
-            </p>
+            <p className="muted small">Point at the <b>barcode</b> and hold still: it's read on its own.</p>
             <div className="pack-actions">
-              <button type="button" className="primary" onClick={takePhoto}>Take photo</button>
               <button type="button" className="ghost" onClick={() => { stopCamera(); setMode("pick"); }}>Back</button>
             </div>
           </>
         ) : mode === "reading" ? (
-          <p className="pack-reading" role="status"><span className="spinner" aria-hidden="true" /> Reading the pack…</p>
+          <p className="pack-reading" role="status"><span className="spinner" aria-hidden="true" /> Looking for the barcode…</p>
         ) : (
           <>
-            <p className="muted small">
-              For <b>packaged products</b> only: the barcode, or the front of the pack with the brand and name. Cooked or
-              loose food (a curry, a thali) can't be read from a photo; tell MacBro about it instead.
-            </p>
+            {missed ? (
+              <div className="scan-tip" role="status">
+                <b>Couldn't spot the barcode in that photo.</b>
+                <span>Try a close-up of just the barcode: fill the photo with it, keep it sharp and in good light (no glare on
+                  the lines), and upload it again.</span>
+              </div>
+            ) : (
+              <p className="muted small">
+                Scan the <b>barcode</b> on the pack, or upload a photo of it. For packaged products; for cooked or loose
+                food (a curry, a thali), just tell MacBro.
+              </p>
+            )}
             <div className="pack-actions">
-              {cameraOk && <button type="button" className="primary" onClick={startCamera}>📷 Use camera</button>}
-              <button type="button" className={cameraOk ? "" : "primary"} onClick={() => file.current?.click()}>🖼 Upload a photo</button>
+              {missed && <button type="button" className="primary" onClick={() => file.current?.click()}>🖼 Upload a close-up</button>}
+              {cameraOk && <button type="button" className={missed ? "" : "primary"} onClick={startCamera}>📷 Use camera</button>}
+              {!missed && <button type="button" className={cameraOk ? "" : "primary"} onClick={() => file.current?.click()}>🖼 Upload a photo</button>}
               <input ref={file} type="file" accept="image/*" hidden
                      onChange={(e) => { const f = e.target.files?.[0]; e.target.value = ""; if (f) void readPhoto(f); }} />
             </div>
-            <p className="muted tiny">The photo is read on your device and isn't uploaded. Only the barcode or the words read are searched.</p>
+            <p className="muted tiny">The photo is read on your device and isn't uploaded. Only the barcode number is searched.</p>
           </>
         )}
         {error && <p className="error small">{error}</p>}

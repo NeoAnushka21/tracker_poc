@@ -34,7 +34,7 @@ export default function PrivacyPage() {
           <li><b>Usage:</b> when you sign in, how many AI requests you made each day, and technical details of each AI call (model, size, timing), used to share the free AI allowance fairly.</li>
           <li><b>Waitlist (only if you use "Join the waitlist" on the welcome page):</b> your name, email, what you'd like to track (optional), and when you joined and were let in. It's used only to email you about access and to plan how many people we can let in. Write to us to be taken off the list; deleting your account also removes it.</li>
           <li><b>On your device:</b> one sign-in cookie (needed to keep you logged in) and your light/dark theme choice. No advertising or tracking cookies, and no analytics.</li>
-          <li><b>Camera and photos:</b> only when you scan a packaged product. The camera picture or photo is read on your device (for its barcode or the brand and name printed on it) and is never uploaded or stored; only the barcode or words read are searched (see Open Food Facts below).</li>
+          <li><b>Camera and photos:</b> only when you scan a packaged product. The camera picture or photo is read on your device for its barcode and is never uploaded or stored; only the barcode number is searched (see Open Food Facts below).</li>
         </ul>
 
         <h2>Why</h2>

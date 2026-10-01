@@ -449,6 +449,43 @@ html:not([data-join="open"]) [data-mode="open"], html[data-join="open"] [data-mo
 .shelf-list .kc b { font-size: 1rem; font-variant-numeric: tabular-nums; }
 .tag { display: inline-block; margin-left: 6px; font-size: 0.68rem; font-weight: 700; padding: 1px 7px; border-radius: 999px; background: var(--accent-soft); color: var(--accent); vertical-align: 1px; }
 .tag.rec { background: color-mix(in srgb, var(--amber) 18%, var(--surface)); color: var(--amber-ink); }
+.tag.warn { background: color-mix(in srgb, var(--amber) 18%, var(--surface)); color: var(--amber-ink); }
+
+/* ---------- packaged food: barcode scanner + "Is this your pack?" (section #scan and Demo stop 3) ---------- */
+.small-note { font-size: 0.85rem; }
+.viewfinder {
+  position: relative; display: grid; place-items: center; padding: 30px 20px; border-radius: 16px; overflow: hidden;
+  background: radial-gradient(120% 90% at 50% 40%, #2b3427, #141912);   /* a camera view: dark in both themes */
+}
+.viewfinder::before {   /* the scan frame */
+  content: ""; position: absolute; inset: 14px 10%; border: 2px solid rgb(255 255 255 / 0.85); border-radius: 12px;
+  box-shadow: 0 0 0 999px rgb(0 0 0 / 0.18);
+}
+.sticker { position: relative; display: grid; justify-items: center; gap: 3px; padding: 10px 16px 6px; border-radius: 8px; background: #ffffff; color: #111111; }
+.sticker .bars { display: block; width: 180px; height: 62px; fill: #111111; }
+.sticker .digits { font: 600 0.74rem/1 ui-monospace, "Cascadia Mono", Consolas, monospace; letter-spacing: 0.16em; }
+.laser {
+  position: absolute; left: 12%; right: 12%; top: 50%; height: 2px; border-radius: 2px;
+  background: #ff5a4f; box-shadow: 0 0 10px 1px rgb(255 90 79 / 0.7);
+}
+.read-chip {
+  justify-self: start; display: inline-flex; align-items: center; gap: 6px; padding: 4px 12px; border-radius: 999px;
+  font-weight: 700; font-size: 0.82rem; background: var(--accent-soft); color: var(--accent);
+}
+.label-ask { display: grid; gap: 8px; padding: 10px 12px; border-radius: 14px; background: var(--surface-2); border: 1px solid var(--border); font-size: 0.86rem; }
+.label-ask .prod {
+  display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 4px 10px; align-items: center;
+  padding: 8px 10px; border-radius: 10px; background: var(--surface); border: 1px solid var(--border);
+}
+.label-ask .prod > span:first-child { overflow-wrap: anywhere; }
+.label-ask .meta { grid-column: 1 / -1; color: var(--muted); font-size: 0.76rem; }
+.ask-link { justify-self: start; color: var(--accent); font-weight: 700; font-size: 0.8rem; }
+.s-chat .label-ask { font-size: 0.76rem; padding: 8px 10px; background: var(--surface-2); }
+.s-chat .label-ask .meta { font-size: 0.68rem; }
+.s-chat .label-ask .fake-btn { padding: 5px 9px; }
+.s-icons { display: inline-flex; align-items: center; gap: 8px; }
+.s-scanbtn { display: inline-grid; place-items: center; width: 24px; height: 24px; border-radius: 50%; border: 1px solid var(--border); color: var(--accent); font-size: 0.8rem; }
+.scan-visual .shelf-list { border-top: 1px solid var(--border); }
 
 /* how it works: a real three-step sequence */
 .steps { list-style: none; margin: 0; padding: 0; display: grid; gap: 16px; counter-reset: step; }
@@ -596,9 +633,11 @@ footer a { color: var(--muted); font-weight: 600; }
   .panel:not(.is-off) > :nth-child(4) { animation-delay: 0.24s; }
   .stop:not(.is-off) .screen { animation: rise 0.35s var(--ease-out) both; }
   .stop:not(.is-off) .stop-copy { animation: rise 0.3s var(--ease-out) both; }
+  .laser { animation: sweep 2.2s ease-in-out infinite alternate; }
 }
 @keyframes rise { from { opacity: 0.001; transform: translateY(8px); } to { opacity: 1; transform: none; } }
 @keyframes draw { from { stroke-dashoffset: 90; } to { stroke-dashoffset: 0; } }
+@keyframes sweep { from { top: 26%; } to { top: 74%; } }
 @media (prefers-reduced-motion: reduce) {
   html { scroll-behavior: auto; }
   .btn { transition: none; }

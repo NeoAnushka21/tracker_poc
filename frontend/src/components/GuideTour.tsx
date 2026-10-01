@@ -35,7 +35,7 @@ function steps(name: string | null): Step[] {
       title: `1. Tell ${BOT_NAME} what you ate`,
       body: (
         <>
-          <p><b>{BOT_NAME}</b> is your nutrition assistant. On <b>Home</b>, tap {BOT_NAME} ("Want to log something? Talk to me") to open the chat window. Type, or tap the <b>mic</b> and speak. For a packaged product, the <b>scan</b> button next to the mic reads its barcode or a photo of the pack. Plain language is fine:</p>
+          <p><b>{BOT_NAME}</b> is your nutrition assistant. On <b>Home</b>, tap {BOT_NAME} ("Want to log something? Talk to me") to open the chat window. Type, or tap the <b>mic</b> and speak. For a packaged product, the <b>scan</b> button next to the mic reads its barcode, with the camera or from a photo. Plain language is fine:</p>
           <ul>
             <li>"2 eggs and a slice of toast for breakfast"</li>
             <li>"150g grilled chicken with a cup of rice"</li>
@@ -98,7 +98,7 @@ function steps(name: string | null): Step[] {
       tab: "foods",
       targets: ["#tab-foods", "#panel-foods .foods-head", "#panel-foods .foods-tools"],
       title: "6. My Foods remembers for you",
-      body: <p>Every food you confirm is saved here with its macros and micronutrients, so the next time you log it (e.g. "40g pineapple") the numbers are exactly the same, straight from your library, without using an AI message (small typos like "panner" are fine). About 300 common foods (fruit, dals, rice, milk, chicken…) are built in too, and for foods like rice or chicken MacBro asks whether the weight was raw or cooked instead of guessing. The list has three tabs: <b>Generic</b> foods, <b>Branded</b> products and <b>My Recipes</b>. It shows each name with its calories; tap <b>Additional info</b> for the other macros and micronutrients. You can search, correct or delete any of them. Packaged foods you log with their brand ("10 g Amul butter") are grouped by brand under <b>Branded</b>, with <b>label ✓</b> once you picked their pack label; for any still to check, press <b>Check label</b> (search, or <b>Scan or photo</b> the pack) or type it in with the pencil. <b>+ Add</b> lets you add a branded product, a generic food or a recipe yourself.</p>,
+      body: <p>Every food you confirm is saved here with its macros and micronutrients, so the next time you log it (e.g. "40g pineapple") the numbers are exactly the same, straight from your library, without using an AI message (small typos like "panner" are fine). About 300 common foods (fruit, dals, rice, milk, chicken…) are built in too, and for foods like rice or chicken MacBro asks whether the weight was raw or cooked instead of guessing. The list has three tabs: <b>Generic</b> foods, <b>Branded</b> products and <b>My Recipes</b>. It shows each name with its calories; tap <b>Additional info</b> for the other macros and micronutrients. You can search, correct or delete any of them. Packaged foods you log with their brand ("10 g Amul butter") are grouped by brand under <b>Branded</b>, with <b>label ✓</b> once you picked their pack label; for any still to check, press <b>Check label</b> (search, or <b>Scan barcode</b>) or type it in with the pencil. <b>+ Add</b> lets you add a branded product, a generic food or a recipe yourself.</p>,
     },
     {
       tab: "body",

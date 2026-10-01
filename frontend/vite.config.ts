@@ -1,4 +1,4 @@
-import { copyFileSync, createReadStream, existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { createElement } from "react";
@@ -52,44 +52,6 @@ function prerenderPages(): Plugin {
   };
 }
 
-/** The pack-photo reader (src/scan.ts) loads Tesseract's worker, engine and English data at run time.
- *  They are served from our own /ocr/ (the CSP allows no CDN): copied from node_modules into dist at
- *  build time, and served straight from node_modules by the dev server. Only the LSTM engines are
- *  needed (the worker picks the one the browser supports). */
-const OCR_FILES: Record<string, string> = {
-  "worker.min.js": "node_modules/tesseract.js/dist/worker.min.js",
-  "tesseract-core-lstm.wasm.js": "node_modules/tesseract.js-core/tesseract-core-lstm.wasm.js",
-  "tesseract-core-simd-lstm.wasm.js": "node_modules/tesseract.js-core/tesseract-core-simd-lstm.wasm.js",
-  "tesseract-core-relaxedsimd-lstm.wasm.js": "node_modules/tesseract.js-core/tesseract-core-relaxedsimd-lstm.wasm.js",
-  "eng.traineddata.gz": "node_modules/@tesseract.js-data/eng/4.0.0_best_int/eng.traineddata.gz",
-};
-
-function ocrFiles(): Plugin {
-  let root = "";
-  let outDir = "";
-  return {
-    name: "ocr-files",
-    configResolved(c) {
-      root = c.root;
-      outDir = resolve(c.root, c.build.outDir);
-    },
-    configureServer(server) {
-      server.middlewares.use((req, res, next) => {
-        const name = req.url?.startsWith("/ocr/") ? req.url.slice(5).split("?")[0] : "";
-        const src = OCR_FILES[name];
-        if (!src) return next();
-        res.setHeader("Content-Type", name.endsWith(".js") ? "text/javascript" : "application/octet-stream");
-        createReadStream(resolve(root, src)).pipe(res);
-      });
-    },
-    closeBundle() {
-      if (!existsSync(outDir)) return;
-      mkdirSync(resolve(outDir, "ocr"), { recursive: true });
-      for (const [name, src] of Object.entries(OCR_FILES)) copyFileSync(resolve(root, src), resolve(outDir, "ocr", name));
-    },
-  };
-}
-
 /** Dev server: /welcome is the welcome page, as the backend serves it in production. */
 function welcomeRoute(): Plugin {
   return {
@@ -106,7 +68,7 @@ function welcomeRoute(): Plugin {
 // In dev, /api is proxied to FastAPI so the session cookie is same-origin.
 // Open the app at http://<APP_DEV_HOST>:5173 (e.g. http://tandurust.localhost:5173).
 export default defineConfig({
-  plugins: [react(), brandHtml(), welcomeRoute(), ocrFiles(), prerenderPages()],
+  plugins: [react(), brandHtml(), welcomeRoute(), prerenderPages()],
   server: {
     port: 5173,
     allowedHosts: [APP_DEV_HOST],

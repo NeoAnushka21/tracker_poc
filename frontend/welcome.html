@@ -42,6 +42,7 @@
       <a href="#for">Who it's for</a>
       <a href="#meet">MacBro</a>
       <a href="#ways">How you log</a>
+      <a href="#scan">Barcode</a>
       <a href="#pantry">My Foods</a>
       <a href="#about">About</a>
     </nav>
@@ -189,18 +190,19 @@
       <div class="section-head">
         <p class="kicker">Demo</p>
         <h2 id="demo-title">Take a tour of the app</h2>
-        <p>Seven stops, about a minute. These are example screens with made-up numbers; the app itself looks just like this.</p>
+        <p>Eight stops, about a minute. These are example screens with made-up numbers; the app itself looks just like this.</p>
       </div>
 
       <div class="tour">
         <div class="tour-steps" role="tablist" aria-label="Demo steps" aria-orientation="vertical">
           <button type="button" role="tab" id="step-1" aria-controls="stop-1" aria-selected="true" tabindex="0"><span class="num" aria-hidden="true">1</span><span><b>Home</b><small>Your day at a glance</small></span></button>
           <button type="button" role="tab" id="step-2" aria-controls="stop-2" aria-selected="false" tabindex="-1"><span class="num" aria-hidden="true">2</span><span><b>Chat with MacBro</b><small>Log a meal in one sentence</small></span></button>
-          <button type="button" role="tab" id="step-3" aria-controls="stop-3" aria-selected="false" tabindex="-1"><span class="num" aria-hidden="true">3</span><span><b>Meals</b><small>Your day, meal by meal</small></span></button>
-          <button type="button" role="tab" id="step-4" aria-controls="stop-4" aria-selected="false" tabindex="-1"><span class="num" aria-hidden="true">4</span><span><b>Progress</b><small>7, 14 or 30 days</small></span></button>
-          <button type="button" role="tab" id="step-5" aria-controls="stop-5" aria-selected="false" tabindex="-1"><span class="num" aria-hidden="true">5</span><span><b>My Foods</b><small>Your personal pantry</small></span></button>
-          <button type="button" role="tab" id="step-6" aria-controls="stop-6" aria-selected="false" tabindex="-1"><span class="num" aria-hidden="true">6</span><span><b>Body Stats</b><small>Weight, BMI, measurements</small></span></button>
-          <button type="button" role="tab" id="step-7" aria-controls="stop-7" aria-selected="false" tabindex="-1"><span class="num" aria-hidden="true">7</span><span><b>Explore</b><small>Recipes and workouts</small></span></button>
+          <button type="button" role="tab" id="step-3" aria-controls="stop-3" aria-selected="false" tabindex="-1"><span class="num" aria-hidden="true">3</span><span><b>Packaged food</b><small>Scan the barcode, pick your pack</small></span></button>
+          <button type="button" role="tab" id="step-4" aria-controls="stop-4" aria-selected="false" tabindex="-1"><span class="num" aria-hidden="true">4</span><span><b>Meals</b><small>Your day, meal by meal</small></span></button>
+          <button type="button" role="tab" id="step-5" aria-controls="stop-5" aria-selected="false" tabindex="-1"><span class="num" aria-hidden="true">5</span><span><b>Progress</b><small>7, 14 or 30 days</small></span></button>
+          <button type="button" role="tab" id="step-6" aria-controls="stop-6" aria-selected="false" tabindex="-1"><span class="num" aria-hidden="true">6</span><span><b>My Foods</b><small>Your personal pantry</small></span></button>
+          <button type="button" role="tab" id="step-7" aria-controls="stop-7" aria-selected="false" tabindex="-1"><span class="num" aria-hidden="true">7</span><span><b>Body Stats</b><small>Weight, BMI, measurements</small></span></button>
+          <button type="button" role="tab" id="step-8" aria-controls="stop-8" aria-selected="false" tabindex="-1"><span class="num" aria-hidden="true">8</span><span><b>Explore</b><small>Recipes and workouts</small></span></button>
         </div>
 
         <div class="tour-stage">
@@ -277,8 +279,51 @@
             </div>
           </div>
 
-          <!-- 3: Meals -->
+          <!-- 3: packaged food -->
           <div class="stop is-off" role="tabpanel" id="stop-3" aria-labelledby="step-3" inert>
+            <div class="stop-copy">
+              <h3>Packaged food: the real label, not a guess</h3>
+              <ul>
+                <li>Tap the <b>barcode button</b> next to the mic. The camera reads the barcode on its own, or upload a photo of it. Pick your product, then add how much you had.</li>
+                <li>Or just name the brand: "2 slices Modern multigrain bread".</li>
+                <li>The card asks <b>Is this your pack?</b> Tap <b>Yes, this one</b>, or <b>Not this one</b> to see the next products. The pack label's numbers replace MacBro's estimate.</li>
+                <li>It's saved to My Foods with <b>label ✓</b>, so next time it's instant.</li>
+              </ul>
+            </div>
+            <div class="screen" aria-label="Example: MacBro's card asking which pack it is" role="img">
+              <div class="screen-bar"><span class="mb" aria-hidden="true"><svg><use href="#macbro"/></svg></span>MacBro<span class="s-x">– ✕</span></div>
+              <div class="screen-body s-chat" aria-hidden="true">
+                <p class="msg-user">2 slices Modern multigrain bread</p>
+                <div class="msg-bot">
+                  <span class="mb"><svg><use href="#macbro"/></svg></span>
+                  <div class="msg-bot-body">
+                    <p class="bubble-bot">Found it on the pack label. Is this yours?</p>
+                    <div class="proposal">
+                      <div class="proposal-head"><b>Breakfast · 8:10 AM</b><span class="pill-warn">Not saved yet</span></div>
+                      <div class="bottom-line"><div><strong>130</strong><span>kcal</span></div><div><strong>5 g</strong><span>protein</span></div></div>
+                      <ul class="items">
+                        <li><span>Multigrain bread · Modern <span class="tag warn">check label</span></span><span class="qty">2 slices</span><span class="kcal">130</span></li>
+                      </ul>
+                      <div class="label-ask">
+                        <span class="q">Is this your pack of <b>Modern multigrain bread</b>?</span>
+                        <div class="prod">
+                          <span><b>Multigrain Bread</b> <span class="muted">· Modern</span></span>
+                          <span class="fake-btn">Yes, this one</span>
+                          <span class="meta">pack 400 g · 250 kcal per 100 g · P 9 · C 45 · F 3.5</span>
+                        </div>
+                        <span class="ask-link">Not this one</span>
+                      </div>
+                      <div class="proposal-actions"><span class="fake-btn primary">Looks good</span><span class="fake-btn">Needs changes</span><span class="fake-btn">Cancel</span></div>
+                    </div>
+                  </div>
+                </div>
+                <div class="s-input"><span>Message MacBro…</span><span class="s-icons"><span class="s-scanbtn">▥</span><span class="s-mic">🎙</span></span></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- 4: Meals -->
+          <div class="stop is-off" role="tabpanel" id="stop-4" aria-labelledby="step-4" inert>
             <div class="stop-copy">
               <h3>Meals: your day, meal by meal</h3>
               <ul>
@@ -314,8 +359,8 @@
             </div>
           </div>
 
-          <!-- 4: progress -->
-          <div class="stop is-off" role="tabpanel" id="stop-4" aria-labelledby="step-4" inert>
+          <!-- 5: progress -->
+          <div class="stop is-off" role="tabpanel" id="stop-5" aria-labelledby="step-5" inert>
             <div class="stop-copy">
               <h3>Check your progress</h3>
               <ul>
@@ -344,14 +389,14 @@
             </div>
           </div>
 
-          <!-- 5: My Foods -->
-          <div class="stop is-off" role="tabpanel" id="stop-5" aria-labelledby="step-5" inert>
+          <!-- 6: My Foods -->
+          <div class="stop is-off" role="tabpanel" id="stop-6" aria-labelledby="step-6" inert>
             <div class="stop-copy">
               <h3>My Foods remembers for you</h3>
               <ul>
                 <li>Every food you confirm is saved here. Next time, it's logged with <b>exactly the same numbers</b>, instantly, without using an AI message.</li>
                 <li>About <b>300 common foods</b> are built in, and for rice or chicken MacBro asks whether the weight was raw or cooked.</li>
-                <li>Three tabs: <b>Generic</b>, <b>Branded</b> (check the real pack label from Open Food Facts) and <b>My Recipes</b>.</li>
+                <li>Three tabs: <b>Generic</b>, <b>Branded</b> (real pack labels from Open Food Facts, <b>label ✓</b>) and <b>My Recipes</b>.</li>
                 <li>Search, correct or delete anything, or add your own with <b>+ Add</b>.</li>
               </ul>
             </div>
@@ -373,8 +418,8 @@
             </div>
           </div>
 
-          <!-- 6: Body Stats -->
-          <div class="stop is-off" role="tabpanel" id="stop-6" aria-labelledby="step-6" inert>
+          <!-- 7: Body Stats -->
+          <div class="stop is-off" role="tabpanel" id="stop-7" aria-labelledby="step-7" inert>
             <div class="stop-copy">
               <h3>Your Body Stats</h3>
               <ul>
@@ -405,8 +450,8 @@
             </div>
           </div>
 
-          <!-- 7: Explore -->
-          <div class="stop is-off" role="tabpanel" id="stop-7" aria-labelledby="step-7" inert>
+          <!-- 8: Explore -->
+          <div class="stop is-off" role="tabpanel" id="stop-8" aria-labelledby="step-8" inert>
             <div class="stop-copy">
               <h3>Explore (coming soon)</h3>
               <ul>
@@ -427,7 +472,7 @@
 
           <div class="tour-nav">
             <button type="button" class="btn btn-ghost btn-small" id="tour-prev">‹ Back</button>
-            <span class="slide-count" id="tour-count" aria-live="polite">Stop 1 of 7</span>
+            <span class="slide-count" id="tour-count" aria-live="polite">Stop 1 of 8</span>
             <button type="button" class="btn btn-primary btn-small" id="tour-next">Next ›</button>
           </div>
         </div>
@@ -548,6 +593,7 @@
             <li><b>One sentence</b> for a whole meal, typed or spoken with the mic.</li>
             <li><b>A card to check</b> before anything is saved: Looks good, Needs changes or Cancel.</li>
             <li><b>Past days too:</b> pick a date and fill in a day you missed.</li>
+            <li><b>Packaged food?</b> Scan its barcode and pick your pack: the real label, not a guess.</li>
           </ul>
         </div>
         <div class="mode">
@@ -565,6 +611,46 @@
     </div>
   </section>
 
+  <!-- ======================= packaged food: barcode + real labels ======================= -->
+  <section class="band tint" id="scan" aria-labelledby="scan-title">
+    <div class="wrap pantry">
+      <div class="pantry-copy">
+        <div class="section-head" style="margin-bottom:0">
+          <p class="kicker">Packaged food</p>
+          <h2 id="scan-title">Scan the barcode. Get the real label.</h2>
+          <p>For anything in a packet, the numbers should come from its label, not a guess. Scan the barcode and Tandurust finds the product on <b>Open Food Facts</b>, a free, open database of food labels.</p>
+        </div>
+        <ul>
+          <li><b>Camera or photo</b><span>Point your phone at the barcode and it's read on its own, or upload a photo of it. Photo too far away? It asks for a close-up of just the barcode.</span></li>
+          <li><b>You pick the pack</b><span>"Is this your pack?" Tap yes, or see the next products. Nothing is assumed.</span></li>
+          <li><b>Or just name the brand</b><span>"2 slices Modern multigrain bread": MacBro's card looks up the label for you, and uses his estimate only when there's no match.</span></li>
+          <li><b>Saved with label ✓</b><span>Next time it's instant, with the label's exact numbers.</span></li>
+        </ul>
+        <p class="muted small-note">The photo is read on your phone and never uploaded: only the barcode number is searched.</p>
+      </div>
+      <div class="shelf scan-visual" aria-label="Example: scanning a barcode and picking the pack" role="img">
+        <div class="shelf-top"><b>Scan the barcode</b><span class="demo-tag">Example</span></div>
+        <div class="viewfinder" aria-hidden="true">
+          <div class="sticker"><svg class="bars" viewBox="0 0 95 46" preserveAspectRatio="none" aria-hidden="true"><rect x="0" width="1" height="46"/><rect x="2" width="1" height="46"/><rect x="6" width="1" height="40"/><rect x="8" width="2" height="40"/><rect x="11" width="1" height="40"/><rect x="14" width="3" height="40"/><rect x="19" width="2" height="40"/><rect x="23" width="1" height="40"/><rect x="26" width="1" height="40"/><rect x="30" width="1" height="40"/><rect x="33" width="2" height="40"/><rect x="36" width="2" height="40"/><rect x="39" width="2" height="40"/><rect x="44" width="1" height="40"/><rect x="46" width="1" height="46"/><rect x="48" width="1" height="46"/><rect x="50" width="2" height="40"/><rect x="54" width="2" height="40"/><rect x="57" width="2" height="40"/><rect x="60" width="2" height="40"/><rect x="64" width="2" height="40"/><rect x="68" width="2" height="40"/><rect x="71" width="2" height="40"/><rect x="75" width="2" height="40"/><rect x="78" width="2" height="40"/><rect x="82" width="2" height="40"/><rect x="85" width="2" height="40"/><rect x="88" width="2" height="40"/><rect x="92" width="1" height="46"/><rect x="94" width="1" height="46"/></svg><span class="digits">8 901725 121112</span></div>
+          <span class="laser"></span>
+        </div>
+        <p class="read-chip" aria-hidden="true">✓ Barcode read</p>
+        <div class="label-ask" aria-hidden="true">
+          <span class="q">Is this your pack?</span>
+          <div class="prod">
+            <span><b>Multigrain Bread</b> <span class="muted">· Modern</span></span>
+            <span class="fake-btn primary">Yes, this one</span>
+            <span class="meta">pack 400 g · 250 kcal per 100 g · P 9 · C 45 · F 3.5</span>
+          </div>
+          <span class="ask-link">Not this one</span>
+        </div>
+        <ul class="shelf-list" aria-hidden="true">
+          <li><span class="name">Multigrain bread <small>· Modern</small><span class="tag">label ✓</span></span><span class="kc"><b>135</b> kcal <span class="muted">2 slices</span></span></li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
   <!-- ======================= pantry ======================= -->
   <section class="band" id="pantry" aria-labelledby="pantry-title">
     <div class="wrap pantry">
@@ -576,7 +662,7 @@
         </div>
         <ul>
           <li><b>Generic</b><span>Everyday foods like paneer, poha or a banana, saved per 100 g or per piece.</span></li>
-          <li><b>Branded</b><span>Packaged foods grouped by brand. Check them against the real pack label using the product's barcode.</span></li>
+          <li><b>Branded</b><span>Packaged foods grouped by brand, with the real pack label you picked (scanned or found by name) marked label ✓.</span></li>
           <li><b>My Recipes</b><span>Home dishes made from their raw ingredients, so "3 chapatis" or "1 serving of bhurji" is exact.</span></li>
           <li><b>Yours to edit</b><span>Correct any number or add your own foods. Your edits are never overwritten.</span></li>
         </ul>

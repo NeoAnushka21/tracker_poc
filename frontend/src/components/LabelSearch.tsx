@@ -2,10 +2,10 @@ import { useEffect, useState } from "react";
 import { api } from "../api";
 import type { Label } from "../types";
 import { grams } from "../format";
-import PackScanner, { type PackReading } from "./PackScanner";
+import PackScanner from "./PackScanner";
 
 /** Search Open Food Facts for a pack label (product and brand, or a barcode) and pick one; the
- *  words can also come from the pack itself (Scan or photo: barcode, or the name read off the front).
+ *  barcode can come from the pack itself (Scan barcode: camera or photo).
  *  Used by Check label on a saved food, + Add → Branded product, and the chat's pack finder. */
 export default function LabelSearch({ initialQuery, busyCode, onPick, scanFirst = false, pickText = "Use this" }: {
   initialQuery: string;
@@ -21,13 +21,13 @@ export default function LabelSearch({ initialQuery, busyCode, onPick, scanFirst 
   const [searching, setSearching] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [scanning, setScanning] = useState(scanFirst);
-  const [readFrom, setReadFrom] = useState<PackReading["kind"] | null>(null);
+  const [scannedCode, setScannedCode] = useState(false);
 
-  function scanned(r: PackReading) {
+  function scanned(code: string) {
     setScanning(false);
-    setReadFrom(r.kind);
-    setQ(r.text);
-    void search(r.text);
+    setScannedCode(true);
+    setQ(code);
+    void search(code);
   }
 
   async function search(text: string) {
@@ -57,15 +57,11 @@ export default function LabelSearch({ initialQuery, busyCode, onPick, scanFirst 
           {searching ? "Searching…" : "Search"}
         </button>
         <button type="button" className="scan-btn" disabled={busy} onClick={() => setScanning(true)}
-                title="Scan the barcode or take a photo of the pack">
-          <span aria-hidden="true">▥</span> Scan or photo
+                title="Scan the pack's barcode with the camera, or upload a photo of it">
+          <span aria-hidden="true">▥</span> Scan barcode
         </button>
       </div>
-      {readFrom && (
-        <p className="muted small scan-note">
-          {readFrom === "barcode" ? "Barcode read from the pack." : "Words read from your photo: fix them above if they're off, then Search."}
-        </p>
-      )}
+      {scannedCode && <p className="muted small scan-note">Barcode read from the pack.</p>}
       {scanning && <PackScanner onRead={scanned} onClose={() => setScanning(false)} />}
       {error && <p className="error small">{error}</p>}
       {results?.length === 0 && (

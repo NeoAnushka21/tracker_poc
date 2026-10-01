@@ -1,6 +1,6 @@
 # Tandurust high-level design (HLD)
 
-> Last updated: 2026-10-01 (branded items on chat cards get pack-label choices from Open Food Facts, picked by the user, §4.5a; scanning a pack by camera or photo, read in the browser, §4.5b; `label_cache` table, §5; CSP allows WebAssembly and the camera for our own pages, §7; Privacy/Terms pre-rendered for Google's brand check, §7; Render services and addresses renamed to `tandurust` / `tandurust-app`, old `omniai-app` forwards, §2, §7; welcome page: Demo tour and **Join the community** waitlist with invite-only sign-up (`JOIN_MODE`), §2, §3.1, §4.3a, §5; welcome page as the start for signed-out visitors, on the static site and at /welcome; new logo and theme, display only; 2026-09-30: tab order Home, Meals, My Foods, Body Stats, Explore; tabs renamed: Saved Food → **My Foods**, Body Profile → **Body Stats**; app renamed Tandurust, display only; Dashboard tab renamed Meals, Analysis moved into it; Chat moved from a tab to a floating chat window opened from Home; Saved Food tabs: Generic / Branded / My Recipes; Saved Food + Add: §4.6; branded foods: Open Food Facts label check, §2, §3, §4.5, §5; optional "About you" answers: targets, meal times, MacBro context; country/region step in the sign-in flow; database hardening phase 1: public user UUIDs, items linked to foods, ON DELETE rules, timestamptz, composite indexes; built-in general food list (USDA) between Saved Food and the AI; raw/cooked asked, never assumed; typo-tolerant saved-food and meal-word matching, Dashboard "Did you mean …?"; earlier: tabs: Saved Food, Explore, Body Profile; admin two-step sign-in; tool allow-list; terms page; earlier: health notes, Alembic, forgot password…).Update the diagrams whenever a component, data flow, table or external service changes (see [docs/README.md](README.md)).
+> Last updated: 2026-10-01 (branded items on chat cards get pack-label choices from Open Food Facts, picked by the user, §4.5a; scanning a barcode by camera or photo, read in the browser (barcode only), §4.5b; `label_cache` table, §5; CSP allows WebAssembly and the camera for our own pages, §7; Privacy/Terms pre-rendered for Google's brand check, §7; Render services and addresses renamed to `tandurust` / `tandurust-app`, old `omniai-app` forwards, §2, §7; welcome page: Demo tour and **Join the community** waitlist with invite-only sign-up (`JOIN_MODE`), §2, §3.1, §4.3a, §5; welcome page as the start for signed-out visitors, on the static site and at /welcome; new logo and theme, display only; 2026-09-30: tab order Home, Meals, My Foods, Body Stats, Explore; tabs renamed: Saved Food → **My Foods**, Body Profile → **Body Stats**; app renamed Tandurust, display only; Dashboard tab renamed Meals, Analysis moved into it; Chat moved from a tab to a floating chat window opened from Home; Saved Food tabs: Generic / Branded / My Recipes; Saved Food + Add: §4.6; branded foods: Open Food Facts label check, §2, §3, §4.5, §5; optional "About you" answers: targets, meal times, MacBro context; country/region step in the sign-in flow; database hardening phase 1: public user UUIDs, items linked to foods, ON DELETE rules, timestamptz, composite indexes; built-in general food list (USDA) between Saved Food and the AI; raw/cooked asked, never assumed; typo-tolerant saved-food and meal-word matching, Dashboard "Did you mean …?"; earlier: tabs: Saved Food, Explore, Body Profile; admin two-step sign-in; tool allow-list; terms page; earlier: health notes, Alembic, forgot password…).Update the diagrams whenever a component, data flow, table or external service changes (see [docs/README.md](README.md)).
 > Diagrams are Mermaid. They render on GitHub and in VS Code with a Mermaid preview extension.
 
 ## 1. Purpose and principles
@@ -26,7 +26,7 @@ flowchart LR
     APP -->|OpenAI-compatible API<br/>tool calling| LLM[(Open-source models<br/>Groq: gpt-oss-20b / 120b<br/>backup: NVIDIA DeepSeek V4.1 Flash)]
     APP -->|label search by product words or barcode<br/>branded items on chat cards, Check label, + Add| OFF[(Open Food Facts<br/>open food-label database)]
     U -.->|Web Speech API<br/>voice to text, in browser| U
-    U -.->|camera or photo of a pack<br/>barcode and words read in browser| U
+    U -.->|camera or photo of a barcode<br/>read in the browser| U
     V([Visitor<br/>welcome page]) -->|Join the waitlist form| APP
     APP -->|new sign-up alert · invitation| BR[(Brevo<br/>transactional email)]
 ```
@@ -293,23 +293,20 @@ flowchart TB
 
 The browser only sends a barcode, and only one the server itself offered on that card, so label numbers never come from the browser. Picks only change the pending card; the write still happens in `confirm_action` (principle 3). A pick is kept when the card is replaced after **Needs changes**. A barcode scanned (or a product picked in the chat's pack finder) is sent with the message (`barcode`): the model is told the product, and the card arrives with that label already applied. Dashboard estimates don't get label choices yet.
 
-### 4.5b Scanning a pack (camera or photo, in the browser)
+### 4.5b Scanning a barcode (camera or photo, in the browser)
 
 ```mermaid
 flowchart LR
-    CAM[Use camera<br/>getUserMedia] -->|frames every 0.4 s| ZX[zxing-wasm<br/>EAN/UPC barcode]
-    CAM -->|Take photo| PH[Photo]
-    UP[Upload a photo] --> PH
-    PH --> ZX
-    ZX -->|barcode found| Q[Search box: barcode]
-    ZX -->|none| OCR[Tesseract.js<br/>largest clear words on the pack]
-    OCR --> Q2[Search box: brand and name,<br/>editable]
+    CAM[Use camera<br/>getUserMedia] -->|frames every 0.4 s| RD
+    UP[Upload a photo<br/>full size] --> RD[readBarcode:<br/>BarcodeDetector if the browser has one,<br/>else zxing-wasm EAN/UPC]
+    RD -->|barcode found| Q[Search box: barcode]
+    RD -->|none in the photo| TIP[Couldn't spot the barcode:<br/>Upload a close-up]
+    TIP --> UP
     Q --> LS[GET /api/foods/label-search]
-    Q2 --> LS
     LS --> PICK[User picks the product]
 ```
 
-Everything up to the search runs in the browser: the photo is never uploaded. Both readers are open source (zxing-wasm MIT, Tesseract.js Apache-2.0), served from the app itself (`/assets`, `/ocr/`) and loaded only on first use. Only for packaged products: a photo of a cooked dish has no label, and its oil and amounts can't be seen, so it stays a chat message. No vision AI model is used (none fits the open-source-licence and free-tier rules today; see open-points).
+Barcode only (owner, 2026-10-01): reading the brand and name off the front of a pack (Tesseract.js) was tried and failed on real photos, so it was removed; every packaged product has a barcode. Everything up to the search runs in the browser: the photo is never uploaded. The reader is open source (zxing-wasm, MIT), served from the app itself (`/assets`) and loaded only on first use. Photos are read at full size, since shrinking them first lost small barcodes in wide shots. Only for packaged products: a photo of a cooked dish has no label, and its oil and amounts can't be seen, so it stays a chat message. No vision AI model is used (none fits the open-source-licence and free-tier rules today; see open-points).
 
 ### 4.6 Adding a food or recipe in My Foods (no LLM)
 

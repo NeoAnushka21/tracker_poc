@@ -161,7 +161,7 @@ function ScanIcon() {
   );
 }
 
-/** The chat's pack finder: scan the barcode or photograph the pack (or type), then pick the product.
+/** The chat's pack finder: scan the barcode (camera or photo) or type, then pick the product.
  *  The picked product goes with the next message, and its label comes ready on MacBro's card. */
 function PackFinder({ onPick, onClose }: { onPick: (l: Label) => void; onClose: () => void }) {
   useEffect(() => {
@@ -176,7 +176,7 @@ function PackFinder({ onPick, onClose }: { onPick: (l: Label) => void; onClose: 
           <h3 id="pack-finder-title">Log a packaged product</h3>
           <button type="button" className="ghost icon-btn" onClick={onClose} aria-label="Close">✕</button>
         </div>
-        <p className="muted small">Scan the barcode, take or upload a photo of the pack, or type the brand and name. Then pick your product.</p>
+        <p className="muted small">Scan the barcode with the camera, upload a photo of it, or type the brand and name. Then pick your product.</p>
         <LabelSearch initialQuery="" scanFirst pickText="This one" onPick={onPick} />
       </div>
     </div>,
@@ -590,7 +590,7 @@ export default function Chat({ user, onDataChanged, draft, active, onMinimize, o
             }
           />
           <button type="button" className="mic scan" onClick={() => setFindingPack(true)} disabled={sending}
-                  aria-label="Log a packaged product: scan or photo" title="Packaged product? Scan the barcode or take a photo">
+                  aria-label="Log a packaged product: scan its barcode" title="Packaged product? Scan its barcode">
             <ScanIcon />
           </button>
           {speech.supported && (
