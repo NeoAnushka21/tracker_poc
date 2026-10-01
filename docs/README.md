@@ -4,6 +4,7 @@
 |---|---|---|
 | [user-guide.md](user-guide.md) | End users, support, testers | Step-by-step manual: sign-up, logging, confirm cards, dashboard, analysis, foods, settings, FAQ |
 | [hld.md](hld.md) | Everyone technical, stakeholders | High-level design: principles, context, containers, key flows, data model, non-functional notes (Mermaid diagrams) |
+| [architecture.html](architecture.html) | Developers new to the project | Visual walkthrough to open in a browser: system architecture, the MacBro LLM pipeline, request lifecycle, auth, database schema, concurrency, failure modes, deploy (Mermaid diagrams) |
 | [technical-overview.md](technical-overview.md) | Developers | Stack, repo layout, services, API, tables, LLM layer, frontend components, config, testing |
 | [llm-routing-strategy.md](llm-routing-strategy.md) | Developers, product | Plan for routing across several free open-source models |
 | [deployment.md](deployment.md) | Whoever deploys | Render + Neon step by step, data copy, free-plan behaviour, troubleshooting |

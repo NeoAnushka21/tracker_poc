@@ -1,0 +1,891 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Tandurust Architecture</title>
+<meta name="description" content="How Tandurust works under the hood: system architecture, the MacBro LLM pipeline, auth, data model, concurrency and failure modes.">
+<!-- Last updated: 2026-10-01. Source of truth: docs/hld.md, docs/technical-overview.md and the code. Diagrams are Mermaid, rendered in the browser (needs internet for the CDN). -->
+<style>
+  :root {
+    --bg: #f6faf3; --surface: #ffffff; --surface-2: #eef4ea; --text: #1b2418; --muted: #55634f;
+    --border: #d5e0cf; --accent: #2f6b2a; --accent-soft: #e2efdc; --warn: #8a5a00; --warn-soft: #fff3d6;
+    --danger: #a33a2c; --danger-soft: #fbe5e1; --code-bg: #eef2ec; --shadow: 0 8px 28px rgba(30,50,25,.07);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #121611; --surface: #1a2017; --surface-2: #20281c; --text: #e6ede2; --muted: #a3b09c;
+      --border: #33402d; --accent: #8fd07f; --accent-soft: #233320; --warn: #f2c66d; --warn-soft: #33290f;
+      --danger: #f0a092; --danger-soft: #3a1f1a; --code-bg: #20281c; --shadow: none;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #121611; --surface: #1a2017; --surface-2: #20281c; --text: #e6ede2; --muted: #a3b09c;
+    --border: #33402d; --accent: #8fd07f; --accent-soft: #233320; --warn: #f2c66d; --warn-soft: #33290f;
+    --danger: #f0a092; --danger-soft: #3a1f1a; --code-bg: #20281c; --shadow: none;
+  }
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body { margin: 0; background: var(--bg); color: var(--text);
+    font: 15.5px/1.6 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+  .wrap { max-width: 1180px; margin: 0 auto; padding: 0 16px 80px; }
+  header.top { padding: 40px 0 18px; }
+  header.top h1 { margin: 0 0 6px; font-size: 2rem; letter-spacing: -.01em; }
+  header.top p { margin: 0; color: var(--muted); max-width: 760px; }
+  nav.toc { position: sticky; top: 0; z-index: 5; background: var(--bg); border-bottom: 1px solid var(--border);
+    padding: 10px 0; margin-bottom: 24px; display: flex; flex-wrap: wrap; gap: 6px; }
+  nav.toc a { color: var(--text); text-decoration: none; font-size: .86rem; padding: 4px 11px; border-radius: 999px;
+    border: 1px solid var(--border); background: var(--surface); white-space: nowrap; }
+  nav.toc a:hover, nav.toc a:focus-visible { border-color: var(--accent); color: var(--accent); }
+  nav.toc a.main { background: var(--accent-soft); border-color: var(--accent); font-weight: 600; }
+  section { margin: 0 0 44px; scroll-margin-top: 64px; }
+  h2 { font-size: 1.45rem; margin: 0 0 4px; }
+  h2 .tag { font-size: .72rem; vertical-align: middle; font-weight: 600; text-transform: uppercase; letter-spacing: .06em;
+    background: var(--accent-soft); color: var(--accent); padding: 3px 8px; border-radius: 6px; margin-left: 8px; }
+  h3 { font-size: 1.08rem; margin: 26px 0 8px; }
+  .lede { color: var(--muted); margin: 0 0 16px; max-width: 820px; }
+  .card { background: var(--surface); border: 1px solid var(--border); border-radius: 16px; padding: 18px 20px;
+    box-shadow: var(--shadow); }
+  .diagram { background: var(--surface); border: 1px solid var(--border); border-radius: 16px; box-shadow: var(--shadow);
+    margin: 12px 0 16px; overflow: hidden; }
+  .diagram .bar { display: flex; justify-content: space-between; align-items: center; gap: 8px; padding: 8px 12px;
+    border-bottom: 1px solid var(--border); background: var(--surface-2); font-size: .84rem; color: var(--muted); }
+  .diagram .bar button { font: inherit; font-size: .8rem; color: var(--text); background: var(--surface);
+    border: 1px solid var(--border); border-radius: 8px; padding: 3px 10px; cursor: pointer; }
+  .diagram .bar button:hover { border-color: var(--accent); }
+  .diagram .canvas { overflow: auto; padding: 16px; max-height: 85vh; }
+  .diagram .canvas .mermaid { min-width: 100%; text-align: center; }
+  .diagram.zoomed .canvas svg { max-width: none !important; width: auto !important; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 12px; }
+  .grid .card h4 { margin: 0 0 4px; font-size: .95rem; }
+  .grid .card p { margin: 0; font-size: .9rem; color: var(--muted); }
+  table { width: 100%; border-collapse: collapse; font-size: .9rem; background: var(--surface); border-radius: 12px;
+    overflow: hidden; border: 1px solid var(--border); }
+  th, td { text-align: left; vertical-align: top; padding: 9px 12px; border-bottom: 1px solid var(--border); }
+  th { background: var(--surface-2); font-weight: 600; }
+  tr:last-child td { border-bottom: 0; }
+  .tbl { overflow-x: auto; margin: 10px 0 16px; }
+  code { font-family: ui-monospace, "Cascadia Code", Consolas, monospace; font-size: .86em; background: var(--code-bg);
+    padding: 1px 5px; border-radius: 5px; }
+  .note { border-left: 4px solid var(--accent); background: var(--accent-soft); padding: 10px 14px; border-radius: 8px;
+    margin: 12px 0; font-size: .92rem; }
+  .note.warn { border-color: var(--warn); background: var(--warn-soft); }
+  .steps { counter-reset: s; list-style: none; padding: 0; margin: 10px 0; }
+  .steps li { counter-increment: s; position: relative; padding: 6px 0 6px 40px; }
+  .steps li::before { content: counter(s); position: absolute; left: 0; top: 6px; width: 26px; height: 26px;
+    border-radius: 50%; background: var(--accent); color: var(--surface); font-weight: 700; font-size: .8rem;
+    display: grid; place-items: center; }
+  .pill { display: inline-block; font-size: .75rem; padding: 1px 8px; border-radius: 999px; border: 1px solid var(--border);
+    background: var(--surface-2); margin-right: 4px; }
+  .s-ok { color: var(--accent); font-weight: 600; } .s-bad { color: var(--danger); font-weight: 600; }
+  .s-warn { color: var(--warn); font-weight: 600; }
+  footer { color: var(--muted); font-size: .84rem; border-top: 1px solid var(--border); padding-top: 16px; }
+  @media (max-width: 640px) { header.top h1 { font-size: 1.55rem; } .diagram .canvas { padding: 8px; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header class="top">
+  <h1>Tandurust: how it works under the hood</h1>
+  <p>A technical walkthrough for software developers. Part 1 is the whole system: browser, Python backend, database
+  and every outside service. Part 2 follows one MacBro chat message from the keyboard to the LLM and back.
+  The deep-dive sections after that cover requests, authentication, the database schema, users, concurrency and
+  failure modes.</p>
+</header>
+
+<nav class="toc" aria-label="Sections">
+  <a class="main" href="#system">1 · System architecture</a>
+  <a class="main" href="#llm">2 · LLM / MacBro pipeline</a>
+  <a href="#principles">Principles</a>
+  <a href="#request">Request lifecycle</a>
+  <a href="#auth">Authentication</a>
+  <a href="#schema">Database schema</a>
+  <a href="#users">Users &amp; data isolation</a>
+  <a href="#concurrency">Concurrency &amp; load</a>
+  <a href="#failures">Failure modes</a>
+  <a href="#deploy">Deploy pipeline</a>
+  <a href="#map">Code map</a>
+</nav>
+
+<!-- ============================================================ PRINCIPLES -->
+<section id="principles">
+  <h2>Five rules that explain most of the design</h2>
+  <p class="lede">Read these first; every diagram below is a consequence of one of them.</p>
+  <div class="grid">
+    <div class="card"><h4>1. The LLM only proposes</h4><p>The model can create a <em>pending action</em> (a card), never a row in the food log. Only <code>services/actions.py → confirm_action</code> writes, and only after the user presses <b>Looks good</b>.</p></div>
+    <div class="card"><h4>2. Numbers come from code when possible</h4><p>Saved foods (My Foods) and the built-in USDA list are scaled in Python. The model's arithmetic is checked (4·P + 4·C + 9·F within ±25%).</p></div>
+    <div class="card"><h4>3. Direct clicks skip the LLM</h4><p>Meals-tab edits, water buttons, My Foods and dashboards hit the database straight through REST endpoints.</p></div>
+    <div class="card"><h4>4. Free and open-source</h4><p>Open-weight models only (Apache-2.0 / MIT, enforced in code) on Groq's free tier; free Render, Neon, Brevo, UptimeRobot, Sentry tiers.</p></div>
+    <div class="card"><h4>5. Degrade gracefully</h4><p>If every model is down, chat says "MacBro's servers are temporarily down" (HTTP 503); everything that isn't chat keeps working.</p></div>
+  </div>
+</section>
+
+<!-- ============================================================ PART 1: SYSTEM -->
+<section id="system">
+  <h2>1 · System architecture <span class="tag">Main diagram</span></h2>
+  <p class="lede">Everything that runs, where it runs, and who talks to whom. Solid arrows are runtime calls; dotted
+  arrows are build, deploy or background jobs.</p>
+
+  <div class="diagram zoomed"><div class="bar"><span>Whole system: clients · Render · FastAPI internals · Neon · external services · CI/CD</span><button type="button" data-zoom>Fit to width</button></div>
+  <div class="canvas"><pre class="mermaid">
+flowchart TB
+  %% ---------- Clients ----------
+  subgraph CLIENT["👤 User's browser / phone"]
+    direction LR
+    WEL["Welcome page<br/>welcome.html + welcome.ts<br/>(plain TS, no React)"]
+    SPA["React 19 + Vite SPA<br/>Home · Meals · My Foods · Body Stats · Explore<br/>MacBro chat window · Settings · Admin console"]
+    GSI["Google sign-in button<br/>(accounts.google.com/gsi/client)"]
+    STT["Web Speech API<br/>voice → text, in browser"]
+    SCAN["Barcode reader<br/>BarcodeDetector or zxing-wasm<br/>photos never uploaded"]
+    SPA --- STT
+    SPA --- SCAN
+    SPA --- GSI
+  end
+
+  %% ---------- Render ----------
+  subgraph RENDER["☁️ Render (free tier · Singapore)"]
+    direction TB
+    STATIC["Static site: tandurust-app<br/>always on · serves the welcome page<br/>+ pre-rendered /privacy and /terms"]
+    subgraph WEB["Web service: tandurust (sleeps after ~15 min idle)"]
+      direction TB
+      UV["Uvicorn (1 process)<br/>--proxy-headers"]
+      subgraph FAST["FastAPI app (Python 3.14) · app/main.py"]
+        direction TB
+        MW["Middleware<br/>request id + logging + friendly 500<br/>security headers / CSP / HSTS<br/>waitlist CORS"]
+        DEPS["deps.py<br/>JWT cookie → current_user<br/>session_version check · onboarded / admin"]
+        RT["Routers /api/*<br/>auth · profile · chat · actions · dashboard<br/>entries · foods · water · admin · waitlist"]
+        SVC["Services (business logic)<br/>actions · logs · foods · entries · water · analysis<br/>labels · label_match · allowance · ratelimit<br/>password_reset · email · waitlist · totp · export"]
+        LLML["LLM layer (app/llm)<br/>fastpath · router · prompt · tools<br/>chat tool loop · pool · provider"]
+        MEM[("In-memory state<br/>Stop-button registry · rate limits<br/>model cooldowns")]
+        FILES[("Bundled data files<br/>general_foods.json (USDA)<br/>countries.json")]
+        SPAFILES["mount_frontend<br/>serves frontend/dist<br/>(SPA, /assets, /welcome)"]
+        MW --> DEPS --> RT
+        RT --> SVC
+        RT --> LLML
+        LLML --> SVC
+        SVC -.-> MEM
+        LLML -.-> MEM
+        SVC --> FILES
+      end
+      UV --> MW
+      UV --> SPAFILES
+    end
+  end
+
+  %% ---------- Data ----------
+  NEON[("🐘 Neon Postgres<br/>Singapore · scales to zero<br/>SQLAlchemy 2 + psycopg 3<br/>pool 5 + 5 overflow, pre-ping<br/>Alembic migrations at startup")]
+
+  %% ---------- External ----------
+  subgraph EXT["🌐 External services"]
+    direction LR
+    GOOG["Google Identity Services<br/>issues ID tokens · JWKS public keys"]
+    GROQ["Groq (OpenAI-compatible API)<br/>gpt-oss-20b (small) · gpt-oss-120b (large)"]
+    NV["NVIDIA DeepSeek V4.1 Flash<br/>backup only · OFF in production"]
+    OFF["Open Food Facts API<br/>pack labels by words or barcode"]
+    BREVO["Brevo<br/>transactional email"]
+    SENTRY["Sentry (optional)<br/>error reports, no personal data"]
+    UPR["UptimeRobot<br/>HEAD /api/health every 5 min"]
+  end
+
+  %% ---------- Runtime arrows ----------
+  WEL -->|"1 · page loads instantly"| STATIC
+  WEL -->|"2 · polls /api/health to wake app<br/>waitlist form → POST /api/waitlist (CORS)"| UV
+  SPA -->|"HTTPS JSON /api/*<br/>httpOnly SameSite JWT cookie"| UV
+  GSI -->|"user picks account → signed ID token"| GOOG
+  RT -->|"verify token signature (JWKS)"| GOOG
+  SVC -->|"SQL over SSL"| NEON
+  LLML -->|"HTTPS · chat completions + tool calling"| GROQ
+  LLML -.->|"only if every Groq model is unavailable"| NV
+  SVC -->|"HTTPS · search / product by barcode<br/>12 s timeout, 5 s on chat cards"| OFF
+  SVC -->|"reset links · waitlist alert · invitation"| BREVO
+  MW -.->|"unhandled exceptions"| SENTRY
+  UPR -->|"keeps the free service awake<br/>emails the owner if down"| UV
+
+  %% ---------- Build / deploy ----------
+  subgraph DEV["🛠 Delivery (GitHub)"]
+    direction LR
+    GH["GitHub repo · main"]
+    CI["GitHub Actions CI<br/>pytest on SQLite + Postgres 17 container<br/>oxlint · tsc · vite build · pip-audit · npm audit"]
+    USDA["Monthly Action<br/>USDA food list check → PR"]
+    DBOT["Dependabot weekly PRs"]
+    GH --> CI
+  end
+  CI -.->|"all checks pass → auto-deploy"| WEB
+  CI -.->|"all checks pass → auto-deploy"| STATIC
+  USDA -.->|"PR only if USDA data changed"| GH
+  DBOT -.-> GH
+
+  classDef ext fill:#fff4e0,stroke:#c98a1b,color:#3a2a07;
+  classDef data fill:#e6eefc,stroke:#3a67b8,color:#0f2346;
+  classDef client fill:#eaf5e4,stroke:#2f6b2a,color:#14280f;
+  classDef dev fill:#f1eafa,stroke:#7a4fb0,color:#2a1640;
+  class GOOG,GROQ,NV,OFF,BREVO,SENTRY,UPR ext;
+  class NEON,MEM,FILES data;
+  class WEL,SPA,GSI,STT,SCAN client;
+  class GH,CI,USDA,DBOT dev;
+</pre></div></div>
+
+  <h3>Every party in the system and what it gets</h3>
+  <div class="tbl"><table>
+    <thead><tr><th>Party</th><th>Role</th><th>Talks to</th><th>Data it receives</th></tr></thead>
+    <tbody>
+      <tr><td><b>Browser SPA</b> (React 19, TS, Vite)</td><td>All screens. Voice-to-text and barcode reading happen here, on the device.</td><td>Only our backend (<code>/api/*</code>), plus Google's sign-in script</td><td>—</td></tr>
+      <tr><td><b>Welcome page</b> (Render static site <code>tandurust-app</code>)</td><td>Always-on front door. Shows instantly, wakes the sleeping app in the background, hosts the waitlist form and Demo tour.</td><td><code>/api/health</code>, <code>/api/waitlist/options</code>, <code>POST /api/waitlist</code></td><td>Waitlist name/email (sent to our backend)</td></tr>
+      <tr><td><b>FastAPI backend</b> (Render web service <code>tandurust</code>)</td><td>One Python process. Serves the built SPA <em>and</em> the API on one address, so one cookie works for both.</td><td>Neon, Groq, Open Food Facts, Brevo, Google JWKS, Sentry</td><td>Everything</td></tr>
+      <tr><td><b>Neon Postgres</b></td><td>The real database (users, logs, foods, chat, cards, usage). SQLite in local dev and tests.</td><td>Backend only</td><td>All user data</td></tr>
+      <tr><td><b>Groq</b> (LLM host)</td><td>Runs open-source gpt-oss models. Estimates nutrition and picks tools. Never writes data.</td><td>Called by <code>llm/provider.py</code></td><td>The chat message, today's chat history, targets/totals, matching saved foods</td></tr>
+      <tr><td><b>NVIDIA</b> (backup LLM)</td><td>Slow last-resort model; its free tier is prototyping-only, so it is <b>off in production</b>.</td><td>Backend (if <code>LLM_API_KEY_2</code> is set)</td><td>Same as Groq</td></tr>
+      <tr><td><b>Google Identity Services</b></td><td>"Continue with Google". Browser gets a signed ID token; backend checks it against Google's public keys. No client secret.</td><td>Browser (button) and backend (JWKS)</td><td><code>openid email profile</code> only</td></tr>
+      <tr><td><b>Open Food Facts</b></td><td>Real pack labels for branded foods. Answers cached 7 days in <code>label_cache</code>.</td><td>Backend (<code>services/labels.py</code>)</td><td>Brand/product words or a barcode. Nothing about the user.</td></tr>
+      <tr><td><b>Brevo</b></td><td>Transactional email: password-reset links, waitlist alerts, invitations.</td><td>Backend (<code>services/email.py</code>), as a background task</td><td>Recipient email + message text</td></tr>
+      <tr><td><b>UptimeRobot</b></td><td>Pings <code>/api/health</code> every 5 min so the free service never sleeps; emails on downtime. The health check doesn't touch the DB, so Neon still sleeps.</td><td>Backend</td><td>Nothing</td></tr>
+      <tr><td><b>Sentry</b> (optional)</td><td>Error reports with stack traces; no request bodies, cookies, IPs or local variables.</td><td>Backend</td><td>Stack traces</td></tr>
+      <tr><td><b>GitHub Actions</b></td><td>CI on every push; Render deploys <code>main</code> only after CI passes. Monthly USDA refresh PR. Dependabot.</td><td>Render, USDA FoodData Central</td><td>Code only</td></tr>
+      <tr><td><b>Docker</b></td><td><b>Not used in production.</b> Render runs the Python runtime natively (<code>render.yaml</code>). Docker is only used for a throwaway <code>postgres:17</code> when running tests against Postgres locally, and CI does the same as a service container.</td><td>—</td><td>Test data only</td></tr>
+    </tbody>
+  </table></div>
+
+  <div class="note"><b>Why one service for site + API?</b> Same origin means a simple httpOnly SameSite cookie, no CORS for the app,
+  and one cold start instead of two. The only cross-origin call is the waitlist form from the static welcome site, allowed by
+  the <code>waitlist_cors</code> middleware for <code>LAUNCHER_ORIGIN</code> only, and without credentials.</div>
+</section>
+
+<!-- ============================================================ PART 2: LLM -->
+<section id="llm">
+  <h2>2 · What happens when a user types to MacBro <span class="tag">Main diagram</span></h2>
+  <p class="lede">Example: the user types <i>"150g chicken and a cup of rice for lunch"</i> and presses Send. Most messages never reach
+  the LLM at all (fast paths). When they do, the model works through a <b>tool loop</b>: it can read data and <b>propose</b> a change,
+  and the proposal comes back as a card that the user must confirm.</p>
+
+  <div class="diagram zoomed"><div class="bar"><span>MacBro pipeline: browser → FastAPI → fast path or router → tool loop → model pool → Groq → tools/guards → pending card → confirm</span><button type="button" data-zoom>Fit to width</button></div>
+  <div class="canvas"><pre class="mermaid">
+flowchart TB
+  U(["User types a message<br/>(or speaks: Web Speech API → text)"]) --> UI
+  UI["Chat.tsx<br/>sends text + client_request_id<br/>+ optional log_date (past day picked)<br/>+ optional barcode (pack scanned)<br/>+ optional feedback_on_action_id (Needs changes)"]
+  UI -->|"POST /api/chat"| AUTH{"deps.onboarded_user<br/>valid JWT cookie?<br/>session_version current?<br/>profile done?"}
+  AUTH -->|no| E401["401 / 403 → sign-in or onboarding"]
+  AUTH -->|yes| H
+
+  subgraph HANDLE["llm/chat.py · handle_user_message (one DB transaction)"]
+    direction TB
+    H["cancel.start(request id) · expire cards older than 24 h<br/>save user ChatMessage (flush, not committed)"]
+    H --> FPQ{"Fast path allowed?<br/>no feedback · no past day · no barcode"}
+    FPQ -->|yes| TYPO["Fix meal-word typos<br/>brkfst → breakfast"]
+    TYPO --> FP{"llm/fastpath.py rules<br/>raw/cooked answer · water amount ·<br/>'yes' while a card is pending · today's summary ·<br/>all foods in My Foods or USDA list · 'same as yesterday'"}
+    FP -->|"matched"| FPR["Reply or card built in code<br/>same tool handlers, 0 tokens<br/>llm_usage outcome = fastpath"]
+    FP -->|"weight given, raw/cooked unknown"| ASK["Ask: Raw or Cooked? buttons<br/>(no model call)"]
+    FPQ -->|no| ALW
+    FP -->|"not sure"| ALW{"allowance.check<br/>AI messages left today?<br/>(20/day, resets local midnight)"}
+    ALW -->|"used up"| E429["429 · message kept in the box<br/>nothing saved"]
+    ALW -->|ok| RTR["llm/router.py (rules, no model)<br/>intent: query · edit · log · full<br/>tier: small or large<br/>picks ONLY the tools + prompt sections needed"]
+    RTR --> CTX["Build the prompt (llm/prompt.py)<br/>SYSTEM_STABLE: MacBro persona + rules (cacheable)<br/>dynamic: date/time, meal window, targets, today's totals,<br/>recent entries with ids, matching My Foods + USDA foods,<br/>About-you answers<br/>history: today's chat only (+3 h grace), 6 msgs small / 12 large"]
+    CTX --> LOOP
+  end
+
+  subgraph TOOLLOOP["Tool loop · _run_tool_loop (max 8 rounds)"]
+    direction TB
+    LOOP["pool.complete(tier, system, messages, tools)"] --> POOL
+    POOL{"llm/pool.py · model pool<br/>licence gate: Apache-2.0 / MIT only<br/>rotate within tier · skip models on cooldown<br/>429 → cooldown until 'try again in …'<br/>short limits waited out (≤ 20 s)<br/>then other tier · then backup"}
+    POOL -->|"every model unavailable"| E503["LLMError → 503<br/>'MacBro's servers are temporarily down'<br/>transaction rolled back, nothing saved"]
+    POOL --> PROV["llm/provider.py · OpenAICompatibleProvider<br/>openai SDK · tools converted to OpenAI schema<br/>retry once on tool-validation error"]
+    PROV -->|"HTTPS"| GROQ[("Groq<br/>gpt-oss-20b / gpt-oss-120b")]
+    GROQ --> RESP{"Model response"}
+    RESP -->|"plain text, no tool call"| NUDGE{"Says 'logged/saved'<br/>but proposed nothing?"}
+    NUDGE -->|"yes, first time"| BACK1["Send back once: 'nothing was saved, propose it'"] --> LOOP
+    NUDGE -->|no| DONE
+    RESP -->|"tool calls"| ALLOW{"Tool in the routed allow-list?"}
+    ALLOW -->|no| TERR["Error result back to the model"]
+    ALLOW -->|yes| KIND{"Read or propose?"}
+    KIND -->|"read: get_food · get_logs · get_daily_summary"| READ["Query DB for THIS user only"] --> FEED["Tool results appended to messages"] --> LOOP
+    KIND -->|"propose_entry · edit · delete · move · recipe · water"| GUARD
+    GUARD["Guards in code (llm/tools.py)<br/>• My Foods / USDA items scaled in Python<br/>• energy check: kcal ≈ 4P + 4C + 9F ± 25%<br/>• quantity cleanup · unit checks<br/>• move ≠ delete + create"]
+    GUARD -->|"invalid"| TERR
+    TERR --> ESC{"2 validation errors<br/>on small tier?"}
+    ESC -->|yes| ESCL["Escalate: large tier + all tools"] --> LOOP
+    ESC -->|no| FEED
+    GUARD -->|"valid, branded item"| LBL["services/label_match.attach<br/>label_cache (7 days) or Open Food Facts<br/>→ 'Is this your pack?' choices"]
+    GUARD -->|valid| PA
+    LBL --> PA[("INSERT pending_actions<br/>status = pending · payload JSON")]
+    PA --> WAT{"Water mentioned but<br/>no propose_water?"}
+    WAT -->|"yes, once"| LOOP
+    WAT -->|no| DONE["Turn ends: proposal note = the reply<br/>(one model call per logged meal)"]
+  end
+
+  DONE --> SAVE["Save assistant ChatMessage · link cards to it<br/>supersede older open cards<br/>cancel.finish_or_cancelled (Stop pressed? → 409, roll back)<br/>allowance.record · COMMIT<br/>then llm_usage rows (tokens, latency, model, outcome)"]
+  FPR --> SAVE
+  ASK --> SAVE
+  SAVE --> CARD["UI: reply + card 'Not saved yet'<br/>Hero kcal + protein · items · pack-label choices"]
+
+  CARD -->|"Looks good"| CONF["POST /api/actions/{id}/confirm<br/>services/actions.confirm_action<br/>THE ONLY WRITER for chat proposals"]
+  CONF --> W[("log_entries + log_entry_items<br/>user_foods learned (My Foods)<br/>action → confirmed")]
+  W --> PROG["Progress card: macros (food) or water"]
+  CARD -->|"Needs changes"| UI
+  CARD -->|"Cancel"| REJ["POST /api/actions/{id}/reject<br/>nothing written · event note for context"]
+  CARD -->|"pick a pack label"| PICK["POST /api/actions/{id}/items/{i}/label<br/>server re-checks the code was offered"] --> CARD
+
+  classDef err fill:#fbe5e1,stroke:#a33a2c,color:#3d0f08;
+  classDef llm fill:#fff4e0,stroke:#c98a1b,color:#3a2a07;
+  classDef db fill:#e6eefc,stroke:#3a67b8,color:#0f2346;
+  classDef ok fill:#eaf5e4,stroke:#2f6b2a,color:#14280f;
+  class E401,E429,E503 err;
+  class GROQ,PROV,POOL llm;
+  class PA,W db;
+  class CONF,PROG,FPR ok;
+</pre></div></div>
+
+  <h3>The same flow as a timeline</h3>
+  <p class="lede">Who waits for whom during a normal "log a new food" message that needs the model.</p>
+  <div class="diagram zoomed"><div class="bar"><span>Sequence: one message, one model call, one confirm</span><button type="button" data-zoom>Fit to width</button></div>
+  <div class="canvas"><pre class="mermaid">
+sequenceDiagram
+  autonumber
+  actor User
+  participant UI as React Chat
+  participant API as FastAPI /api/chat
+  participant FP as Fast path + router
+  participant Pool as Model pool
+  participant Groq as Groq (gpt-oss)
+  participant Tools as Tool handlers + guards
+  participant OFFA as Open Food Facts
+  participant DB as Neon Postgres
+
+  User->>UI: "150g chicken and a cup of rice for lunch"
+  UI->>API: POST /api/chat {message, client_request_id}
+  API->>DB: verify session · load user · save user message (uncommitted)
+  API->>FP: fast path? (all foods saved / water / summary…)
+  FP-->>API: no → allowance OK → intent=log, tier=small, tools=[propose_entry, get_food]
+  API->>DB: read targets, today's totals, matching My Foods, today's chat
+  API->>Pool: complete(small, system prompt, history, tools)
+  Pool->>Groq: chat.completions (gpt-oss-20b) with tool schemas
+  Groq-->>Pool: tool_call propose_entry(items, meal, note)
+  Pool-->>API: response (+ tokens, latency)
+  API->>Tools: run propose_entry
+  Tools->>Tools: scale saved/USDA foods · energy check · cleanup
+  opt item has a brand
+    Tools->>DB: label_cache lookup
+    Tools->>OFFA: search (5 s timeout) if not cached
+  end
+  Tools->>DB: INSERT pending_actions (status = pending)
+  Tools-->>API: ok + note → turn ends
+  API->>DB: save reply · supersede older cards · COMMIT · llm_usage
+  API-->>UI: reply + card "Not saved yet"
+  User->>UI: Looks good
+  UI->>API: POST /api/actions/{id}/confirm
+  API->>DB: write log_entries + items · learn My Foods · confirmed · COMMIT
+  API-->>UI: progress card (calories, macros)
+</pre></div></div>
+
+  <h3>How the router picks the model and tools</h3>
+  <div class="tbl"><table>
+    <thead><tr><th>Message looks like</th><th>Intent</th><th>Tier / model</th><th>Tools offered</th></tr></thead>
+    <tbody>
+      <tr><td>"drank 500 ml", "yes", "how much protein left?", "had 3 eggs" (eggs saved), "same breakfast as yesterday"</td><td>fast path</td><td>none · 0 tokens</td><td>— (reply built in code)</td></tr>
+      <tr><td>"what did I eat yesterday?"</td><td><code>query</code></td><td>small · gpt-oss-20b</td><td><code>get_logs</code>, <code>get_daily_summary</code> (no food library in the prompt)</td></tr>
+      <tr><td>"move the banana to breakfast", "the chicken was 150g"</td><td><code>edit</code></td><td>small</td><td>edit / move / delete tools</td></tr>
+      <tr><td>One or two simple foods with amounts</td><td><code>log</code></td><td>small</td><td><code>propose_entry</code> + reads</td></tr>
+      <tr><td>Vague dish, 3+ foods, recipe, feedback on a card, long message, several meals</td><td><code>log</code> / <code>full</code></td><td>large · gpt-oss-120b</td><td>what the intent needs; <code>full</code> = all 9</td></tr>
+      <tr><td>Small tier made 2 invalid tool calls</td><td>escalated</td><td>large</td><td>all tools</td></tr>
+    </tbody>
+  </table></div>
+
+  <h3>The nine tools</h3>
+  <div class="tbl"><table>
+    <thead><tr><th>Tool</th><th>Kind</th><th>Effect</th></tr></thead>
+    <tbody>
+      <tr><td><code>get_food</code></td><td>read</td><td>Look up the user's saved foods by name</td></tr>
+      <tr><td><code>get_logs</code></td><td>read</td><td>Confirmed entries for a date range</td></tr>
+      <tr><td><code>get_daily_summary</code></td><td>read</td><td>Totals vs targets for a day</td></tr>
+      <tr><td><code>propose_entry</code></td><td>propose</td><td>New meal → pending <code>create</code></td></tr>
+      <tr><td><code>propose_edit</code></td><td>propose</td><td>Replace an entry's items → <code>edit</code></td></tr>
+      <tr><td><code>propose_delete</code></td><td>propose</td><td>→ <code>delete</code></td></tr>
+      <tr><td><code>propose_move</code></td><td>propose</td><td>Move or copy items to another meal/day → <code>move</code> / <code>copy</code></td></tr>
+      <tr><td><code>propose_recipe</code></td><td>propose</td><td>→ <code>save_recipe</code></td></tr>
+      <tr><td><code>propose_water</code></td><td>propose</td><td>→ <code>water</code></td></tr>
+    </tbody>
+  </table></div>
+
+  <div class="note"><b>Why prompt injection can't write data:</b> even if a message tricks the model, the most it can do is create a card. The tool
+  handlers only touch the current user's rows, tools outside the routed allow-list are refused, and the database write needs a
+  human button press (<code>tests/test_llm_hardening.py</code>).</div>
+
+  <h3>Token budget (why routing and fast paths exist)</h3>
+  <p>Groq's free tier gives each model about <b>200K tokens/day</b>, shared by every user. A full call used to be ~4.4K tokens
+  (≈40 calls a day). Sending only the routed tools, a slimmer prompt and only the saved foods named in the message cuts a call by
+  25–87%; fast-path messages cost nothing. Each user also has a daily allowance of 20 AI-answered messages
+  (<code>AI_DAILY_MESSAGE_LIMIT</code>); failed calls and instant replies don't count. Everything is logged in <code>llm_usage</code> and shown
+  in the admin <b>AI usage</b> panel.</p>
+</section>
+
+<!-- ============================================================ REQUEST LIFECYCLE -->
+<section id="request">
+  <h2>Request lifecycle (any API call)</h2>
+  <p class="lede">What every <code>/api/*</code> request goes through, e.g. opening the Meals tab (<code>GET /api/dashboard/daily</code>).</p>
+  <div class="diagram zoomed"><div class="bar"><span>One HTTP request through the stack</span><button type="button" data-zoom>Fit to width</button></div>
+  <div class="canvas"><pre class="mermaid">
+sequenceDiagram
+  participant B as Browser (api.ts)
+  participant R as Render edge (HTTPS)
+  participant U as Uvicorn
+  participant M as Middleware
+  participant D as deps.py
+  participant RT as Router
+  participant S as Service
+  participant DB as Neon
+
+  B->>R: GET /api/dashboard/daily?date=… (cookie: session JWT)
+  alt service asleep (rare: UptimeRobot keeps it awake)
+    R-->>B: Render's HTML waking page
+    B->>B: wake.ts shows the MacBro wake screen, polls /api/health every 2 s, retries once
+  end
+  R->>U: forward (X-Forwarded-For / proto)
+  U->>M: assign X-Request-ID, start log context
+  M->>D: current_user
+  D->>D: decode JWT (SECRET_KEY) · expiry
+  D->>DB: load user by id · compare session_version
+  D-->>RT: user (onboarded_user also checks profile)
+  RT->>S: logs.daily_summary(user, date)
+  S->>DB: SELECT … WHERE user_id = :me
+  DB-->>S: rows
+  S-->>RT: dict
+  RT-->>M: JSON
+  M-->>B: + security headers (CSP, nosniff, frame DENY, HSTS) + X-Request-ID
+</pre></div></div>
+  <p>An unexpected exception is caught in the middleware, logged with the request id, sent to Sentry (if set), and returned as
+  <code>500 "Something went wrong on our side (ref …)"</code> so a user can quote the reference.</p>
+</section>
+
+<!-- ============================================================ AUTH -->
+<section id="auth">
+  <h2>Authentication: how it works and why it fails</h2>
+  <p class="lede">Three ways in: email + password, Continue with Google, and a separate admin login with two-step codes.
+  All three end the same way: the backend sets its <b>own</b> session cookie.</p>
+
+  <div class="diagram zoomed"><div class="bar"><span>Sign-in paths → one session cookie</span><button type="button" data-zoom>Fit to width</button></div>
+  <div class="canvas"><pre class="mermaid">
+sequenceDiagram
+  actor U as User
+  participant B as Browser
+  participant G as Google Identity Services
+  participant API as FastAPI /api/auth
+  participant DB as Neon
+
+  rect rgba(120,170,110,0.12)
+  note over U,DB: Email + password
+  U->>B: email + password
+  B->>API: POST /auth/login
+  API->>API: rate limits (per email, per IP)
+  API->>DB: find user
+  API->>API: Argon2id verify (same work for unknown emails)
+  API-->>B: Set-Cookie session=JWT{user id, sv} httpOnly SameSite (Secure in prod)
+  end
+
+  rect rgba(110,140,200,0.12)
+  note over U,DB: Continue with Google
+  U->>G: choose Google account
+  G-->>B: signed ID token (credential)
+  B->>API: POST /auth/google {credential, consent?, link?}
+  API->>G: fetch public keys (JWKS)
+  API->>API: check RS256 signature, audience = our client id, issuer, expiry, email_verified
+  API->>DB: user by google_sub, else by email
+  alt email has a password account
+    API-->>B: link_required → user confirms → resend with link=true
+  else brand-new email
+    API->>API: invite gate (JOIN_MODE=waitlist → approved?)
+    API-->>B: consent_required → user consents → resend
+  end
+  API-->>B: Set-Cookie session=JWT
+  end
+
+  rect rgba(200,150,90,0.12)
+  note over U,DB: Admin (emails in ADMIN_EMAILS only)
+  B->>API: POST /auth/admin-login {email, password, code?}
+  API-->>B: 401 code_required until a valid TOTP code
+  API->>DB: TOTP step not reused (no replay)
+  API-->>B: Set-Cookie (12-hour admin session)
+  end
+
+  note over B,API: Every later request: deps.current_user decodes the JWT and compares sv with users.session_version
+</pre></div></div>
+
+  <h3>Session model</h3>
+  <ul>
+    <li><b>Token:</b> a PyJWT token signed with <code>SECRET_KEY</code>, holding the internal user id and <code>sv</code> (session version). Stored in an
+    <b>httpOnly</b>, <b>SameSite</b> cookie (Secure over HTTPS), so page JavaScript can't read it. Users: 14 days; admins: 12 hours.</li>
+    <li><b>Log out everywhere / password change:</b> bump <code>users.session_version</code>; every older token now fails the <code>sv</code> check.</li>
+    <li><b>Google:</b> no client secret, no OAuth code flow; just verifying Google's signed ID token. Google accounts are linked to an existing password account only after the user confirms.</li>
+    <li><b>Passwords:</b> Argon2id (OWASP settings); old scrypt hashes upgrade on next login. Forgot password = one-time link via Brevo (only its SHA-256 stored, 30 min).</li>
+  </ul>
+
+  <h3>Why a sign-in fails</h3>
+  <div class="tbl"><table>
+    <thead><tr><th>Response</th><th>Cause</th></tr></thead>
+    <tbody>
+      <tr><td class="s-bad">401</td><td>No cookie, expired JWT, bad signature (e.g. <code>SECRET_KEY</code> changed → everyone is signed out), or <code>sv</code> out of date (logged out everywhere / password changed). Wrong password. Bad Google token (signature, audience, issuer, expiry, unverified email). Admin login without a valid two-step code.</td></tr>
+      <tr><td class="s-bad">403</td><td>An admin email used on the normal login, register or Google. Invite-only mode and the email isn't approved on the waitlist (<code>NOT_INVITED</code>). A user calling an admin endpoint. Consent outdated / not onboarded (the UI shows the consent gate or onboarding).</td></tr>
+      <tr><td class="s-warn">409</td><td>This Google account's email is already linked to a different Google account.</td></tr>
+      <tr><td class="s-warn">429</td><td>Too many wrong passwords for one email (10 / 15 min) or too many auth requests from one IP (60 / 10 min). In memory, so a restart clears them.</td></tr>
+      <tr><td class="s-warn">503</td><td>Google sign-in not configured (<code>GOOGLE_CLIENT_ID</code> empty) or email not configured for Forgot password.</td></tr>
+      <tr><td>Google button missing</td><td><code>GOOGLE_CLIENT_ID</code> empty, or the page's origin isn't in the client's authorised JavaScript origins (locally use <code>localhost:5173</code>, not <code>tandurust.localhost</code>).</td></tr>
+    </tbody>
+  </table></div>
+</section>
+
+<!-- ============================================================ SCHEMA -->
+<section id="schema">
+  <h2>Database schema</h2>
+  <p class="lede">Postgres on Neon in production, SQLite locally; SQLAlchemy 2 models in <code>backend/app/models.py</code>, Alembic
+  migrations in <code>backend/migrations/versions/</code> that run automatically at startup. 18 tables.</p>
+
+  <div class="diagram zoomed"><div class="bar"><span>Entity-relationship diagram (key columns)</span><button type="button" data-zoom>Fit to width</button></div>
+  <div class="canvas"><pre class="mermaid">
+erDiagram
+  users ||--o{ weight_logs : has
+  users ||--o{ user_targets : "dated targets"
+  users ||--o{ body_measurements : has
+  users ||--o{ log_entries : logs
+  log_entries ||--|{ log_entry_items : contains
+  user_foods |o--o{ log_entry_items : "logged from"
+  users ||--o{ water_logs : drinks
+  users ||--o{ user_foods : "My Foods"
+  user_foods ||--o{ recipe_ingredients : "recipe has"
+  users ||--o{ pending_actions : "proposed by MacBro"
+  users ||--o{ chat_messages : "chat history"
+  users ||--o{ ai_requests : "daily allowance"
+  users ||--o{ password_resets : "reset links"
+  users ||--o| user_preferences : "about you"
+  users |o--o{ admin_audit : "viewed by admin"
+  users |o--o{ llm_usage : "model calls"
+
+  users {
+    int id PK "internal, in JWT"
+    uuid public_id UK "shown by the API"
+    string email UK
+    string hashed_password "empty = Google only"
+    string google_sub
+    int session_version
+    string totp_secret "encrypted, admin only"
+    date date_of_birth
+    string sex
+    float height_cm
+    string timezone
+    string goal_type
+    string activity_level
+    string country
+    string region
+    datetime consent_at
+    string consent_version
+    datetime guide_seen_at
+  }
+  user_targets {
+    int id PK
+    int user_id FK
+    int daily_calorie_target
+    float protein_target_g
+    float carbs_target_g
+    float fat_target_g
+    date effective_date
+    bool is_custom
+  }
+  log_entries {
+    int id PK
+    int user_id FK
+    datetime eaten_at "UTC"
+    string meal_type
+    text raw_user_message
+    datetime deleted_at "soft delete"
+  }
+  log_entry_items {
+    int id PK
+    int log_entry_id FK
+    string ingredient_name
+    string brand_name
+    float quantity
+    string unit
+    float calories
+    float protein_g
+    float carbs_g
+    float fat_g
+    float fiber_g
+    json micronutrients
+    int user_food_id FK "SET NULL"
+    string general_id "USDA list"
+    string source "library general estimate recipe"
+  }
+  user_foods {
+    int id PK
+    int user_id FK
+    string name
+    string brand_name
+    string kind "food or recipe"
+    string source "estimate user recipe general label"
+    float ref_qty
+    string ref_unit
+    float calories
+    float protein_g
+    json micronutrients
+    bool label_checked
+    string off_code "barcode"
+  }
+  recipe_ingredients {
+    int id PK
+    int recipe_id FK
+    int food_id FK
+    float quantity
+    string unit
+  }
+  pending_actions {
+    int id PK
+    int user_id FK
+    string action_type "create edit delete move copy water save_recipe"
+    int target_entry_id
+    json payload
+    string status "pending confirmed rejected superseded expired"
+    int chat_message_id FK
+    int result_entry_id
+    datetime resolved_at
+  }
+  chat_messages {
+    int id PK
+    int user_id FK
+    string role "user assistant event"
+    text content
+    string kind
+    json data
+    int related_log_entry_id
+  }
+  water_logs {
+    int id PK
+    int user_id FK
+    int amount_ml
+    datetime drank_at
+  }
+  weight_logs {
+    int id PK
+    int user_id FK
+    float weight_kg
+    datetime logged_at
+  }
+  body_measurements {
+    int id PK
+    int user_id FK
+    datetime measured_at
+    float waist_cm
+    float neck_cm
+    float hips_cm
+  }
+  user_preferences {
+    int user_id PK
+    string diet_type
+    json allergies
+    float pace_kg_per_week
+    string breakfast_time
+    json health_conditions
+    datetime health_consent_at
+  }
+  ai_requests {
+    int id PK
+    int user_id FK
+    datetime created_at
+    string kind "chat dashboard_add"
+  }
+  llm_usage {
+    int id PK
+    int user_id FK "SET NULL"
+    string provider
+    string model
+    string tier
+    string intent
+    int prompt_tokens
+    int completion_tokens
+    int latency_ms
+    string outcome "ok error rate_limited fastpath"
+  }
+  password_resets {
+    int id PK
+    int user_id FK
+    string token_hash "SHA-256"
+    datetime expires_at
+    datetime used_at
+  }
+  admin_audit {
+    int id PK
+    int admin_user_id
+    int target_user_id "SET NULL"
+    string action
+  }
+  waitlist {
+    uuid public_id
+    string email UK
+    string name
+    string interest
+    datetime approved_at
+  }
+  label_cache {
+    string key PK "q:words or code:barcode"
+    json labels
+    datetime fetched_at
+  }
+</pre></div></div>
+
+  <div class="tbl"><table>
+    <thead><tr><th>Group</th><th>Tables</th><th>Notes</th></tr></thead>
+    <tbody>
+      <tr><td>Identity</td><td><code>users</code>, <code>user_preferences</code>, <code>password_resets</code></td><td>Integer <code>id</code> internally; UUID v7 <code>public_id</code> in the API. Optional "About you" answers feed targets and MacBro's context.</td></tr>
+      <tr><td>Body &amp; goals</td><td><code>weight_logs</code>, <code>user_targets</code>, <code>body_measurements</code></td><td>Targets are dated; the latest effective row applies (history kept). Mifflin-St Jeor in <code>nutrition.py</code>.</td></tr>
+      <tr><td>Food log</td><td><code>log_entries</code>, <code>log_entry_items</code>, <code>water_logs</code></td><td>Nutrients are stored, not recomputed, so past days never change (except an explicit "correct past logs" after a label check). Entries are soft-deleted.</td></tr>
+      <tr><td>Food library</td><td><code>user_foods</code>, <code>recipe_ingredients</code>, <code>label_cache</code></td><td>My Foods is learned on confirm. A <code>label</code> or <code>user</code> food is never overwritten by an AI estimate. <code>label_cache</code> is public, shared, 7 days.</td></tr>
+      <tr><td>Chat &amp; AI</td><td><code>chat_messages</code>, <code>pending_actions</code>, <code>ai_requests</code>, <code>llm_usage</code></td><td>Cards expire after 24 h (lazily). <code>event</code> messages are hidden context for the model.</td></tr>
+      <tr><td>Admin &amp; growth</td><td><code>admin_audit</code>, <code>waitlist</code></td><td>Every admin view of a user is audited. Waitlist matched to users by email, not by key.</td></tr>
+      <tr><td>Not in the DB</td><td><code>general_foods.json</code>, <code>countries.json</code></td><td>~300 USDA foods (public domain) and country/region lists, loaded once into memory.</td></tr>
+    </tbody>
+  </table></div>
+  <p><b>Integrity:</b> every foreign key has an ON DELETE rule. Deleting a user cascades through everything they own; <code>llm_usage</code>
+  and <code>admin_audit</code> rows are kept but unlinked (SET NULL). Timestamps are <code>timestamptz</code> (UTC). Per-user tables have
+  composite indexes on <code>(user_id, date)</code> or <code>(user_id, status)</code>.</p>
+</section>
+
+<!-- ============================================================ USERS -->
+<section id="users">
+  <h2>How users are managed and kept apart</h2>
+  <div class="grid">
+    <div class="card"><h4>Multi-tenant by <code>user_id</code></h4><p>One shared database. Every query is filtered by the signed-in user's id, taken from the cookie, never from the request body. Other users' ids return 404.</p></div>
+    <div class="card"><h4>Signup states</h4><p>Account → consent (versioned) → onboarding (18+, country, body, goal) → optional About you → first-run guide → app. <code>GET /api/auth/me</code> tells the UI which gate to show.</p></div>
+    <div class="card"><h4>Invite-only mode</h4><p><code>JOIN_MODE=waitlist</code>: visitors join a waitlist; the admin approves; Brevo emails an invitation; only then can that email register or use Google.</p></div>
+    <div class="card"><h4>Admins</h4><p>Fixed emails (<code>ADMIN_EMAILS</code>), separate login with TOTP. Read-only view of users, every view audited. Admins are hidden from the user list.</p></div>
+    <div class="card"><h4>Privacy rights</h4><p><b>Download my data</b> (every row, secrets excluded) and full account deletion (DB cascade + waitlist row).</p></div>
+    <div class="card"><h4>Fair use</h4><p>Per-user daily AI allowance (20). Sign-in rate limits per email and per IP. Waitlist form 5/hour per IP with a honeypot.</p></div>
+  </div>
+</section>
+
+<!-- ============================================================ CONCURRENCY -->
+<section id="concurrency">
+  <h2>Concurrency: what happens when many requests hit at once</h2>
+  <p class="lede">Current setup is deliberately small: one free instance, sized for the owner plus a small group of testers.</p>
+
+  <div class="diagram zoomed"><div class="bar"><span>Where concurrent requests queue up</span><button type="button" data-zoom>Fit to width</button></div>
+  <div class="canvas"><pre class="mermaid">
+flowchart LR
+  REQ["Many browsers<br/>at the same time"] --> UV["Uvicorn<br/>1 process, async event loop"]
+  UV --> TP["Endpoints are sync 'def'<br/>→ run in a thread pool<br/>(Starlette default ~40 threads)"]
+  TP --> DBP["SQLAlchemy pool<br/>5 connections + 5 overflow<br/>= max 10 at once"]
+  DBP --> NEON[("Neon Postgres<br/>free compute")]
+  TP --> LLMQ["LLM calls block their thread<br/>for 1–20 s (rate-limit waits up to 20 s)"]
+  LLMQ --> GROQ[("Groq free tier<br/>~8K tokens/min · ~200K tokens/day per model<br/>shared by all users")]
+  TP -.-> MEMS[("In-memory, per process<br/>cancel registry · rate limits · cooldowns")]
+  classDef hot fill:#fbe5e1,stroke:#a33a2c,color:#3d0f08;
+  class GROQ,DBP hot;
+</pre></div></div>
+
+  <div class="tbl"><table>
+    <thead><tr><th>Layer</th><th>Limit today</th><th>What happens when it's hit</th></tr></thead>
+    <tbody>
+      <tr><td>Render free instance</td><td>1 instance, 512 MB, shared CPU</td><td>Requests queue; latency rises. No autoscaling on the free plan.</td></tr>
+      <tr><td>Thread pool</td><td>~40 sync requests in flight</td><td>Extra requests wait for a free thread. Slow LLM turns hold a thread each.</td></tr>
+      <tr><td>DB connection pool</td><td>10 connections</td><td>A request waits for a connection (SQLAlchemy pool timeout 30 s, then error).</td></tr>
+      <tr><td>Groq per-minute tokens</td><td>~8K tokens/min per model</td><td>429 "try again in 9.6s" → the pool waits (≤ 20 s total) or uses the other model.</td></tr>
+      <tr><td>Groq per-day tokens</td><td>~200K tokens/day per model</td><td>Model on cooldown until reset → other tier → backup → 503 "servers down". Non-chat features keep working.</td></tr>
+      <tr><td>Per-user allowance</td><td>20 AI messages/day</td><td>429 before any model call; fast paths and buttons still work.</td></tr>
+      <tr><td>Double send / Stop</td><td><code>client_request_id</code></td><td>Stop marks the request cancelled; the turn is rolled back unless it already committed (atomic check).</td></tr>
+    </tbody>
+  </table></div>
+  <div class="note warn"><b>Scaling path (parked, see <code>docs/open-points.md</code>):</b> the in-memory state (Stop registry, rate limits,
+  model cooldowns) must move to Postgres or Redis before running more than one instance; then add instances, a paid Render plan, and
+  more LLM capacity (second free provider or paid tier).</div>
+</section>
+
+<!-- ============================================================ FAILURES -->
+<section id="failures">
+  <h2>Failure modes</h2>
+  <div class="tbl"><table>
+    <thead><tr><th>What fails</th><th>What the user sees</th><th>What still works</th></tr></thead>
+    <tbody>
+      <tr><td>All LLM models down / out of quota</td><td>Chat: "MacBro's servers are temporarily down" (503). Nothing saved; retry later.</td><td>Fast-path messages, Meals tab, + Add food for saved/USDA foods, water, My Foods, dashboards.</td></tr>
+      <tr><td>Model output invalid</td><td>Nothing; the error goes back to the model, then the large model takes over. Loop capped at 8 rounds → 503.</td><td>—</td></tr>
+      <tr><td>Open Food Facts slow or down</td><td>Card shows the AI estimate with "Find the label" to retry. Check label → 502.</td><td>Everything else.</td></tr>
+      <tr><td>Render instance asleep / redeploying</td><td>Wake screen with dancing MacBro; request retried automatically.</td><td>Welcome page (static, always on).</td></tr>
+      <tr><td>Neon asleep</td><td>~1 s extra on the first query (pool pre-ping reconnects).</td><td>—</td></tr>
+      <tr><td>Brevo not configured / down</td><td>Forgot password hidden or 503; emails only logged in dev.</td><td>Sign-in, app.</td></tr>
+      <tr><td>Google down / misconfigured</td><td>Google button missing or sign-in error.</td><td>Email + password.</td></tr>
+      <tr><td>Unhandled bug</td><td>500 with a reference id; Sentry gets the stack trace.</td><td>Other endpoints.</td></tr>
+      <tr><td>Process restart</td><td>Rate limits, cooldowns and in-flight Stop flags are forgotten.</td><td>All persisted data.</td></tr>
+    </tbody>
+  </table></div>
+</section>
+
+<!-- ============================================================ DEPLOY -->
+<section id="deploy">
+  <h2>Deploy pipeline</h2>
+  <div class="diagram zoomed"><div class="bar"><span>From git push to live</span><button type="button" data-zoom>Fit to width</button></div>
+  <div class="canvas"><pre class="mermaid">
+flowchart LR
+  DEV["Developer<br/>git push main"] --> GH["GitHub"]
+  GH --> CI["GitHub Actions ci.yml"]
+  subgraph CHECKS["CI jobs (all must pass)"]
+    T1["pytest on SQLite<br/>fake LLM, no network"]
+    T2["pytest on Postgres 17<br/>service container"]
+    T3["frontend: oxlint · tsc · vite build"]
+    T4["pip-audit · npm audit"]
+  end
+  CI --> T1 & T2 & T3 & T4
+  T1 & T2 & T3 & T4 --> OK{"checks pass"}
+  OK -->|"autoDeployTrigger: checksPass"| B1["Render builds tandurust<br/>pip install · npm ci · npm run build"]
+  OK --> B2["Render builds tandurust-app<br/>static welcome site"]
+  B1 --> RUN["uvicorn app.main:app<br/>startup: Alembic migrations on Neon<br/>data fixes · admin bootstrap"]
+  RUN --> HC["health check /api/health → live"]
+  SEC["Secrets in Render dashboard<br/>DATABASE_URL · LLM_API_KEY · SECRET_KEY<br/>BREVO_API_KEY · SENTRY_DSN"] -.-> RUN
+</pre></div></div>
+</section>
+
+<!-- ============================================================ CODE MAP -->
+<section id="map">
+  <h2>Code map: where to look</h2>
+  <div class="tbl"><table>
+    <thead><tr><th>Concern</th><th>Files</th></tr></thead>
+    <tbody>
+      <tr><td>App wiring, middleware, serving the SPA</td><td><code>backend/app/main.py</code>, <code>observability.py</code></td></tr>
+      <tr><td>Config and every constant</td><td><code>backend/app/config.py</code>, <code>backend/.env.example</code>, <code>render.yaml</code></td></tr>
+      <tr><td>Auth</td><td><code>routers/auth.py</code>, <code>security.py</code>, <code>google_auth.py</code>, <code>deps.py</code>, <code>services/totp.py</code>, <code>services/ratelimit.py</code></td></tr>
+      <tr><td>Database</td><td><code>db.py</code>, <code>models.py</code>, <code>migrate.py</code>, <code>migrations/versions/</code></td></tr>
+      <tr><td>Chat entry point</td><td><code>routers/chat.py</code> → <code>llm/chat.py</code></td></tr>
+      <tr><td>No-LLM replies</td><td><code>llm/fastpath.py</code>, <code>services/foods.py</code>, <code>services/general_foods.py</code></td></tr>
+      <tr><td>Routing, prompt, tools</td><td><code>llm/router.py</code>, <code>llm/prompt.py</code>, <code>llm/tools.py</code></td></tr>
+      <tr><td>Models and failover</td><td><code>llm/pool.py</code>, <code>llm/provider.py</code>, <code>backend/llm_pool.json</code></td></tr>
+      <tr><td>The only writer for proposals</td><td><code>services/actions.py</code> (<code>confirm_action</code>)</td></tr>
+      <tr><td>Pack labels</td><td><code>services/labels.py</code>, <code>services/label_match.py</code>, <code>frontend/src/scan.ts</code></td></tr>
+      <tr><td>Frontend</td><td><code>frontend/src/App.tsx</code>, <code>api.ts</code>, <code>wake.ts</code>, <code>components/Chat.tsx</code>, <code>ProposalCard.tsx</code></td></tr>
+      <tr><td>Further reading</td><td><code>docs/hld.md</code>, <code>docs/technical-overview.md</code>, <code>docs/llm-routing-strategy.md</code>, <code>docs/deployment.md</code></td></tr>
+    </tbody>
+  </table></div>
+</section>
+
+<footer>Last updated 2026-10-01 · Built from <code>docs/hld.md</code>, <code>docs/technical-overview.md</code> and the backend code.
+Diagrams use Mermaid, loaded from a CDN, so viewing needs an internet connection. Diagrams open at actual size; scroll inside a diagram, or press <b>Fit to width</b> for an overview.</footer>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
+<script>
+  (function () {
+    var dark = document.documentElement.dataset.theme === "dark" ||
+      (document.documentElement.dataset.theme !== "light" && window.matchMedia("(prefers-color-scheme: dark)").matches);
+    mermaid.initialize({
+      startOnLoad: false,
+      securityLevel: "loose",
+      theme: dark ? "dark" : "default",
+      flowchart: { htmlLabels: true, curve: "basis", useMaxWidth: true },
+      sequence: { useMaxWidth: true, mirrorActors: false },
+      er: { useMaxWidth: true },
+      themeVariables: { fontFamily: "system-ui, -apple-system, Segoe UI, Roboto, sans-serif", fontSize: "14px" }
+    });
+    mermaid.run({ querySelector: ".mermaid" }).catch(function (e) { console.error(e); });
+    document.querySelectorAll("[data-zoom]").forEach(function (btn) {
+      btn.addEventListener("click", function () {
+        var d = btn.closest(".diagram");
+        var on = d.classList.toggle("zoomed");
+        btn.textContent = on ? "Fit to width" : "Actual size";
+      });
+    });
+  })();
+</script>
+</body>
+</html>
