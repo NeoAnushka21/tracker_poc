@@ -69,7 +69,13 @@ services:
     staticPublishPath: frontend/dist
     autoDeployTrigger: checksPass
     routes:
-      - type: rewrite            # any path (e.g. an old bookmark) shows the welcome page
+      - type: rewrite            # the pre-rendered Privacy and Terms pages (vite.config.ts): Google's brand
+        source: /privacy         # check wants the privacy policy on the home page's own domain
+        destination: /privacy.html
+      - type: rewrite
+        source: /terms
+        destination: /terms.html
+      - type: rewrite            # any other path (e.g. an old bookmark) shows the welcome page
         source: /*
         destination: /index.html
     envVars:

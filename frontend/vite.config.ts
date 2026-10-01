@@ -7,20 +7,15 @@ import { createServer, defineConfig, type Plugin } from "vite";
 import react from "@vitejs/plugin-react";
 import { APP_DEV_HOST, APP_NAME, APP_TAGLINE } from "./src/brand";
 
-/** Fills %APP_NAME% in the HTML pages from src/brand.ts, so a rename is one edit. %APP_URL% is the app's
- *  address on the always-on welcome site (VITE_APP_URL), empty when the app serves the page itself. */
+/** Fills %APP_NAME% in the HTML pages from src/brand.ts, so a rename is one edit. */
 function brandHtml(): Plugin {
-  const appUrl = (process.env.VITE_APP_URL ?? "").replace(/\/$/, "");
-  return {
-    name: "brand-html",
-    transformIndexHtml: (html) =>
-      html.replaceAll("%APP_NAME%", APP_NAME).replaceAll("%APP_TAGLINE%", APP_TAGLINE).replaceAll("%APP_URL%", appUrl),
-  };
+  return { name: "brand-html", transformIndexHtml: (html) => html.replaceAll("%APP_NAME%", APP_NAME).replaceAll("%APP_TAGLINE%", APP_TAGLINE) };
 }
 
 /** After the build, saves /privacy and /terms as dist/privacy.html and dist/terms.html: the app's page
  *  with the text already inside #root, for readers that don't run JavaScript (Google's brand check reads
- *  the privacy policy that way). In the browser main.tsx renders over it as usual. */
+ *  the privacy policy that way). In the browser main.tsx renders over it as usual. The app serves them
+ *  (backend mount_frontend) and so does the always-on welcome site (render.yaml routes). */
 function prerenderPages(): Plugin {
   const pages = [
     { file: "privacy", module: "/src/components/PrivacyPage.tsx", title: "Privacy" },

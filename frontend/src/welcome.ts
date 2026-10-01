@@ -109,12 +109,8 @@ document.querySelectorAll<HTMLElement>("[data-go]").forEach((el) => {
   });
 });
 
-// Privacy and Terms live in the app. The build already writes the app's address into these links
-// (%APP_URL% in welcome.html, so readers without JavaScript get them right); this covers the rest.
-document.querySelectorAll<HTMLAnchorElement>("a[data-app-link]").forEach((a) => {
-  const href = a.getAttribute("href") ?? "";
-  if (href.startsWith("/")) a.href = `${APP_URL}${href}`;
-});
+// Privacy and Terms (/privacy, /terms) are relative links: both the app and the always-on welcome site
+// publish their pre-rendered pages (render.yaml), so Google's brand check finds them on the home page's domain.
 
 // ---- example chats: a slideshow of three tabs (click, arrow keys, Home/End) --------------
 // Plays by itself (5 s a chat, looping); pauses on hover, on keyboard focus inside the card and when
