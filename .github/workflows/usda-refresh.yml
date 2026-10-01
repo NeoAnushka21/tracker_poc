@@ -32,7 +32,7 @@ jobs:
       GH_TOKEN: ${{ github.token }}
       USDA_API_KEY: ${{ secrets.USDA_API_KEY }}
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
       - uses: actions/setup-python@v6
         with:
           python-version-file: .python-version
