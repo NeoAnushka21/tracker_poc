@@ -26,7 +26,7 @@ from app.services.foods import FoodError, closest_saved, get_user_food, library_
 from app.services.logs import item_to_dict
 from app.timeutil import local_today
 
-log = logging.getLogger("omniai.entries")
+log = logging.getLogger("tandurust.entries")
 
 router = APIRouter(prefix="/api/entries", tags=["entries"])
 

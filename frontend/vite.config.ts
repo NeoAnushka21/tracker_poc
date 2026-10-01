@@ -22,7 +22,7 @@ function welcomeRoute(): Plugin {
 }
 
 // In dev, /api is proxied to FastAPI so the session cookie is same-origin.
-// Open the app at http://<APP_DEV_HOST>:5173 (e.g. http://omniai.localhost:5173).
+// Open the app at http://<APP_DEV_HOST>:5173 (e.g. http://tandurust.localhost:5173).
 export default defineConfig({
   plugins: [react(), brandHtml(), welcomeRoute()],
   server: {

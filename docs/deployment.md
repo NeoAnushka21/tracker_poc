@@ -1,10 +1,10 @@
 # Deploying Tandurust (Render + Neon)
 
-> Last updated: 2026-10-01 (invite-only sign-up with a waitlist: `JOIN_MODE`, `LAUNCHER_ORIGIN`, how to open sign-up again; the static site's start page is now the welcome page, not the launcher; the app serves it at /welcome; 2026-09-30: UptimeRobot monitor live, server kept awake; keep-awake monitor steps, `/api/health` answers HEAD; monthly USDA food list check; earlier: always-on launcher page).
+> Last updated: 2026-10-01 (moving to the Tandurust addresses: new services `tandurust` / `tandurust-app`, old `omniai-app` forwards, owner checklist; invite-only sign-up with a waitlist: `JOIN_MODE`, `LAUNCHER_ORIGIN`, how to open sign-up again; the static site's start page is now the welcome page, not the launcher; the app serves it at /welcome; 2026-09-30: UptimeRobot monitor live, server kept awake; keep-awake monitor steps, `/api/health` answers HEAD; monthly USDA food list check; earlier: always-on launcher page).
 
-**Open the app from the welcome page:** https://omniai-app.onrender.com (static site `omniai-app`, never sleeps; the exact address is shown on its Render page). **App:** https://omniai-hkv2.onrender.com (Render service `omniai`, Singapore) · Neon project `young-star-73873699` (AWS Singapore). Local data was copied into Neon on 2026-09-29 (159 rows, 13 tables); Neon is now the real database. The NVIDIA backup is off in production. An UptimeRobot monitor (free, since 2026-09-30) pings `/api/health` every 5 minutes, so the app stays awake and down alerts go by email. Update this file whenever the deployment setup changes (see [README.md](README.md)).
+**Open the app from the welcome page:** https://tandurust-app.onrender.com (static site `tandurust-app`, never sleeps; the exact address is shown on its Render page). **App:** https://tandurust.onrender.com (Render service `tandurust`, Singapore). The old addresses: `omniai-app.onrender.com` forwards to the welcome page; `omniai-hkv2.onrender.com` (service `omniai`) is deleted once the move below is done · Neon project `young-star-73873699` (AWS Singapore). Local data was copied into Neon on 2026-09-29 (159 rows, 13 tables); Neon is now the real database. The NVIDIA backup is off in production. An UptimeRobot monitor (free, since 2026-09-30) pings `/api/health` every 5 minutes, so the app stays awake and down alerts go by email. Update this file whenever the deployment setup changes (see [README.md](README.md)).
 
-> The app is shown as **Tandurust** (renamed from OmniAI on 2026-09-30, display only). Everything named below keeps its "OmniAI" / "omniai" name: the Render services and Blueprint, the live URL, the Google Cloud project, sign-in client and consent-screen app name, and the uptime monitor.
+> The app was renamed from OmniAI to **Tandurust** on 2026-09-30 (display) and its services and addresses followed on 2026-10-01: see [Moving to the Tandurust addresses](#moving-to-the-tandurust-addresses-2026-10-01). Until that checklist is done, the live app is still on the old `omniai` addresses.
 
 Tandurust runs as **one free Render web service** that builds the React app and runs the FastAPI backend, which serves both the site and `/api`. The data lives in a **free Neon Postgres** database. Both are in **Singapore**, close to India and to each other. The setup is in [`render.yaml`](../render.yaml) at the repo root (a Render "Blueprint").
 
@@ -29,7 +29,7 @@ Render builds from the `main` branch of `github.com/NeoAnushka21/tracker_poc`. T
 
 1. Go to **https://neon.com** and click **Sign up**. Signing up with GitHub or Google is quickest. No card is needed.
 2. On **Create project**, fill in:
-   - **Project name:** `omniai`
+   - **Project name:** `tandurust` (created as `omniai`; renaming it in Settings changes nothing else)
    - **Postgres version:** the default (17 or later)
    - **Cloud provider:** AWS
    - **Region:** **Asia Pacific (Singapore)**. This must match Render's region.
@@ -71,13 +71,15 @@ This copies every table (users, logs, chat, foods, water, weight, usage) from th
    - If `tracker_poc` isn't listed, click **Configure account** / **Connect GitHub**.
    - Allow Render access to the `tracker_poc` repository only, then select it.
    - Branch: `main`.
-4. Render reads `render.yaml` and shows two services: **omniai** (free web service, Singapore: the app) and **omniai-app** (free static site: the launcher, see below; it needs no secrets). It asks for the app's two secret values:
+4. Render reads `render.yaml` and shows the services: **tandurust** (free web service, Singapore: the app), **tandurust-app** (free static site: the welcome page, see below) and **omniai-app** (free static site forwarding the old address; neither static site needs secrets). It asks for the app's secret values:
    - **`DATABASE_URL`**: paste the same Neon connection string as in step 3.
    - **`LLM_API_KEY`**: your Groq key (the `LLM_API_KEY` value from `backend/.env`).
+   - **`SECRET_KEY`**: a long random value (`python -c "import secrets; print(secrets.token_urlsafe(48))"`); when replacing a service, the old service's value instead.
+   - `BREVO_API_KEY`, `EMAIL_FROM`, `SENTRY_DSN`: optional (sections below); leave empty if not set up.
 
-   Everything else is preset. `SECRET_KEY` (which signs logins) is generated by Render automatically. `GOOGLE_CLIENT_ID` (Continue with Google) is in `render.yaml`; it isn't a secret.
+   Everything else is preset. `GOOGLE_CLIENT_ID` (Continue with Google) is in `render.yaml`; it isn't a secret.
 5. Click **Apply** / **Deploy Blueprint**. The first build takes about 3–6 minutes. You can watch it under the service's **Events** / **Logs**.
-6. When it shows **Live**, the address is at the top of the service page, e.g. `https://omniai.onrender.com`. If that name is taken, Render adds a suffix, such as `omniai-ab12.onrender.com`. Put the app's address in `VITE_APP_URL` (`render.yaml`, launcher section) so the launcher knows where to send people, and bookmark the launcher's address.
+6. When it shows **Live**, the address is at the top of the service page, e.g. `https://tandurust.onrender.com`. If that name is taken, Render adds a suffix, such as `tandurust-ab12.onrender.com`. Then fix the lines marked `# address` in `render.yaml` (and `deploy/moved/index.html` if the welcome site got a suffix), and bookmark the welcome site's address.
 
 Optional: the NVIDIA backup is **off** in production, because its free tier is for prototyping only. To turn it on, add `LLM_API_KEY_2` under the service's **Environment** tab.
 
@@ -90,9 +92,27 @@ Optional: the NVIDIA backup is **off** in production, because its free tier is f
 
 ---
 
+## Moving to the Tandurust addresses (2026-10-01)
+
+Render can't change a service's `onrender.com` address, so `render.yaml` now describes **new** services: `tandurust` (the app) and `tandurust-app` (the welcome page). The old `omniai-app` site stays, but only forwards every visit to `tandurust-app` (`deploy/moved/index.html`, keeping any `#join` / `#login` part), so old bookmarks and invitation links keep working. The old app service `omniai` is deleted at the end. The data doesn't move: the new service uses the same Neon database. Free, about 30 minutes, all steps **You**:
+
+1. **Copy the old secrets first.** Render → **omniai** → **Environment**: note `DATABASE_URL`, `LLM_API_KEY`, **`SECRET_KEY`**, `BREVO_API_KEY`, `EMAIL_FROM`, `SENTRY_DSN` (and `LLM_API_KEY_2` if set). `SECRET_KEY` matters most: the admin's two-step secret is encrypted with it, so a different key means setting two-step sign-in up again.
+2. **Push this change**, then Render → **Blueprints** → the Blueprint → **Sync** / **Apply**. It offers to create `tandurust` and `tandurust-app` and to update `omniai-app`. Paste the values from step 1 when asked. (If it lists `omniai` as removed from the Blueprint, don't delete it yet.)
+3. **Check the addresses.** When both new services are **Live**, read their addresses at the top of each service page. If either isn't exactly `tandurust.onrender.com` / `tandurust-app.onrender.com` (Render added a suffix), the `# address` lines in `render.yaml` and the address in `deploy/moved/index.html` need the real ones; push again.
+4. **Google sign-in** (console.cloud.google.com → the project):
+   - **Google Auth Platform → Clients → the web client:** add `https://tandurust.onrender.com` to **Authorised JavaScript origins** (keep the old one until step 9). Rename the client `Tandurust web` (optional; the client id doesn't change).
+   - **Google Auth Platform → Branding:** app name `Tandurust`: what people see on Google's sign-in screen. If Google asks to verify the change, follow it (free).
+   - **IAM & Admin → Settings:** project name `Tandurust` (display name only; the project id keeps "omniai" and can't be changed).
+5. **UptimeRobot:** edit the monitor: friendly name `Tandurust app`, URL `https://tandurust.onrender.com/api/health`.
+6. **Brevo** (if set up): if the sender name says OmniAI, change it to Tandurust (Senders); if `EMAIL_FROM` contains "OmniAI", update it in Render → **tandurust** → **Environment**.
+7. **Sentry** (if set up): project settings → rename `omniai` to `tandurust` (optional; the DSN stays the same).
+8. **Test** on https://tandurust-app.onrender.com: **Log in** (once more: logins are per address), Continue with Google, the admin's two-step code, one chat message; then open https://omniai-app.onrender.com and check it forwards. Update your bookmark and the phone home-screen shortcut.
+9. **Clean up:** delete the old **omniai** web service (Render → **omniai** → **Settings** → **Delete web service**), so it doesn't build on every push or use free hours. Then remove `https://omniai-hkv2.onrender.com` from Google's authorised origins.
+10. **Optional:** Neon → project **Settings** → rename to `tandurust`; rename your authenticator app's "OmniAI" entry (new set-ups already say Tandurust). The GitHub repository name can stay.
+
 ## The welcome page: no Render "waking up" page
 
-The free web service sleeps after about 15 minutes idle, and Render shows its own black "waking up" page to browsers while it starts. That page can't be customised. So the Blueprint also creates **`omniai-app`**, a free **static site** that never sleeps. Since 2026-10-01 its start page is the **welcome page** (`frontend/welcome.html`; before, a "launcher" wake screen):
+The free web service sleeps after about 15 minutes idle, and Render shows its own black "waking up" page to browsers while it starts. That page can't be customised. So the Blueprint also creates **`tandurust-app`**, a free **static site** that never sleeps. Since 2026-10-01 its start page is the **welcome page** (`frontend/welcome.html`; before, a "launcher" wake screen):
 
 1. You open the static site's address (bookmark and share this one, not the app's).
 2. The welcome page shows at once and starts waking the app in the background (it polls `/api/health`, which allows other origins).
@@ -102,19 +122,19 @@ The free web service sleeps after about 15 minutes idle, and Render shows its ow
 
 The app serves the same welcome page at **`/welcome`** and sends everyone who isn't signed in there, so the app's own address starts at the welcome page too.
 
-**After this change is pushed (You):** the static site's build command in `render.yaml` changed (`mv dist/welcome.html dist/index.html`). If Render doesn't pick it up by itself, open Render → **Blueprints** → the OmniAI Blueprint → **Sync** / **Apply**, or set the build command on the `omniai-app` service by hand.
+**After this change is pushed (You):** the static site's build command in `render.yaml` changed (`mv dist/welcome.html dist/index.html`). If Render doesn't pick it up by itself, open Render → **Blueprints** → the Blueprint → **Sync** / **Apply**, or set the build command on the `tandurust-app` service by hand.
 
-**Adding it the first time (You):** after this change is pushed, Render → **Blueprints** → the OmniAI Blueprint → it shows the new `omniai-app` service → **Sync** / **Apply**. No secrets are needed. If the app's address ever changes, update `VITE_APP_URL` in `render.yaml`.
+**Adding it the first time (You):** after this change is pushed, Render → **Blueprints** → the Blueprint → it shows the new `tandurust-app` service → **Sync** / **Apply**. No secrets are needed. If the app's address ever changes, update `VITE_APP_URL` in `render.yaml`.
 
 Since 2026-09-30 an uptime monitor keeps the server awake (see below), so the app's own address normally loads straight away too. Only after a restart or redeploy can Render's page still appear on the direct link; the launcher is still the safest link to share.
 
 ## Continue with Google (set up 2026-09-29)
 
-Free: no billing and no Google review (only the basic `openid email profile` scopes). In the owner's Google Cloud project **OmniAI**:
+Free: no billing and no Google review (only the basic `openid email profile` scopes). In the owner's Google Cloud project **Tandurust** (created as OmniAI):
 
-1. **Google Auth Platform → Branding:** app name `OmniAI`, support and developer contact email. No logo (a logo needs Google's brand verification).
+1. **Google Auth Platform → Branding:** app name `Tandurust`, support and developer contact email. No logo (a logo needs Google's brand verification).
 2. **Audience:** External, **published** (In production), so any Google account can sign in.
-3. **Clients → Web application** `OmniAI web`. Authorised JavaScript origins: `https://omniai-hkv2.onrender.com`, `http://localhost:5173`, `http://localhost`. No redirect URIs; the client secret isn't used.
+3. **Clients → Web application** `Tandurust web`. Authorised JavaScript origins: `https://tandurust.onrender.com`, `http://localhost:5173`, `http://localhost`. No redirect URIs; the client secret isn't used.
 4. The client ID goes in `GOOGLE_CLIENT_ID` (`render.yaml` and `backend/.env`).
 
 A new app address (e.g. a custom domain) must be added to the origins, or the button fails there.
@@ -126,9 +146,9 @@ Every response has an `X-Request-ID`. An unexpected error shows the user "Someth
 **Error reports (Sentry, free Developer plan)**, about 5 minutes:
 
 1. Sign up at **https://sentry.io** (pick the EU or US data region when asked; either is fine).
-2. **Create project** → platform **FastAPI** (or Python) → name `omniai` → alert me on every new issue.
+2. **Create project** → platform **FastAPI** (or Python) → name `tandurust` → alert me on every new issue.
 3. Copy the **DSN** (`https://…@….ingest.sentry.io/…`).
-4. Render → **omniai** → **Environment** → `SENTRY_DSN` → paste → **Save** (it redeploys).
+4. Render → **tandurust** → **Environment** → `SENTRY_DSN` → paste → **Save** (it redeploys).
 
 Reports carry the error and stack trace only: no request bodies (chat, food, passwords), no local variables, no cookies or IP addresses, no performance tracing (`observability.setup_sentry`). GlitchTip (open source, Sentry-compatible) also works with the same `SENTRY_DSN`.
 
@@ -137,8 +157,8 @@ Reports carry the error and stack trace only: no request bodies (chat, food, pas
 1. Sign up at **https://uptimerobot.com** (free plan: 50 monitors, checks every 5 minutes).
 2. **+ New monitor**:
    - Monitor type: **HTTP(s)**
-   - Friendly name: `OmniAI app`
-   - URL: `https://omniai-hkv2.onrender.com/api/health` (the **app** address, not the static site: that one never sleeps)
+   - Friendly name: `Tandurust app`
+   - URL: `https://tandurust.onrender.com/api/health` (the **app** address, not the static site: that one never sleeps)
    - Monitoring interval: **5 minutes**
    - Alert contact: your email
    - **Create monitor.**
@@ -158,18 +178,18 @@ Without it, **Forgot password?** stays hidden on the live site. About 10 minutes
 1. Sign up at **https://www.brevo.com** (free plan, about 300 emails a day).
 2. **Senders** (under Senders, domains & IPs): add the address emails should come from (e.g. your Gmail) and confirm it from the email Brevo sends.
 3. **SMTP & API → API keys → Generate a new API key**. Copy it (it's shown once).
-4. Render → **omniai** → **Environment**: `BREVO_API_KEY` = the key, `EMAIL_FROM` = the verified sender → **Save**. `PUBLIC_APP_URL` is already set in `render.yaml`.
+4. Render → **tandurust** → **Environment**: `BREVO_API_KEY` = the key, `EMAIL_FROM` = the verified sender → **Save**. `PUBLIC_APP_URL` is already set in `render.yaml`.
 5. Test: on the live site, **Forgot password?** with your own email.
 
-Emails sent from a free-mail address (Gmail) through another service can land in spam; with our own domain later, verify the domain in Brevo for better delivery. Menu names in Brevo may differ slightly. If sending fails, the reason is in Render → **Logs** (`omniai.email`).
+Emails sent from a free-mail address (Gmail) through another service can land in spam; with our own domain later, verify the domain in Brevo for better delivery. Menu names in Brevo may differ slightly. If sending fails, the reason is in Render → **Logs** (`tandurust.email`).
 
 ## Invite-only sign-up and the waitlist (2026-10-01)
 
-`render.yaml` sets **`JOIN_MODE=waitlist`**: on the welcome page, **Join the waitlist** opens the waitlist form (with a clear "invite-only for now" note) instead of Create account, and new accounts (email or Google) are only allowed for emails approved in **Admin → Waitlist**. Existing accounts log in as usual. **`LAUNCHER_ORIGIN`** (`https://omniai-app.onrender.com`) lets the always-on welcome site send the form to the app, and is the start of the link in invitation emails.
+`render.yaml` sets **`JOIN_MODE=waitlist`**: on the welcome page, **Join the waitlist** opens the waitlist form (with a clear "invite-only for now" note) instead of Create account, and new accounts (email or Google) are only allowed for emails approved in **Admin → Waitlist**. Existing accounts log in as usual. **`LAUNCHER_ORIGIN`** (`https://tandurust-app.onrender.com`) lets the always-on welcome site send the form to the app, and is the start of the link in invitation emails.
 
 - **Emails:** each sign-up emails an alert to the admin address (`WAITLIST_ALERT_EMAIL`, default the fixed admin email), and **Approve** emails the person their invitation. Both use Brevo (section above). Until `BREVO_API_KEY` and `EMAIL_FROM` are set, nothing is sent (only logged): the list still fills up in **Admin → Waitlist**, and you tell approved people yourself (the panel says so).
 - **Letting people in:** Admin → Waitlist → **Approve** (again: **Resend invite**). They create their account with the same email.
-- **Open sign-up to everyone again:** Render → **omniai** → **Environment** → `JOIN_MODE` = `open` → **Save** (the service restarts). Join goes back to Create account; the welcome page picks the change up on its next visit.
+- **Open sign-up to everyone again:** Render → **tandurust** → **Environment** → `JOIN_MODE` = `open` → **Save** (the service restarts). Join goes back to Create account; the welcome page picks the change up on its next visit.
 - **Test after a deploy:** open the static site in a private window → **Join** → the form appears → send it with a test address → the row shows in Admin → Waitlist (and the alert arrives, with Brevo set up) → **Remove** it.
 
 ## Security headers

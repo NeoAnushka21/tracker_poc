@@ -34,7 +34,7 @@ COMPARED = ("calories", "protein_g", "carbs_g", "fat_g", "fiber_g", "grams_per_p
 def fetch(url: str, body: dict | None = None) -> bytes:
     data = json.dumps(body).encode() if body is not None else None
     req = urllib.request.Request(url, data=data, headers={"Content-Type": "application/json",
-                                                          "User-Agent": "OmniAI food list check"})
+                                                          "User-Agent": "Tandurust food list check"})
     with urllib.request.urlopen(req, timeout=120) as r:
         return r.read()
 

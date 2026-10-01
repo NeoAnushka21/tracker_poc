@@ -10,7 +10,7 @@ import httpx
 
 from app import config
 
-log = logging.getLogger("omniai.email")
+log = logging.getLogger("tandurust.email")
 BREVO_URL = "https://api.brevo.com/v3/smtp/email"
 
 

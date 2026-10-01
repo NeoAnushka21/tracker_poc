@@ -102,7 +102,7 @@ def test_copy_sqlite_to_postgres(client, tmp_path):
 
 
 def test_health_is_readable_by_the_launcher(client):
-    r = client.get("/api/health", headers={"Origin": "https://omniai-app.onrender.com"})
+    r = client.get("/api/health", headers={"Origin": "https://tandurust-app.onrender.com"})
     assert r.json() == {"ok": True}
     assert r.headers["access-control-allow-origin"] == "*"
     assert r.headers["cache-control"] == "no-store"
@@ -165,7 +165,7 @@ def test_unexpected_error_gives_a_reference_and_is_logged(client, caplog):
 
     app.add_api_route("/api/test-boom", boom, methods=["POST"])
     try:
-        with caplog.at_level("ERROR", logger="omniai"):
+        with caplog.at_level("ERROR", logger="tandurust"):
             r = client.post("/api/test-boom")
     finally:
         app.router.routes = [rt for rt in app.router.routes if getattr(rt, "path", "") != "/api/test-boom"]

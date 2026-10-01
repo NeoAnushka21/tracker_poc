@@ -1,5 +1,7 @@
 # OmniAI: frontend design brief
 
+> **Note (2026-10-01):** the app has since been renamed **Tandurust**, with a new logo (see `frontend/src/brand.ts`, `docs/brand/`); its address is now https://tandurust-app.onrender.com. The brief below is kept as written on 2026-09-29.
+
 > Prepared 2026-09-29 for the design team. It describes the app as it is today, the parts that are fixed, and where design can help most. Screenshots are in [`design-brief/`](design-brief/) and use a demo account with sample data. Updated the same day after the reward-style UI pass (section 3: tokens, shape and motion); screenshots taken before it show the older palette.
 
 ## 1. The product in one minute
@@ -8,7 +10,7 @@
 
 - **Users:** adults tracking food for weight goals or general health, mostly in India for now (metric by default, Indian foods common). Right now one person uses it daily; small groups of testers come later.
 - **Platforms:** a web app that works on phones and laptops, with one codebase. A phone app is planned for later, starting as an installable web app.
-- **Try it:** https://omniai-app.onrender.com. The free server sleeps when idle, so the first visit can take up to a minute; a dancing-MacBro screen shows meanwhile.
+- **Try it:** https://tandurust-app.onrender.com (was omniai-app). The free server sleeps when idle, so the first visit can take up to a minute; a dancing-MacBro screen shows meanwhile.
 
 **Naming rules:**
 - The **app** is *OmniAI*, with a placeholder logo: the letters **"OAI"** on a green tile. Both the name and the logo are temporary.

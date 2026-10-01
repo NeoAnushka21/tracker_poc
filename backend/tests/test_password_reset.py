@@ -18,7 +18,7 @@ LOGIN = {"email": "me@example.com", "password": "password123"}
 def outbox(monkeypatch):
     sent = []
     monkeypatch.setattr(email, "send", lambda to, subject, text: sent.append({"to": to, "subject": subject, "text": text}))
-    monkeypatch.setattr(config, "PUBLIC_APP_URL", "https://omniai.example")
+    monkeypatch.setattr(config, "PUBLIC_APP_URL", "https://tandurust.example")
     return sent
 
 
@@ -34,7 +34,7 @@ def test_same_reply_whether_or_not_the_account_exists(client, user, outbox):
     known, unknown = forgot(client), forgot(client, "nobody@example.com")
     assert known.status_code == unknown.status_code == 200 and known.json() == unknown.json()
     assert [m["to"] for m in outbox] == ["me@example.com"]
-    assert outbox[0]["text"].count("https://omniai.example/reset-password#token=") == 1   # fixed address, token after #
+    assert outbox[0]["text"].count("https://tandurust.example/reset-password#token=") == 1   # fixed address, token after #
 
 
 def test_reset_sets_the_password_and_signs_out_everywhere(client, user, outbox):
@@ -95,7 +95,7 @@ def test_off_in_production_without_an_email_service(client, monkeypatch):
 
 def test_development_prints_the_link_instead_of_sending(caplog, monkeypatch):
     monkeypatch.setattr(config, "BREVO_API_KEY", "")
-    with caplog.at_level("INFO", logger="omniai.email"):
+    with caplog.at_level("INFO", logger="tandurust.email"):
         email.send("me@example.com", "Subject", "https://example/reset-password#token=abc")
     assert "reset-password#token=abc" in caplog.text
     assert email.enabled() is True

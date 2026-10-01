@@ -1,7 +1,7 @@
 /**
  * The welcome page (welcome.html): what every visitor who isn't signed in sees first.
  * - On the app's own address it's served at /welcome (the app sends signed-out visitors here).
- * - On the always-on static site (render.yaml "omniai-app") it's the start page: the app's free
+ * - On the always-on static site (render.yaml "tandurust-app") it's the start page: the app's free
  *   server may be asleep, so this page starts waking it as soon as it opens (VITE_APP_URL is the
  *   app's address; empty = the same origin). Join / Log in go straight to the app's Create account /
  *   Log in page once it answers; before that the button shows a spinner and moves on by itself.

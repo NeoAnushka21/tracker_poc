@@ -14,7 +14,7 @@ from fastapi.responses import JSONResponse
 from app import config
 
 request_id: contextvars.ContextVar[str] = contextvars.ContextVar("request_id", default="-")
-log = logging.getLogger("omniai")
+log = logging.getLogger("tandurust")
 
 
 class _RequestIdFilter(logging.Filter):
@@ -24,11 +24,11 @@ class _RequestIdFilter(logging.Filter):
 
 
 def setup_logging() -> None:
-    """App loggers (omniai.*, macbro.*) at INFO, one line each, with the request id."""
+    """App loggers (tandurust.*, macbro.*) at INFO, one line each, with the request id."""
     handler = logging.StreamHandler()
     handler.addFilter(_RequestIdFilter())
     handler.setFormatter(logging.Formatter("%(asctime)s %(levelname)s [%(request_id)s] %(name)s: %(message)s"))
-    for name in ("omniai", "macbro"):
+    for name in ("tandurust", "macbro"):
         logger = logging.getLogger(name)
         if not logger.handlers:
             logger.addHandler(handler)

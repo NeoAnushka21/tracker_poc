@@ -59,7 +59,7 @@ ADMIN_EMAILS = {
 JOIN_MODE = os.getenv("JOIN_MODE", "open").strip().lower()
 if JOIN_MODE not in ("open", "waitlist"):
     raise ValueError(f"JOIN_MODE must be 'open' or 'waitlist', not {JOIN_MODE!r}")
-# The always-on static welcome site (render.yaml "omniai-app"), another origin: allowed to send the
+# The always-on static welcome site (render.yaml "tandurust-app"), another origin: allowed to send the
 # waitlist form to the API. Empty = same origin only (development: Vite serves both).
 LAUNCHER_ORIGIN = os.getenv("LAUNCHER_ORIGIN", "").strip().rstrip("/")
 # Where "someone joined the waitlist" alerts go. Defaults to the fixed admin email.
@@ -67,8 +67,8 @@ WAITLIST_ALERT_EMAIL = os.getenv("WAITLIST_ALERT_EMAIL", DEFAULT_ADMIN_EMAIL).st
 WAITLIST_REQUESTS_PER_IP = 5            # form sends per address ...
 WAITLIST_REQUEST_WINDOW_S = 60 * 60     # ... per hour
 
-# Product names. The app is Tandurust (renamed from OmniAI on 2026-09-30, for display only: the live
-# URL, Render services, Google sign-in, database names and log names keep "omniai"); MacBro is the
+# Product names. The app is Tandurust (renamed from OmniAI on 2026-09-30; the services, addresses and
+# log names followed on 2026-10-01, see docs/deployment.md); MacBro is the
 # chat assistant, named only in the chat.
 APP_NAME = "Tandurust"
 BOT_NAME = "MacBro"

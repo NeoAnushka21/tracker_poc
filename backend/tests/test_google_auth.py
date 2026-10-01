@@ -126,7 +126,7 @@ def test_google_only_account_can_set_a_password_by_reset_link(client, monkeypatc
     from app.services import email
     sent = []
     monkeypatch.setattr(email, "send", lambda to, subject, text: sent.append(text))
-    monkeypatch.setattr(config, "PUBLIC_APP_URL", "https://omniai.example")
+    monkeypatch.setattr(config, "PUBLIC_APP_URL", "https://tandurust.example")
     google(client, token(), consent=True)
     client.post("/api/auth/logout")
     client.post("/api/auth/forgot-password", json={"email": "new@example.com"})

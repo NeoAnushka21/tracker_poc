@@ -17,7 +17,7 @@ from app.llm.provider import (
     AnthropicProvider, LLMError, LLMProvider, LLMRateLimited, LLMResponse, OpenAICompatibleProvider,
 )
 
-log = logging.getLogger("omniai.llm.pool")
+log = logging.getLogger("tandurust.llm.pool")
 TIERS = ("small", "large")
 
 

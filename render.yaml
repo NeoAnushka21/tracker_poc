@@ -1,12 +1,16 @@
 # Render Blueprint (guide: docs/deployment.md). Secrets are entered in the Render dashboard, never here.
-# - omniai: free web service; builds the React app and runs FastAPI, which serves the site and /api.
+# - tandurust: free web service; builds the React app and runs FastAPI, which serves the site and /api.
 #   The database is Neon Postgres (external). Free web services sleep after ~15 min idle.
-# - omniai-app: free static site (never sleeps) whose start page is the welcome page: it shows at once,
-#   wakes omniai in the background, and Join / Log in open the app when it answers, so visitors never
+# - tandurust-app: free static site (never sleeps) whose start page is the welcome page: it shows at once,
+#   wakes tandurust in the background, and Join / Log in open the app when it answers, so visitors never
 #   see Render's own waking page. Old links to an app tab (#dashboard...) are forwarded.
+# - omniai-app: the welcome site's old address (before the 2026-10-01 rename); it only forwards to
+#   tandurust-app, so old bookmarks and invitation links keep working.
+# If Render adds a suffix to a new address (name taken), update the addresses marked "address" below
+# and in deploy/moved/index.html.
 services:
   - type: web
-    name: omniai
+    name: tandurust
     runtime: python
     plan: free
     region: singapore            # same region as the Neon database
@@ -26,12 +30,12 @@ services:
         sync: false
       - key: LLM_API_KEY         # Groq key (asked for when the Blueprint is created)
         sync: false
-      - key: SECRET_KEY          # signs login sessions; Render generates a random one
-        generateValue: true
+      - key: SECRET_KEY          # signs logins and encrypts the admin's two-step secret: copy the old
+        sync: false              # service's value (a new key means setting up two-step sign-in again)
       - key: COOKIE_SECURE
         value: "true"
       - key: PUBLIC_APP_URL       # used to build links in emails (never taken from the request)
-        value: https://omniai-hkv2.onrender.com
+        value: https://tandurust.onrender.com          # address
       - key: BREVO_API_KEY        # password-reset emails (docs/deployment.md); empty = Forgot password hidden
         sync: false
       - key: EMAIL_FROM           # the sender address verified in Brevo
@@ -41,7 +45,7 @@ services:
       - key: JOIN_MODE             # waitlist: Join opens the "Join the community" form, new accounts need an invite; open: anyone
         value: waitlist
       - key: LAUNCHER_ORIGIN       # the always-on welcome site below: may send the waitlist form; base of invite links
-        value: https://omniai-app.onrender.com
+        value: https://tandurust-app.onrender.com      # address
       - key: AI_DAILY_MESSAGE_LIMIT   # AI messages per user per day (0 = unlimited)
         value: "20"
       - key: GOOGLE_CLIENT_ID      # Continue with Google; public, so kept here
@@ -56,7 +60,7 @@ services:
       # enable it. Its free tier is for prototyping only, so it's off by default here.
 
   - type: web
-    name: omniai-app
+    name: tandurust-app
     runtime: static
     # The welcome page becomes the site's start page; the app's own index.html isn't published here.
     buildCommand: >-
@@ -72,4 +76,16 @@ services:
       - key: NODE_VERSION
         value: "24"
       - key: VITE_APP_URL        # the app the welcome page wakes and sends people to
-        value: https://omniai-hkv2.onrender.com
+        value: https://tandurust.onrender.com          # address
+
+  - type: web
+    name: omniai-app
+    runtime: static
+    # Old address: every path shows a page that forwards to tandurust-app, keeping any #part.
+    buildCommand: echo "forwarding page only"
+    staticPublishPath: deploy/moved
+    autoDeployTrigger: checksPass
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html

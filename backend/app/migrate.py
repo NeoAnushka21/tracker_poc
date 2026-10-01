@@ -22,7 +22,7 @@ from sqlalchemy.engine import Engine
 from app import models  # noqa: F401  (registers every table)
 from app.db import Base, add_missing_columns
 
-log = logging.getLogger("omniai.migrate")
+log = logging.getLogger("tandurust.migrate")
 BACKEND = Path(__file__).resolve().parent.parent
 
 
