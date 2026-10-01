@@ -105,9 +105,11 @@ export default function PackScanner({ onRead, onClose }: { onRead: (r: PackReadi
     setMode("pick");
   }
 
-  // On <body>, so it isn't clipped by the chat window it may be opened from.
+  // On <body>, so it isn't clipped by the chat window it may be opened from, and on a layer above
+  // other dialogs: it opens from inside one (the chat's pack finder), whose portal comes later in
+  // the page and would otherwise cover it.
   return createPortal(
-    <div className="backdrop">
+    <div className="backdrop pack-scanner-layer">
       <div className="dialog card pack-scanner" role="dialog" aria-modal="true" aria-labelledby="pack-scan-title" ref={box}>
         <div className="dialog-head">
           <h3 id="pack-scan-title">Scan a packaged product</h3>

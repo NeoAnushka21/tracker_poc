@@ -680,6 +680,7 @@ button.danger { color: var(--error); }
 .pack-chip { flex-wrap: wrap; }
 .pack-chip b { flex: 0 1 auto; }
 .pack-finder, .pack-scanner { max-width: 560px; }
+.backdrop.pack-scanner-layer { z-index: 12; }   /* above the dialog it opens from (z 10), below the guide (z 20) */
 .pack-actions { display: flex; gap: 8px; flex-wrap: wrap; margin: 10px 0; }
 .pack-camera { position: relative; border-radius: var(--radius-sm); overflow: hidden; background: #000; aspect-ratio: 4 / 3; }
 .pack-camera video { width: 100%; height: 100%; object-fit: cover; display: block; }
