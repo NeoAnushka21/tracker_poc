@@ -33,7 +33,7 @@ jobs:
       USDA_API_KEY: ${{ secrets.USDA_API_KEY }}
     steps:
       - uses: actions/checkout@v5
-      - uses: actions/setup-python@v6
+      - uses: actions/setup-python@v7
         with:
           python-version-file: .python-version
           cache: pip
